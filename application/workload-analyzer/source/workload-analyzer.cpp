@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 
 #include "workload-analyzer.h"
 #include <boost/cast.hpp>
@@ -309,6 +309,7 @@ void WLA::MarkEvent::InternalProcessRecord()
 {
 	String ^ op = input_obj->Members[L"Operation"]->Value->ToString();
 	uint64_t lba = 0;
+	FID fid = -1;
 
 	if (op == L"ReadFile" || op == L"WriteFile")
 	{
@@ -317,19 +318,23 @@ void WLA::MarkEvent::InternalProcessRecord()
 		ToStdString(str_path, path);
 		
 		uint64_t offset = Convert::ToUInt64(input_obj->Members[L"offset"]->Value);
-		offset /= 4096;		// byte to cluster
+//		offset /= 4096;		// byte to cluster
 
 		if (str_path == L"C:")
 		{
-			lba = disk_offset + offset * 8;
+			lba = disk_offset + offset;
+			fid = -3;
 		}
 		else
 		{
+			uint64_t cluster_offset = offset / 8;
 			std::wstring ss = str_path.substr(2);
-			FID fid = global.FindFidByName(ss);
-			if (fid >= 0) lba = global.GetLba(fid, offset) * 8;
+			fid = global.FindFidByName(ss);
+			if (fid >= 0) lba = global.GetLba(fid, cluster_offset) * 8;
 		}
 	}
+	PSNoteProperty ^ fid_item = gcnew PSNoteProperty(L"fid", fid);
+	input_obj->Members->Add(fid_item);
 
 	PSNoteProperty ^ lba_item = gcnew PSNoteProperty(L"lba", lba);
 	input_obj->Members->Add(lba_item);

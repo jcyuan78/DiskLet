@@ -62,31 +62,31 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\build\external_libs.props" />
-    <Import Project="..\..\..\jcvos2\support_jcvos.props" />
-    <Import Project="..\..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\..\build_app.props" />
+    <Import Project="..\..\build\external_libs.props" />
+    <Import Project="..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\build_app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\build\external_libs.props" />
-    <Import Project="..\..\..\jcvos2\support_jcvos.props" />
-    <Import Project="..\..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\..\build_app.props" />
+    <Import Project="..\..\build\external_libs.props" />
+    <Import Project="..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\build_app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\build\external_libs.props" />
-    <Import Project="..\..\..\jcvos2\support_jcvos.props" />
-    <Import Project="..\..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\..\build_app.props" />
+    <Import Project="..\..\build\external_libs.props" />
+    <Import Project="..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\build_app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\build\external_libs.props" />
-    <Import Project="..\..\..\jcvos2\support_jcvos.props" />
-    <Import Project="..\..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\..\build_app.props" />
+    <Import Project="..\..\build\external_libs.props" />
+    <Import Project="..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\build_app.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">
@@ -138,29 +138,19 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="workload-analyzer.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="AssemblyInfo.cpp" />
-    <ClCompile Include="pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="workload-analyzer.cpp" />
+    <ClInclude Include="source\pch.h" />
+    <ClInclude Include="source\workload-analyzer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc" />
@@ -177,6 +167,13 @@
     </Reference>
     <Reference Include="System.Management.Instrumentation" />
     <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\AssemblyInfo.cpp" />
+    <ClCompile Include="source\pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\workload-analyzer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
