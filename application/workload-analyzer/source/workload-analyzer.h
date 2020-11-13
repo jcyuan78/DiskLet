@@ -23,8 +23,8 @@ public:
 	SEGMENT(uint64_t f, uint32_t s, uint32_t n) : first_cluster(f), start(s), num(n) {};
 	SEGMENT(const SEGMENT & ss) : first_cluster(ss.first_cluster), start(ss.start), num(ss.num) {};
 public:
-	uint64_t first_cluster;
-	uint32_t start;
+	uint64_t first_cluster;		// 这一段的起始的磁盘lba （4KB单位）
+	uint32_t start;				// 这一段在文件中的偏移量
 	uint32_t num;
 };
 
@@ -56,6 +56,9 @@ public:
 
 protected:
 	void ClearMapping(void);
+
+public:
+	uint64_t m_first_lba;
 
 protected:
 	std::map<std::wstring, FID> * m_fid_map;
@@ -107,7 +110,7 @@ namespace WLA {
 
 		[Parameter(Position = 2, Mandatory = true,
 			HelpMessage = "offset of the device")]
-		property uint64_t offset;
+		property uint64_t first_lba;
 
 	public:
 		virtual void BeginProcessing()	override;
@@ -115,14 +118,11 @@ namespace WLA {
 		virtual void InternalProcessRecord() override;
 
 	protected:
-		//FN_MAP * m_fn_mapping;
 		LBA_INFO * m_lba_mapping;
 		// map的大小，以8 sec (4KB）为单位;
 		size_t m_map_size;
-		uint64_t m_offset;
-
+		uint64_t m_first_cluster;
 		FILE_INFO* m_cur_file_info;
-//		uint32_t m_cur_offset;
 	};
 
 
@@ -152,7 +152,7 @@ namespace WLA {
 		property Collections::ArrayList  ^ segments;
 
 		[Parameter(Position = 2, HelpMessage = "disk offset")]
-		property uint64_t disk_offset;
+		property uint64_t first_lba;
 
 //		property Array ^ segments;
 
@@ -196,7 +196,7 @@ namespace WLA {
 		property PSObject ^ input_obj;
 
 		[Parameter(Position = 1, HelpMessage = "disk offset")]
-		property uint64_t disk_offset;
+		property uint64_t first_lba;
 
 	public:
 		virtual void InternalProcessRecord() override;

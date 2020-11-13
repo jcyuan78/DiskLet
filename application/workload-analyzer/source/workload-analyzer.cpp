@@ -4,6 +4,8 @@
 #include <boost/cast.hpp>
 using namespace System::Runtime::InteropServices;
 
+LOCAL_LOGGER_ENABLE(L"wla", LOGGER_LEVEL_DEBUGINFO);
+
 
 void ToStdString(std::wstring & dst, System::String ^ src)
 {
@@ -84,8 +86,10 @@ uint64_t GlobalInit::GetLba(FID fid, uint64_t offset)
 	std::vector<SEGMENT> & segs = it->second->segments;
 	for (auto ii = segs.begin(); ii != segs.end(); ++ii)
 	{
-		if (offset >= ii->start && offset < (ii->start + ii->num))
-			return ii->first_cluster + offset;
+		int64_t delta = offset - ii->start;
+		if (delta >= 0 && delta < ii->num) return ii->first_cluster + delta;
+		//if (offset >= ii->start && offset < (ii->start + ii->num))
+		//	return ii->first_cluster + offset;
 	}
 	
 	return uint64_t();
@@ -131,12 +135,13 @@ WLA::SetStaticMapping::SetStaticMapping(void) : /*m_fn_mapping(nullptr), */m_lba
 
 void WLA::SetStaticMapping::BeginProcessing()
 {
-	m_map_size = (secs + offset) / 8;
-	m_offset = offset / 8;
+	m_map_size = (secs + first_lba) / 8;
+	m_first_cluster = first_lba / 8;
 	m_lba_mapping = new LBA_INFO[m_map_size];
 	memset(m_lba_mapping, 0xFF, sizeof(LBA_INFO)*m_map_size);
 	//m_fn_mapping = new FN_MAP;
-	global.SetMaping(nullptr, m_lba_mapping, m_map_size, m_offset);
+	global.SetMaping(nullptr, m_lba_mapping, m_map_size, m_first_cluster);
+	global.m_first_lba = first_lba;
 	m_cur_file_info = nullptr;
 }
 
@@ -172,18 +177,12 @@ void WLA::SetStaticMapping::InternalProcessRecord()
 		else				m_lba_mapping[start_cluster + ii].file_offset = file_offset + ii;
 	}
 
-	//auto ff = m_fn_mapping->find(fid);
-	//if (ff == m_fn_mapping->end())
-	//{
-	//}
 	if (file_offset == 0)
 	{
-//		m_fn_mapping->insert(std::make_pair(fid, fn));
 		m_cur_file_info = new FILE_INFO;
 		m_cur_file_info->fid = fid;
 		m_cur_file_info->fn = fn;
 		m_cur_file_info->length = 0;
-//		m_fn_mapping->insert(std::make_pair(fid, m_cur_file_info));
 		global.AddFile(fid, m_cur_file_info);
 	}
 	m_cur_file_info->segments.push_back(SEGMENT(start_cluster, m_cur_file_info->length, cluster_num));
@@ -193,7 +192,6 @@ void WLA::SetStaticMapping::InternalProcessRecord()
 
 void WLA::ProcessTrace::InternalProcessRecord()
 {
-//	System::Management::Automation::PSNoteProperty ^ input_obj->Members[L"lba"];
 	uint64_t lba = System::Convert::ToUInt64(input_obj->Members[L"lba"]->Value);
 	uint64_t cluster = lba / 8;
 	LBA_INFO * finfo = global.ClusterToFid(cluster);
@@ -202,7 +200,10 @@ void WLA::ProcessTrace::InternalProcessRecord()
 	if (finfo)
 	{
 		fid = finfo->fid;
-		file_offset = finfo->file_offset*8;
+		// 如果lba不属于任何文件， 则给出相对c:盘的lba
+		if (fid < 0) file_offset = lba - global.m_first_lba;
+		// 如果lba属于某个文件，则给出相对文件的offset
+		else file_offset = finfo->file_offset*8;
 	}
 
 	std::wstring fn;
@@ -242,40 +243,6 @@ void WLA::AddFileMapping::InternalProcessRecord()
 	uint64_t secs = System::Convert::ToUInt64(file_mapping->Members[L"file_length"]->Value);
 	PSObject ^ ss = (PSObject ^)(file_mapping->Members[L"segments"]->Value);
 	Type ^ type = ss->GetType();
-
-	String ^str = ss->Members->ToString();
-
-//	ComponentModel::TypeDescriptor::GetConverter(ss)->ConvertTo(ss, ComponentModel::TypeDescriptor::GetConverter)))
-
-//	Object ^ s0 = ss->Members["0"]->Value;
-	//PSObject ^seg = (PSObject^)(s0);
-
-	//Array ^ _segments = (Array^)(ss->Members);
-
-	System::Collections::Generic::IEnumerator<System::Management::Automation::PSMemberInfo^> ^ it
-		= ss->Members->GetEnumerator();
-	bool br = it->MoveNext();
-	while (br)
-	{
-//		PSObject ^s0 = (PSObject^)(it->Current->Value);
-//		uint64_t start = System::Convert::ToUInt64(s0->Members[L"start"]->Value);
-//		uint64_t seg_len = System::Convert::ToUInt64(s0->Members[L"secs"]->Value);
-		br = it->MoveNext();
-	}
-
-
-//	cli::array<System::Object ^> ^ segments  = 
-//	Array ^ segments = (Array^)(file_mapping->Members[L"segments"]->Value);
-//	size_t len;
-//	len = segments->Length;
-//	len = _segments->Count;
-	//for (size_t ii = 0; ii < len; ++ii)
-	//{
-	//	PSObject ^ seg = (PSObject^)(segments->GetValue<PSObject^>(ii));
-	//}
-//	Array ^ segments = System::Collections::ArrayList::ToArray(file_mapping->Members[L"segments"]->Value);
-
-//		;
 */
 	std::wstring str_fn;
 	ToStdString(str_fn, fn);
@@ -290,10 +257,15 @@ void WLA::AddFileMapping::InternalProcessRecord()
 	for (size_t ii = 0; ii < count; ++ii)
 	{
 		PSObject ^ ss = (PSObject^)segments[ii];
-		uint64_t start = System::Convert::ToUInt64(ss->Members[L"start"]->Value) / 8 + (disk_offset/8);
+		// 这一段的起始cluster，相对于磁盘
+		uint64_t start = System::Convert::ToUInt64(ss->Members[L"start"]->Value) / 8;
+		// 这一段拥有的cluster数量
 		uint64_t clusters = System::Convert::ToUInt64(ss->Members[L"secs"]->Value) / 8;
+
 		file_info->segments.push_back(SEGMENT(start, file_info->length, clusters));
-		file_info->length += clusters;
+		//wprintf_s(L"segment: file offset = %d/offset=%lld, cluster num = %lld, start lba=%lld\n", file_info->length, offset, start, clusters);
+		file_info->length += boost::numeric_cast<uint32_t>(clusters);
+
 		for (uint32_t jj = 0; jj < clusters; ++jj)
 		{
 			lba_mapping[start + jj].fid = fid;
@@ -309,7 +281,7 @@ void WLA::MarkEvent::InternalProcessRecord()
 {
 	String ^ op = input_obj->Members[L"Operation"]->Value->ToString();
 	uint64_t lba = 0;
-	FID fid = -1;
+	FID fid = -10;
 
 	if (op == L"ReadFile" || op == L"WriteFile")
 	{
@@ -317,19 +289,20 @@ void WLA::MarkEvent::InternalProcessRecord()
 		std::wstring str_path;
 		ToStdString(str_path, path);
 		
+		// 文件相对地址，lba单位
 		uint64_t offset = Convert::ToUInt64(input_obj->Members[L"offset"]->Value);
-//		offset /= 4096;		// byte to cluster
-
 		if (str_path == L"C:")
 		{
-			lba = disk_offset + offset;
+			lba = first_lba + offset;
 			fid = -3;
 		}
 		else
 		{
+			// lba单位=>4KB单位
 			uint64_t cluster_offset = offset / 8;
 			std::wstring ss = str_path.substr(2);
 			fid = global.FindFidByName(ss);
+			// 4KB单位=>lba单位
 			if (fid >= 0) lba = global.GetLba(fid, cluster_offset) * 8;
 		}
 	}
