@@ -1,5 +1,7 @@
 #pragma once
 
+using namespace System;
+
 
 inline void ToStdString(std::wstring & dst, System::String ^ src)
 {
@@ -26,6 +28,7 @@ inline System::Guid ^ GUIDToSystemGuid(const GUID & in_id)
 	return gcnew System::Guid(gcnew System::String(str));
 }
 
+/*
 Clone::PartitionType GuidToPartitionType(System::Guid ^ type_id);
 
 inline System::Guid ^ GptTypeToGuid(const Clone::PartitionType & type)
@@ -60,4 +63,4 @@ inline System::Guid ^ GptTypeToGuid(const Clone::PartitionType & type)
 
 }
 
-
+*/

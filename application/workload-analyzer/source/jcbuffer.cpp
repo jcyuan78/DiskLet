@@ -1,8 +1,17 @@
 #include "pch.h"
 
+
 #include "../include/jcbuffer.h"
+#include <jcfile.h>
+
 
 LOCAL_LOGGER_ENABLE(L"jcbuffer", LOGGER_LEVEL_NOTICE);
+
+///////////////////////////////////////////////////////////////////////////////
+// -- show binary
+
+
+
 
 JcCmdLet::BinaryType::BinaryType(jcvos::IBinaryBuffer * ibuf)
 	: m_data(ibuf)
@@ -49,7 +58,7 @@ void _local_itohex(wchar_t * str, size_t dig, UINT d)
 }
 
 
-void JcCmdLet::ShowBinary::ProcessRecord()
+void JcCmdLet::ShowBinary::InternalProcessRecord()
 {
 	LOG_STACK_TRACE();
 
@@ -111,4 +120,154 @@ void JcCmdLet::ShowBinary::ProcessRecord()
 		str = gcnew System::String(str_buf);
 		System::Console::WriteLine(str);
 	}
+}
+
+void JcCmdLet::ImportBinary::InternalProcessRecord()
+{
+	std::wstring str_fn;
+	ToStdString(str_fn, fn);
+	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
+
+	bool br = false;
+	if (Mapping.ToBool())
+	{
+		jcvos::auto_interface<jcvos::IFileMapping> file;
+		br = jcvos::CreateFileMappingObject(file, str_fn, GENERIC_READ);
+		br = jcvos::CreateFileMappingBuf(file, 0, 0, buf);
+	}
+	else
+	{
+		br = jcvos::LoadBinaryFromFile(buf, str_fn);
+	}
+	if (!br || buf == NULL) gcnew ApplicationException(L"failed loading binary");
+	BinaryType ^ val = gcnew BinaryType(buf);
+	WriteObject(val);
+}
+
+void JcCmdLet::ExportBinary::InternalProcessRecord()
+{
+	LOG_STACK_TRACE();
+	JCASSERT(m_file);
+
+	if (!data) return;
+	jcvos::auto_interface<jcvos::IBinaryBuffer> ibuf;
+	data->GetData(ibuf);	JCASSERT(ibuf);
+	BYTE * _data = ibuf->Lock();
+	for (size_t ii = 0; ii < ibuf->GetSize(); ++ii)
+	{
+		m_file->WriteByte(_data[ii]);
+	}
+	ibuf->Unlock(_data);
+}
+
+void JcCmdLet::SelectBinary::InternalProcessRecord()
+{
+	bool br;
+	if (!data) return;
+	jcvos::auto_interface<jcvos::IBinaryBuffer> ibuf;
+	data->GetData(ibuf);
+	if (!ibuf) return;
+	jcvos::auto_interface<jcvos::IBinaryBuffer> ipartial;
+	br = jcvos::CreatePartialBuffer(ipartial, ibuf, offset, secs);
+	if (!br || !ipartial) throw gcnew System::ApplicationException(L"failed on creating partial buffer");
+
+	JcCmdLet::BinaryType ^ val = gcnew JcCmdLet::BinaryType(ipartial);
+	WriteObject(val);
+}
+
+void JcCmdLet::ConvertArrayToBinary::InternalProcessRecord()
+{
+	if (!DataIn) return;
+
+	size_t input_len = DataIn->Length;
+	size_t new_len = m_len + input_len;
+	System::Array::Resize(m_buf, new_len);
+	DataIn->CopyTo(m_buf, (int)m_len);
+	m_len = new_len;
+}
+
+void JcCmdLet::ConvertArrayToBinary::EndProcessing()
+{
+	if (m_len)
+	{
+		jcvos::IBinaryBuffer * ibuf = NULL;
+		jcvos::CreateBinaryBuffer(ibuf, m_len);
+
+		System::Runtime::InteropServices::GCHandle hobject =
+			System::Runtime::InteropServices::GCHandle::Alloc(m_buf,
+				System::Runtime::InteropServices::GCHandleType::Pinned);
+		const BYTE * src = (const BYTE*)(hobject.AddrOfPinnedObject().ToPointer());
+
+		BYTE * buf = ibuf->Lock();
+		memcpy_s(buf, m_len, src, m_len);
+		ibuf->Unlock(buf);
+		hobject.Free();
+
+		JcCmdLet::BinaryType ^ val = gcnew JcCmdLet::BinaryType(ibuf);
+		ibuf->Release();
+		WriteObject(val);
+	}
+}
+
+void JcCmdLet::ConvertBinaryToArray::InternalProcessRecord()
+{
+	if (!Data) gcnew System::ApplicationException(L"missing input data");
+	jcvos::auto_interface<jcvos::IBinaryBuffer> ibuf;
+	Data->GetData(ibuf);
+	if (!ibuf) gcnew System::ApplicationException(L"input data does not contain binary data");
+	size_t len = ibuf->GetSize();
+
+	System::Array ^ val;
+	switch (WordLen)
+	{
+	case 1:	val = gcnew array<BYTE>(len); break;
+	case 2:	val = gcnew array<WORD>((len + 1) / 2); break;	// round up
+	case 4:	val = gcnew array<DWORD>((len + 3) / 4); break;
+	case 8:	val = gcnew array<UINT64>((len + 7) / 8); break;
+	default: {
+		System::String ^ msg = System::String::Format(L"illeagle word length={0}", WordLen);
+		throw gcnew System::ApplicationException(msg);
+	}
+	}
+
+	System::Runtime::InteropServices::GCHandle hobject =
+		System::Runtime::InteropServices::GCHandle::Alloc(val,
+			System::Runtime::InteropServices::GCHandleType::Pinned);
+	void * dst = (hobject.AddrOfPinnedObject().ToPointer());
+
+	BYTE * src = ibuf->Lock();
+	memcpy_s(dst, len, src, len);
+	ibuf->Unlock(src);
+	hobject.Free();
+
+	WriteObject(val);
+}
+
+BYTE * JcCmdLet::CompareBinary::CheckData(BinaryType ^ data, jcvos::IBinaryBuffer *& ibuf, size_t & len)
+{
+	JCASSERT(ibuf == NULL);
+	size_t cmp_len = SECTOR_TO_BYTE(Secs);
+	if (!data) throw gcnew System::ApplicationException(L"missing data");
+	data->GetData(ibuf);
+	if (!ibuf) throw gcnew System::ApplicationException(L"no binary data in data");
+	len = ibuf->GetSize();
+	if (len < cmp_len) throw gcnew System::ApplicationException(L"data is less then secs");
+	return ibuf->Lock();
+}
+
+void JcCmdLet::CompareBinary::InternalProcessRecord()
+{
+	size_t cmp_len = SECTOR_TO_BYTE(Secs);
+	jcvos::auto_interface<jcvos::IBinaryBuffer> ibuf1;
+	size_t len1;
+	BYTE * buf1 = CheckData(Data1, ibuf1, len1);
+
+	jcvos::auto_interface<jcvos::IBinaryBuffer> ibuf2;
+	size_t len2;
+	BYTE * buf2 = CheckData(Data2, ibuf2, len2);
+
+	int ir = memcmp(buf1, buf2, cmp_len);
+	ibuf1->Unlock(buf1);
+	ibuf2->Unlock(buf2);
+	WriteObject(ir);
 }

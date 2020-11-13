@@ -27,6 +27,9 @@
     <ClInclude Include="include\jcbuffer.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="include\utility.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc">
@@ -49,6 +52,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\jcbuffer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\utility.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

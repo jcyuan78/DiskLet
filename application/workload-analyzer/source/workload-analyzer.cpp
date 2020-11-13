@@ -1,21 +1,22 @@
 ﻿#include "pch.h"
 
 #include "workload-analyzer.h"
+#include "../include/utility.h"
 #include <boost/cast.hpp>
 using namespace System::Runtime::InteropServices;
 
 LOCAL_LOGGER_ENABLE(L"wla", LOGGER_LEVEL_DEBUGINFO);
 
 
-void ToStdString(std::wstring & dst, System::String ^ src)
-{
-	if (!System::String::IsNullOrEmpty(src))
-	{
-		const wchar_t * wstr = (const wchar_t*)(Marshal::StringToHGlobalUni(src)).ToPointer();
-		dst = wstr;
-		Marshal::FreeHGlobal(IntPtr((void*)wstr));
-	}
-}
+//void ToStdString(std::wstring & dst, System::String ^ src)
+//{
+//	if (!System::String::IsNullOrEmpty(src))
+//	{
+//		const wchar_t * wstr = (const wchar_t*)(Marshal::StringToHGlobalUni(src)).ToPointer();
+//		dst = wstr;
+//		Marshal::FreeHGlobal(IntPtr((void*)wstr));
+//	}
+//}
 
 GlobalInit global;
 GlobalInit::GlobalInit(void) 
