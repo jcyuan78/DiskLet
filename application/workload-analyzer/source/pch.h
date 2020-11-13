@@ -7,7 +7,15 @@
 #ifndef PCH_H
 #define PCH_H
 
+#ifdef _DEBUG
+#define LOG_OUT_CLASS_SIZE
+#define LOGGER_LEVEL LOGGER_LEVEL_DEBUGINFO
+#else
+#define LOGGER_LEVEL	LOGGER_LEVEL_NOTICE
+#endif
+
 // 添加要在此处预编译的标头
 #include <stdext.h>
+#include <jcapp.h>
 
 #endif //PCH_H
