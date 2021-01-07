@@ -42,6 +42,7 @@
     <ClCompile Include="source\partition_info.cpp" />
     <ClCompile Include="source\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="source\storage_device.cpp" />
     <ClCompile Include="source\storage_manage.cpp" />
@@ -138,7 +139,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>

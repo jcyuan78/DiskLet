@@ -34,6 +34,11 @@ namespace Clone
 
 	//-----------------------------------------------------------------------------
 	// -- storage device
+
+#define NVME_CMD_GET_LOG	(0x02)
+#define NVME_CMD_IDENTIFY	(0x06)
+
+
 	public ref class StorageDevice : public Object
 	{
 	public:
@@ -47,6 +52,40 @@ namespace Clone
 
 		HEALTH_INFO ^ GetHealthInfo(void);
 		INQUIRY ^ Inquiry(void);
+
+		JcCmdLet::BinaryType ^ Test1(void)
+		{
+			INVMeDevice * nvme = dynamic_cast<INVMeDevice*>(m_storage);
+			if (!nvme) throw gcnew System::ApplicationException(L"The device is not a NVMe device");
+
+			NVME_COMMAND nvme_cmd;
+			memset(&nvme_cmd, 0, sizeof(NVME_COMMAND));
+			// read identify
+			//nvme_cmd.CDW0.OPC = NVME_CMD_IDENTIFY;
+			//nvme_cmd.u.IDENTIFY.CDW10.CNS = 1;
+			//nvme_cmd.u.IDENTIFY.CDW11 = 0;
+
+			// read smart
+			nvme_cmd.CDW0.OPC = NVME_CMD_GET_LOG;
+			nvme_cmd.NSID = 0xFFFFFFFF;
+			nvme_cmd.u.GETLOGPAGE.CDW10.LID = NVME_LOG_PAGE_HEALTH_INFO;
+			nvme_cmd.u.GETLOGPAGE.CDW10_V13.NUMDL = 0x7F;
+
+			jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
+			jcvos::CreateBinaryBuffer(buf, 4096);
+			BYTE * _buf = buf->Lock();
+
+	//		bool br = nvme->NVMeCommand(IStorageDevice::UDMA_DATA_IN, NVME_CMD_IDENTIFY, &nvme_cmd, _buf, 4096);
+			bool br = nvme->NVMeCommand(IStorageDevice::UDMA_DATA_IN, NVME_CMD_GET_LOG, &nvme_cmd, _buf, sizeof(NVME_HEALTH_INFO_LOG));
+			buf->Unlock(_buf);
+			if (!br)
+			{
+				System::Console::WriteLine(L"failed on reading nvme");
+				return nullptr;
+			}
+//			if (!br) throw gcnew System::ApplicationException(L"failed on getting log page");
+			return gcnew JcCmdLet::BinaryType(buf);
+		}
 
 	protected:
 		IStorageDevice *m_storage;

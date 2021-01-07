@@ -315,10 +315,11 @@ bool CNVMeDevice::NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BY
 	protocolCommand->Length = sizeof(STORAGE_PROTOCOL_COMMAND);
 	protocolCommand->ProtocolType = ProtocolTypeNvme;
 	protocolCommand->Flags = STORAGE_PROTOCOL_COMMAND_FLAG_ADAPTER_REQUEST;
+//	protocolCommand->Flags = 0;
 	protocolCommand->CommandLength = STORAGE_PROTOCOL_COMMAND_LENGTH_NVME;
 	protocolCommand->ErrorInfoLength = sizeof(NVME_ERROR_INFO_LOG);
-	protocolCommand->TimeOutValue = 10;
 	protocolCommand->ErrorInfoOffset = FIELD_OFFSET(STORAGE_PROTOCOL_COMMAND, Command) + STORAGE_PROTOCOL_COMMAND_LENGTH_NVME;
+	protocolCommand->TimeOutValue = 100;
 
 	if (protocol == IStorageDevice::PIO_DATA_IN || protocol == IStorageDevice::UDMA_DATA_IN)
 	{	// read
@@ -350,7 +351,11 @@ bool CNVMeDevice::NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BY
 		query_buf, boost::numeric_cast<DWORD>(query_buf.size()),
 		query_buf, boost::numeric_cast<DWORD>(query_buf.size()),
 		&returnedLength, NULL);
-	if (!br) LOG_WIN32_ERROR(L"failed on invoking NVMe command");
+	if (!br)
+	{
+		LOG_WIN32_ERROR(L"failed on invoking NVMe command");
+		return false;
+	}
 
 	if (protocol == IStorageDevice::PIO_DATA_IN || protocol == IStorageDevice::UDMA_DATA_IN)
 	{
