@@ -35,8 +35,6 @@ namespace JcCmdLet
 		}
 	};
 
-
-
 	//-----------------------------------------------------------------------------
 	// -- binary type	
 	public ref class BinaryType : public Object
@@ -53,9 +51,12 @@ namespace JcCmdLet
 
 	public:
 		void GetData(jcvos::IBinaryBuffer * & data) { data = m_data; data->AddRef(); }
-		bool GetData(void * & data);
+		BYTE* LockData(void);
+		void Unlock(void);
+		//bool GetData(void * & data);
 	protected:
 		jcvos::IBinaryBuffer * m_data;
+		BYTE* m_locked;
 	};
 
 

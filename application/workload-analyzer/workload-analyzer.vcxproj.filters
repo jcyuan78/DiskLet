@@ -30,6 +30,12 @@
     <ClInclude Include="include\utility.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="source\tcg_parser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="source\tcg_token.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc">
@@ -55,6 +61,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\utility.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\tcg_parser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\tcg_token.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

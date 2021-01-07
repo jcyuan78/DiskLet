@@ -3,6 +3,7 @@
 
 #include "../include/jcbuffer.h"
 #include <jcfile.h>
+#include <boost\cast.hpp>
 
 
 LOCAL_LOGGER_ENABLE(L"jcbuffer", LOGGER_LEVEL_NOTICE);
@@ -14,30 +15,42 @@ LOCAL_LOGGER_ENABLE(L"jcbuffer", LOGGER_LEVEL_NOTICE);
 
 
 JcCmdLet::BinaryType::BinaryType(jcvos::IBinaryBuffer * ibuf)
-	: m_data(ibuf)
+	: m_data(ibuf), m_locked(nullptr)
 {
 	LOG_STACK_TRACE();
+	LOG_DEBUG(L"data = 0x%p", m_data);
 	if (m_data) m_data->AddRef();
 }
 
 JcCmdLet::BinaryType::~BinaryType(void)
 {
+	LOG_STACK_TRACE();
+	if (m_locked) m_data->Unlock(m_locked);
+	m_locked = nullptr;
 	jcvos::IBinaryBuffer * tmp = m_data; m_data = NULL;
 	if (tmp) tmp->Release();
 }
 
 JcCmdLet::BinaryType::!BinaryType(void)
 {
+	LOG_STACK_TRACE();
+	if (m_locked) m_data->Unlock(m_locked);
+	m_locked = nullptr;
 	jcvos::IBinaryBuffer * tmp = m_data; m_data = NULL;
 	if (tmp) tmp->Release();
 }
 
-bool JcCmdLet::BinaryType::GetData(void * & data)
+BYTE* JcCmdLet::BinaryType::LockData(void)
 {
-	JCASSERT(data == NULL);
-	if (m_data) m_data->AddRef();
-	data = reinterpret_cast<void*>(m_data);
-	return true;
+	JCASSERT(m_data && m_locked == NULL);
+	m_locked = m_data->Lock();
+	return m_locked;
+}
+
+void JcCmdLet::BinaryType::Unlock(void)
+{
+	if (m_locked) m_data->Unlock(m_locked);
+	m_locked = nullptr;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -181,7 +194,7 @@ void JcCmdLet::ConvertArrayToBinary::InternalProcessRecord()
 
 	size_t input_len = DataIn->Length;
 	size_t new_len = m_len + input_len;
-	System::Array::Resize(m_buf, new_len);
+	System::Array::Resize(m_buf, boost::numeric_cast<int>(new_len) );
 	DataIn->CopyTo(m_buf, (int)m_len);
 	m_len = new_len;
 }
@@ -215,7 +228,7 @@ void JcCmdLet::ConvertBinaryToArray::InternalProcessRecord()
 	jcvos::auto_interface<jcvos::IBinaryBuffer> ibuf;
 	Data->GetData(ibuf);
 	if (!ibuf) gcnew System::ApplicationException(L"input data does not contain binary data");
-	size_t len = ibuf->GetSize();
+	int len = boost::numeric_cast<int>(ibuf->GetSize());
 
 	System::Array ^ val;
 	switch (WordLen)
