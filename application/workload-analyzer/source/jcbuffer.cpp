@@ -18,11 +18,13 @@ JcCmdLet::BinaryType::BinaryType(jcvos::IBinaryBuffer * ibuf)
 	: m_data(ibuf), m_locked(nullptr)
 {
 	LOG_STACK_TRACE();
+	LOG_DEBUG(L"data = 0x%p", m_data);
 	if (m_data) m_data->AddRef();
 }
 
 JcCmdLet::BinaryType::~BinaryType(void)
 {
+	LOG_STACK_TRACE();
 	if (m_locked) m_data->Unlock(m_locked);
 	m_locked = nullptr;
 	jcvos::IBinaryBuffer * tmp = m_data; m_data = NULL;
@@ -31,6 +33,7 @@ JcCmdLet::BinaryType::~BinaryType(void)
 
 JcCmdLet::BinaryType::!BinaryType(void)
 {
+	LOG_STACK_TRACE();
 	if (m_locked) m_data->Unlock(m_locked);
 	m_locked = nullptr;
 	jcvos::IBinaryBuffer * tmp = m_data; m_data = NULL;

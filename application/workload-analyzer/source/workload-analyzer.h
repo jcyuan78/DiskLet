@@ -54,6 +54,19 @@ public:
 	FID FindFidByName(const std::wstring & fn);
 	uint64_t GetLba(FID fid, uint64_t offset);
 
+	/// <summary> 设置partion的offset和大小	</summary>
+	/// <param name="offset"> partition的起始位置，sector单位</param>
+	/// <param name="secs"> parttion的大小，sector单位</param>
+	void SetDiskInfo(UINT64 offset, UINT64 secs)
+	{
+		m_disk_offset = offset;
+		m_disk_cap = offset + secs;
+	}
+
+	UINT64 GetDiskCapacity(void) const { return m_disk_cap; }
+//	UINT64 GetPartitionCapacity(void) const { return m_part_cap; }
+	UINT64 GetPartitionOffset(void) const { return m_disk_offset; }
+
 protected:
 	void ClearMapping(void);
 
@@ -69,6 +82,7 @@ protected:
 	size_t m_map_size;
 	uint64_t m_offset;
 
+	UINT64 m_disk_cap, m_disk_offset;
 };
 
 namespace WLA {
@@ -202,5 +216,55 @@ namespace WLA {
 		virtual void InternalProcessRecord() override;
 	};
 
+	[CmdletAttribute(VerbsCommon::Set, "DiskInfo")]
+	public ref class SetDiskInfo : public WLABase
+	{
+	public:
+		SetDiskInfo(void) { offset = -1; capacity = -1; };
+		~SetDiskInfo(void) {};
+
+	public:
+		[Parameter(Position = 0, ValueFromPipeline = true,
+			ValueFromPipelineByPropertyName = true,
+			HelpMessage = "partition offset")]
+		property UINT64 offset;
+
+		[Parameter(Position = 1, ValueFromPipeline = true,
+			ValueFromPipelineByPropertyName = true,
+			HelpMessage = "partition size (sec)")]
+		property UINT64 capacity;
+
+	public:
+		virtual void InternalProcessRecord() override;
+
+
+	};
+
+
+	[CmdletAttribute(VerbsData::Import, "Trace")]
+	public ref class TraceStatistics : public WLABase
+	{
+	public:
+		TraceStatistics(void);
+		~TraceStatistics(void);
+
+	public:
+		[Parameter(Position = 0, ValueFromPipeline = true,
+			ValueFromPipelineByPropertyName = true, Mandatory = true,
+			HelpMessage = "input object")]
+		property PSObject^ input_obj;
+
+	public:
+		virtual void BeginProcessing()	override;
+		virtual void EndProcessing()	override;
+		virtual void InternalProcessRecord() override;
+
+	protected:
+		//std::vector<UINT> * m_read_count;
+		//std::vector<UINT> * m_write_count;
+		UINT* m_read_count;
+		UINT* m_write_count;
+		UINT64 m_cluster_num;
+	};
 
 }

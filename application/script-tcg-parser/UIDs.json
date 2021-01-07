@@ -1,0 +1,86 @@
+{
+    "UIDs": [
+		{ "UID":"00 00 00 00 00 00 00 FF", "Name":"SMUID", 			"class":"invoking" },
+		{ "UID":"00 00 00 00 00 00 FF 02", "Name":"StartSession", 	"class":"method" },
+		{ "UID":"00 00 00 00 00 00 FF 03", "Name":"SyncSession", 	"class":"method" },
+		{ "UID":"00 00 00 09 00 00 00 06", "Name":"SID",			"class":"object;authority" },
+		{ "UID":"00 00 00 09 00 00 00 01", "Name":"Anybody",		"class":"object;authority;invoking" },
+		{ "UID":"00 00 00 09 00 01 00 01", "Name":"Admin1",			"class":"object;authority;invoking" },
+		{ "UID":"00 00 00 0B 00 00 00 01", "Name":"C_PIN.SID",		"class":"object;invoking" },
+		{ "UID":"00 00 00 0B 00 00 84 02", "Name":"C_PIN_MSID",		"class":"object;invoking" },
+		{ "UID":"00 00 02 05 00 00 00 01", "Name":"AdminSP", 		"class":"object;invoking" },
+		{ "UID":"00 00 02 05 00 00 00 02", "Name":"LockingSP",		"class":"object;invoking" },
+		{ "UID":"00 00 08 02 00 00 00 01", "Name":"Locking.Global",	"class":"object;invoking" }
+	],
+	
+	"Methods": [ 
+	{ 
+		"UID":"00 00 00 00 00 00 FF 02", 
+		"Name":"StartSession",
+		"Requested": [ 
+			{ "Number":0,"Name":"HostSessionID", 	"Type":"uinteger"},
+			{ "Number":1,"Name":"SPID", 			"Type":"uidref"},
+			{ "Number":2,"Name":"Write", 			"Type":"boolean"}
+		],
+		"Optional":[
+			{ "Number":0, "Name":"HostChallenge", 	"Type":"bytes"},
+			{ "Number":1, "Name":"HostExchangeAuthority", "Type":"uidref"},
+			{ "Number":2, "Name":"HostExchangeCert", "Type":"bytes"},
+			{ "Number":3, "Name":"HostSigningAuthority", "Type":"uidref"},
+			{ "Number":4, "Name":"HostSigningCert", "Type":"bytes"},
+			{ "Number":5, "Name":"SesstionTimeOut", "Type":"uinteger"},
+			{ "Number":6, "Name":"TransTimeOut", 	"Type":"uinteger"},
+			{ "Number":7, "Name":"InitialCredit", 	"Type":"uinteger"},
+			{ "Number":8, "Name":"SignedHash", 		"Type":"bytes"}
+		],
+		"Return":""
+	},
+	{
+		"UID":"00 00 00 00 00 00 FF 03", 
+		"Name":"SyncSession",
+		"Requested": [ 
+			{ "Number":0,"Name":"HostSessionID", "Type":"uinteger"},
+			{ "Number":1,"Name":"SPSessionID", "Type":"uinteger"}
+		],
+		"Optional":[
+			{ "Number":0, "Name":"SPChallenge", "Type":"bytes"},
+			{ "Number":1, "Name":"SPExchangeCert", "Type":"bytes"},
+			{ "Number":2, "Name":"SPSigningCert", "Type":"bytes"},
+			{ "Number":3, "Name":"TransTimeout", "Type":"uinteger"},
+			{ "Number":4, "Name":"InitialCredit", "Type":"uinteger"},
+			{ "Number":5, "Name":"SignedHash", "Type":"bytes"}
+		],
+		"Return":""
+	},
+	{ 
+		"UID":"00 00 00 06 00 00 00 08", 
+		"Name":"Next",			
+		"Optional": [
+			{ "Number":0, "Name":"Where", "Type":"uidref"},
+			{ "Number":1, "Name":"Count", "Type":"uinteger"}
+		]
+	},
+	{
+		"UID":"00 00 00 06 00 00 00 16", 
+		"Name":"Get",
+		"Requested": [ 
+			{ "Number":0,"Name":"Cellblock", "Type":"cell_block"}
+		],
+		"Return":""
+	},
+	{
+		"UID":"00 00 00 06 00 00 00 17", 
+		"Name":"Set",
+		"Optional": [ 
+			{ "Number":0,"Name":"Where", "Type":"row_address"},
+			{ "Number":1,"Name":"Values", "Type":"typeOr"}
+		],
+		"Return":""
+	},
+	{ 
+		"UID":"00 00 00 06 00 00 02 03", 
+		"Name":"Activate"
+	}
+	
+	]
+}

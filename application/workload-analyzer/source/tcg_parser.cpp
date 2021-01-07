@@ -5,7 +5,7 @@
 namespace prop_tree = boost::property_tree;
 
 
-LOCAL_LOGGER_ENABLE(L"tcg_parser", LOGGER_LEVEL_DEBUGINFO);
+LOCAL_LOGGER_ENABLE(L"tcg_parser", LOGGER_LEVEL_NOTICE);
 //
 //void EndianSubPacket(SUBPACKET& ss)
 //{
@@ -58,16 +58,12 @@ tcg_parser::ComPacket::ComPacket(COM_PACKET* com_packet, size_t src_len)
 	outstanding = endian_reverse(com_packet->outstanding);
 	min_transfer = endian_reverse(com_packet->min_transfer);
 	length = endian_reverse(com_packet->length);
-	if (length + offsetof(COM_PACKET, payload) > src_len)
-		THROW_ERROR(ERR_APP, L"len field (%d) is larger than source size (%zd)", length, src_len);
+	size_t offset = offsetof(COM_PACKET, payload);
+	if (length + offset > src_len)
+		THROW_ERROR(ERR_APP, L"len field (%d) is larger than source size (%zd)", length, src_len-offset);
 
 	PACKET* pp = (PACKET*)((BYTE*)com_packet + 20);
-//	packet = gcnew Packet(&com_packet->packet);
-//	packet = gcnew Packet(pp);
-	packet = gcnew Packet((PACKET*)(com_packet->payload));
-
-//	payload = CopyPayload(&com_packet->packet, length);
-//	payload = CopyPayload(pp, length);
+	packet = gcnew Packet((PACKET*)(com_packet->payload), src_len- offset);
 	payload = CopyPayload(com_packet->payload, length);
 }
 
@@ -89,7 +85,7 @@ tcg_parser::ComPacket::!ComPacket(void)
 	payload = nullptr;
 }
 
-tcg_parser::Packet::Packet(PACKET* pp)
+tcg_parser::Packet::Packet(PACKET* pp, size_t src_len)
 	: payload(nullptr)
 {
 	session = endian_reverse(pp->session);
@@ -97,8 +93,11 @@ tcg_parser::Packet::Packet(PACKET* pp)
 	ack_type = endian_reverse(pp->ack_type);
 	acknowlede = endian_reverse(pp->acknowlede);
 	length = endian_reverse(pp->length);
+	size_t offset = offsetof(PACKET, payload);
+	if (length + offset > src_len) 
+		THROW_ERROR(ERR_APP, L"len field (%d) is larger than source size (%d)", length, src_len-offset);
 
-	sub_packet = gcnew SubPacket((SUBPACKET*)pp->payload);
+	sub_packet = gcnew SubPacket((SUBPACKET*)pp->payload, src_len - offset);
 	payload = CopyPayload(pp->payload, length);
 }
 
@@ -116,11 +115,14 @@ tcg_parser::Packet::!Packet(void)
 	payload = nullptr;
 }
 
-tcg_parser::SubPacket::SubPacket(SUBPACKET* sub_packet)
+tcg_parser::SubPacket::SubPacket(SUBPACKET* sub_packet, size_t src_len)
 	: payload(nullptr)
 {
 	kind = endian_reverse(sub_packet->kind);
 	length = endian_reverse(sub_packet->length);
+	size_t offset = offsetof(SUBPACKET, payload);
+	if (length + offset > src_len) 
+		THROW_ERROR(ERR_APP, L"len feild (%d) is larger than source size (%d)", length, src_len - offset);
 	if (kind == 0x8001) credit = sub_packet->credit;
 	else credit = 0;
 	payload = CopyPayload(sub_packet->payload, length);
@@ -149,7 +151,7 @@ tcg_parser::ParseTcgToken::ParseTcgToken(void)
 
 tcg_parser::ParseTcgToken::~ParseTcgToken(void)
 {
-	delete Payload;
+	//delete Payload;
 }
 
 void tcg_parser::ParseTcgToken::InternalProcessRecord()
@@ -157,17 +159,17 @@ void tcg_parser::ParseTcgToken::InternalProcessRecord()
 //	PSObject^ token_list = gcnew PSObject;
 	size_t len = Payload->Length;
 
-	TcgToken^ token = gcnew TcgToken;
-	CTcgTokenBase* top = token->GetToken();
+//	TcgToken^ token = gcnew TcgToken;
+//	CTcgTokenBase* top = token->GetToken();
 
-//	ListToken* top = new ListToken(CTcgTokenBase::TopToken);
 	BYTE* buf = Payload->LockData();
 	BYTE* ptr = buf;
 	BYTE* end_buf = buf + len;
-	top->ParseToken(ptr, end_buf);
+//	top->ParseToken(ptr, end_buf);
+	LOG_DEBUG(L"receive = %d", receive);
+	CTcgTokenBase* tt = CTcgTokenBase::SyntaxParse(ptr, end_buf, buf, /*receive.ToBool()*/ receive);
 	Payload->Unlock();
-//	top->Print(stdout, 0);
-//	delete top;
+	TcgToken^ token = gcnew TcgToken(tt);
 	WriteObject(token);
 }
 

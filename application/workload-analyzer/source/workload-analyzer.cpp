@@ -7,21 +7,31 @@ using namespace System::Runtime::InteropServices;
 
 LOCAL_LOGGER_ENABLE(L"wla", LOGGER_LEVEL_DEBUGINFO);
 
-
-//void ToStdString(std::wstring & dst, System::String ^ src)
-//{
-//	if (!System::String::IsNullOrEmpty(src))
-//	{
-//		const wchar_t * wstr = (const wchar_t*)(Marshal::StringToHGlobalUni(src)).ToPointer();
-//		dst = wstr;
-//		Marshal::FreeHGlobal(IntPtr((void*)wstr));
-//	}
-//}
-
 GlobalInit global;
 GlobalInit::GlobalInit(void) 
 	: m_fn_mapping(nullptr), m_lba_mapping(nullptr), m_fid_map(nullptr)
 {
+	// for test
+	wchar_t dllpath[MAX_PATH] = { 0 };
+#ifdef _DEBUG
+	GetCurrentDirectory(MAX_PATH, dllpath);
+//	wprintf_s(L"current path=%s\n", dllpath);
+	memset(dllpath, 0, sizeof(wchar_t) * MAX_PATH);
+#endif
+	// 获取DLL路径
+	MEMORY_BASIC_INFORMATION mbi;
+	static int dummy;
+	VirtualQuery(&dummy, &mbi, sizeof(mbi));
+	HMODULE this_dll = reinterpret_cast<HMODULE>(mbi.AllocationBase);
+	::GetModuleFileName(this_dll, dllpath, MAX_PATH);
+	// Load log config
+	std::wstring fullpath, fn;
+	jcvos::ParseFileName(dllpath, fullpath, fn);
+#ifdef _DEBUG
+//	wprintf_s(L"module path=%s\n", fullpath.c_str());
+#endif
+	LOGGER_CONFIG(L"wla.cfg", fullpath.c_str());
+	LOG_DEBUG(L"log config...");
 }
 
 GlobalInit::~GlobalInit(void)
@@ -313,4 +323,96 @@ void WLA::MarkEvent::InternalProcessRecord()
 	PSNoteProperty ^ lba_item = gcnew PSNoteProperty(L"lba", lba);
 	input_obj->Members->Add(lba_item);
 	WriteObject(input_obj);
+}
+
+/// ///////////////////////////////////////////////////////////////////////////
+
+
+
+WLA::TraceStatistics::TraceStatistics(void)
+	: m_read_count(NULL), m_write_count(NULL)
+{
+	//m_read_count = new std::vector<UINT>;
+	//m_write_count = new std::vector<UINT>;
+}
+
+WLA::TraceStatistics::~TraceStatistics(void)
+{
+	delete[] m_read_count;
+	delete[] m_write_count;
+}
+
+void WLA::TraceStatistics::BeginProcessing()
+{
+	UINT64 secs = global.GetDiskCapacity();
+	m_cluster_num = (secs - 1) / 8 + 1;
+	LOG_DEBUG(L"start counting, cluster number = %d", m_cluster_num);
+
+	m_read_count = new UINT[m_cluster_num];
+	memset(m_read_count, 0, sizeof(UINT) * m_cluster_num);
+	m_write_count = new UINT[m_cluster_num];
+	memset(m_write_count, 0, sizeof(UINT) * m_cluster_num);
+}
+
+void WLA::TraceStatistics::EndProcessing()
+{
+	LOG_DEBUG(L"start saving counting");
+	size_t lines = 0;
+	for (UINT64 cc = 0; cc < m_cluster_num; ++cc)
+	{
+		if (m_read_count[cc] == 0 && m_write_count[cc] == 0) continue;
+		PSNoteProperty^ cluster = gcnew PSNoteProperty(L"cluster", cc);
+		PSNoteProperty^ read_count = gcnew PSNoteProperty(L"read_count", m_read_count[cc]);
+		PSNoteProperty^ write_count = gcnew PSNoteProperty(L"write_count", m_write_count[cc]);
+		PSObject^ obj = gcnew PSObject;
+		obj->Members->Add(cluster);
+		obj->Members->Add(read_count);
+		obj->Members->Add(write_count);
+		WriteObject(obj);
+		lines++;
+	}
+	LOG_DEBUG(L"completed saving. total lines=%d", lines);
+
+	delete[] m_read_count;
+	m_read_count = NULL;
+	delete[] m_write_count;
+	m_write_count = NULL;
+}
+
+void WLA::TraceStatistics::InternalProcessRecord()
+{
+	String^ cmd = input_obj->Members[L"cmd"]->Value->ToString();
+	if (cmd != L"Write" && cmd != L"Read") return;
+//	uint64_t cluster = Convert::ToUInt64(input_obj->Members[L"cluster"]->Value);
+	uint64_t lba = Convert::ToUInt64(input_obj->Members[L"lba"]->Value);
+	uint64_t secs = Convert::ToUInt64(input_obj->Members[L"secs"]->Value);
+
+	uint64_t start_cluster = lba / 8;
+	uint64_t end_lba = lba + secs;
+	uint64_t end_cluster = (end_lba - 1) / 8 + 1;
+	if (end_cluster > m_cluster_num)
+	{
+		String^ str = String::Format(L"start lba ({0}) secs ({1}) is over range (cluster={2})", lba, secs, m_cluster_num);
+		throw gcnew	System::ApplicationException(str);
+	}
+
+	//for (; start_cluster < end_cluster; )
+	//{
+
+	//}
+
+	if (cmd == L"Write")
+	{
+		for (; start_cluster < end_cluster; start_cluster ++)	m_write_count[start_cluster] ++;
+	}
+		
+	else if (cmd == L"Read")
+	{
+		for (; start_cluster < end_cluster; start_cluster ++)	m_read_count[start_cluster] ++;
+	}
+}
+
+void WLA::SetDiskInfo::InternalProcessRecord()
+{
+	global.SetDiskInfo(offset, capacity);
 }
