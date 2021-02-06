@@ -90,7 +90,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -108,6 +108,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\jccmdlet-comm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
@@ -120,6 +121,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\jccmdlet-comm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
@@ -131,6 +133,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\jccmdlet-comm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
@@ -142,19 +145,18 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\jccmdlet-comm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\jcbuffer.h" />
-    <ClInclude Include="include\utility.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="source\pch.h" />
-    <ClInclude Include="source\tcg_token.h" />
+    <ClInclude Include="source\ssd-simulator.h" />
+    <ClInclude Include="source\trace-statistic.h" />
     <ClInclude Include="source\workload-analyzer.h" />
-    <ClInclude Include="source\tcg_parser.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc" />
@@ -164,6 +166,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Management" />
     <Reference Include="System.Management.Automation">
@@ -174,14 +177,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\AssemblyInfo.cpp" />
-    <ClCompile Include="source\jcbuffer.cpp" />
     <ClCompile Include="source\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="source\tcg_parser.cpp" />
-    <ClCompile Include="source\tcg_token.cpp" />
-    <ClCompile Include="source\utility.cpp" />
+    <ClCompile Include="source\ssd-simulator.cpp" />
+    <ClCompile Include="source\trace-statistic.cpp" />
     <ClCompile Include="source\workload-analyzer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\jccmdlet\jccmdlet.vcxproj">
+      <Project>{103af91b-360e-49c1-b502-2a10c4f59b41}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

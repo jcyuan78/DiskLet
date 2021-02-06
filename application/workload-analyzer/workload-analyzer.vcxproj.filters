@@ -24,16 +24,10 @@
     <ClInclude Include="source\workload-analyzer.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="include\jcbuffer.h">
+    <ClInclude Include="source\ssd-simulator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="include\utility.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="source\tcg_parser.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="source\tcg_token.h">
+    <ClInclude Include="source\trace-statistic.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -57,16 +51,10 @@
     <ClCompile Include="source\workload-analyzer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="source\jcbuffer.cpp">
+    <ClCompile Include="source\ssd-simulator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="source\utility.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="source\tcg_parser.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="source\tcg_token.cpp">
+    <ClCompile Include="source\trace-statistic.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

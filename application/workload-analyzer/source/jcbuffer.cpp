@@ -284,3 +284,24 @@ void JcCmdLet::CompareBinary::InternalProcessRecord()
 	ibuf2->Unlock(buf2);
 	WriteObject(ir);
 }
+
+
+void JcCmdLet::JcCmdletBase::ProcessRecord()
+{
+	try
+	{
+		InternalProcessRecord();
+	}
+	catch (std::exception & err)
+	{
+		std::wstring err_msg;
+		jcvos::Utf8ToUnicode(err_msg, err.what());
+		LOG_ERROR(L"[err] %s", err_msg.c_str());
+//				System::String ^ msg = gcnew System::String(err.what());
+		System::Exception ^ exp = gcnew PipelineStoppedException( System::String::Format(L"[err] {0}", 
+			gcnew System::String(err_msg.c_str())) );
+		ErrorRecord ^er = gcnew	ErrorRecord(exp, L"stderr", ErrorCategory::FromStdErr, this);
+		WriteError(er);
+	}
+//			ShowPipeMessage();
+}

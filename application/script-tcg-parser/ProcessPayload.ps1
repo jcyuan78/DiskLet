@@ -19,5 +19,17 @@ foreach ($file in $files)
 {
     write-debug "processing file $($file.FullName)"
     $data= .\ConvertTextToBinary.ps1 $file.FullName;
-    $data | Export-Binary "$tar\binary\$($file.Name).bin"
+
+    if ($file.Name -match "cmd-(\d+)-.*")
+    {
+        $no=$matches[1];
+        $fn = "cmd-$no.bin"
+    }
+    else {
+        $fn = "$($file.Name).bin"
+    }
+
+    $data | Export-Binary "$tar\binary\$fn"
 }
+
+.\pre-process-list.ps1 $tar

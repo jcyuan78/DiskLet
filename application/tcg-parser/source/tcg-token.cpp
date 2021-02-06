@@ -623,66 +623,54 @@ bool CUidMap::Load(const std::wstring& fn)
 	std::string str_fn;
 	jcvos::UnicodeToUtf8(str_fn, fn);
 
-//	try
-//	{
-		boost::property_tree::wptree root_pt;
-		boost::property_tree::read_json(str_fn, root_pt);
-		// Load UIDs
-		boost::property_tree::wptree& uids_pt = root_pt.get_child(L"UIDs");
-		auto end_it = uids_pt.end();
-		for (auto it = uids_pt.begin(); it != end_it; ++it)
+	boost::property_tree::wptree root_pt;
+	boost::property_tree::read_json(str_fn, root_pt);
+	// Load UIDs
+	boost::property_tree::wptree& uids_pt = root_pt.get_child(L"UIDs");
+	auto end_it = uids_pt.end();
+	for (auto it = uids_pt.begin(); it != end_it; ++it)
+	{
+		UID_INFO uinfo;
+		std::wstring& str_uid = (*it).second.get<std::wstring>(L"UID");
+		uinfo.m_uid = StringToUid(str_uid);
+		uinfo.m_name = (*it).second.get<std::wstring>(L"Name");
+		std::wstring& str_class = (*it).second.get<std::wstring>(L"class");
+		uinfo.m_class = StringToClass(str_class);
+		uinfo.m_method = nullptr;
+		m_map.insert(std::make_pair(uinfo.m_uid, uinfo));
+	}
+
+	// Load method defines
+	boost::property_tree::wptree& methods_pt = root_pt.get_child(L"Methods");
+	end_it = methods_pt.end();
+	for (auto it = methods_pt.begin(); it != end_it; ++it)
+	{
+		boost::property_tree::wptree& pt = (*it).second;
+		UINT64 uid = StringToUid(pt.get<std::wstring>(L"UID"));
+		METHOD_INFO* method = new METHOD_INFO;
+		UID_INFO* uidinfo = GetUidInfo(uid);
+		if (uidinfo)
 		{
-			UID_INFO uinfo;
-			std::wstring& str_uid = (*it).second.get<std::wstring>(L"UID");
-			uinfo.m_uid = StringToUid(str_uid);
-			uinfo.m_name = (*it).second.get<std::wstring>(L"Name");
-			std::wstring& str_class = (*it).second.get<std::wstring>(L"class");
-			uinfo.m_class = StringToClass(str_class);
-			uinfo.m_method = nullptr;
-			m_map.insert(std::make_pair(uinfo.m_uid, uinfo));
+			uidinfo->m_method = method;
+		}
+		//		if (uidinfo == nullptr)
+		else
+		{
+			UID_INFO _uidinfo;
+			LOG_NOTICE(L"add new uid=%016llX, ", uid);
+			_uidinfo.m_uid = uid;
+			_uidinfo.m_name = pt.get<std::wstring>(L"Name");
+			_uidinfo.m_class = UID_INFO::Method;
+			_uidinfo.m_method = method;
+			m_map.insert(std::make_pair(uid, _uidinfo));
 		}
 
-		// Load method defines
-		boost::property_tree::wptree& methods_pt = root_pt.get_child(L"Methods");
-		end_it = methods_pt.end();
-		for (auto it = methods_pt.begin(); it != end_it; ++it)
-		{
-			boost::property_tree::wptree& pt = (*it).second;
-			UINT64 uid = StringToUid(pt.get<std::wstring>(L"UID"));
-			METHOD_INFO* method = new METHOD_INFO;
-			UID_INFO* uidinfo = GetUidInfo(uid);
-			if (uidinfo)
-			{
-				uidinfo->m_method = method;
-			}
-			//		if (uidinfo == nullptr)
-			else
-			{
-				UID_INFO _uidinfo;
-				LOG_NOTICE(L"add new uid=%016llX, ", uid);
-				_uidinfo.m_uid = uid;
-				_uidinfo.m_name = pt.get<std::wstring>(L"Name");
-				_uidinfo.m_class = UID_INFO::Method;
-				_uidinfo.m_method = method;
-				m_map.insert(std::make_pair(uid, _uidinfo));
-			}
-			//			THROW_ERROR(ERR_APP, L"method %016llX is not defined", uid);
-			//		method = new METHOD_INFO;
-			method->m_id = uid;
-
-			//		boost::property_tree::wptree& request_pt = pt.get_child(L"Requested");
-			auto req_param = pt.get_child_optional(L"Requested");
-			if (req_param) LoadParameter((*req_param), method->m_required_param);
-			auto opt_param = pt.get_child_optional(L"Optional");
-			if (opt_param)	LoadParameter((*opt_param), method->m_option_param);
-		}
-	//}
-	//catch (std::exception& err)
-	//{
-	//	std::wstring err_msg;
-	//	jcvos::Utf8ToUnicode(err_msg, err.what());
-	//	LOG_ERROR(L"[err] failed on parsing json %s", err_msg.c_str());
-	//}
+		method->m_id = uid;
+		auto req_param = pt.get_child_optional(L"Requested");
+		if (req_param) LoadParameter((*req_param), method->m_required_param);
+		auto opt_param = pt.get_child_optional(L"Optional");
+		if (opt_param)	LoadParameter((*opt_param), method->m_option_param);
+	}
 
 	return true;
 }

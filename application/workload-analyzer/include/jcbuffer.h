@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../include/utility.h"
+//#include "../include/utility.h"
+
 
 using namespace System::Management::Automation;
 #include <boost/cast.hpp>
@@ -18,21 +19,7 @@ namespace JcCmdLet
 //		void ShowPipeMessage(void);
 
 	protected:
-		virtual void ProcessRecord() override
-		{
-			try
-			{
-				InternalProcessRecord();
-			}
-			catch (std::exception & err)
-			{
-				System::String ^ msg = gcnew System::String(err.what());
-				System::Exception ^ exp = gcnew PipelineStoppedException(msg);
-				ErrorRecord ^er = gcnew	ErrorRecord(exp, L"stderr", ErrorCategory::FromStdErr, this);
-				WriteError(er);
-			}
-//			ShowPipeMessage();
-		}
+		virtual void ProcessRecord() override;
 	};
 
 	//-----------------------------------------------------------------------------

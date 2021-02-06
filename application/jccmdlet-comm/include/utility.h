@@ -1,6 +1,23 @@
 #pragma once
 
 using namespace System;
+using namespace System::Management::Automation;
+
+template <typename T>
+void AddPropertyMember(PSObject^ list, String^ name, T^ val)
+{
+	PSNoteProperty^ item = gcnew PSNoteProperty(name, val);
+	list->Members->Add(item);
+}
+
+template <typename T1, typename T2>
+void AddPropertyMember(PSObject^ list, String^ name, const T2& val)
+{
+	PSNoteProperty^ item = gcnew PSNoteProperty(name, gcnew T1(val));
+	list->Members->Add(item);
+}
+
+
 
 
 inline void ToStdString(std::wstring & dst, System::String ^ src)

@@ -44,6 +44,7 @@ public:
 		START_NAME = 0xF2, END_NAME = 0xF3,
 		END_OF_DATA = 0xF9, END_OF_SESSION = 0xFA,
 		TOKEN_CALL = 0xF8,
+		EMPTY_TOKEN = 0xFF,
 	};
 
 public:
@@ -126,7 +127,11 @@ public:
 class CStatePhrase : public CTcgTokenBase
 {
 public:
-	CStatePhrase(void) : CTcgTokenBase(CTcgTokenBase::List), m_s0(0), m_s1(0), m_s2(0) {};
+	CStatePhrase(void) : CTcgTokenBase(CTcgTokenBase::List) 
+	{
+		memset(m_empty, 0, sizeof(UINT) * 3); 
+		memset(m_state, 0, sizeof(UINT) * 3); 
+	};
 	~CStatePhrase(void) {};
 
 public:
@@ -134,7 +139,8 @@ public:
 	virtual void Print(FILE* ff, int indentation);
 
 protected:
-	UINT m_s0, m_s1, m_s2;
+	UINT m_empty[3];
+	UINT m_state[3];
 };
 
 

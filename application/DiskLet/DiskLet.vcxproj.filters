@@ -39,9 +39,6 @@
     <ClCompile Include="source\storage_device.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="source\utility.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\DiskLet.h">
@@ -63,9 +60,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="include\storage_device.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="include\utility.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="source\pch.h">

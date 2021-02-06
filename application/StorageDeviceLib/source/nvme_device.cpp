@@ -4,7 +4,7 @@
 #include <ntddscsi.h>
 #include <boost/cast.hpp>
 #include <boost/algorithm/string.hpp>
-#define _NVME 1
+#define _NVME 0
 //#include "../include/utility.h"
 //#include <nvme.h>
 

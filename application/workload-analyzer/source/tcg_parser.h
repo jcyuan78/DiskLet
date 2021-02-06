@@ -44,6 +44,10 @@ public:
 	BYTE payload[1];
 };
 
+
+
+
+
 bool AnalyzeTcgProtocol(CTcgTokenBase* tt);
 
 
@@ -96,6 +100,8 @@ namespace tcg_parser
 		JcCmdLet::BinaryType^ payload;
 		Packet^ packet;
 	};
+
+
 
 	[CmdletAttribute(VerbsData::ConvertFrom, "TcgPayload")]
 	public ref class ConvertTcgPayload : public JcCmdLet::JcCmdletBase

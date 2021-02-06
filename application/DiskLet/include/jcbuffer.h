@@ -52,7 +52,6 @@ namespace JcCmdLet
 		[ValidateNotNullOrEmpty]
 		property BinaryType ^ data;
 
-
 	protected:
 		virtual void ProcessRecord() override;
 	};

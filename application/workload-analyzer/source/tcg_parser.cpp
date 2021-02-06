@@ -1,6 +1,8 @@
 ﻿#include "pch.h"
 
 #include "tcg_parser.h"
+#include "l0discovery.h"
+#include <boost/cast.hpp>
 #include <boost/property_tree/json_parser.hpp>
 namespace prop_tree = boost::property_tree;
 
@@ -21,18 +23,31 @@ LOCAL_LOGGER_ENABLE(L"tcg_parser", LOGGER_LEVEL_NOTICE);
 void tcg_parser::ConvertTcgPayload::InternalProcessRecord()
 {
 	BYTE protocol = 1;
+	WORD comid = 0;
 	if (CDW10 != 0xFFFFFFFF)
 	{
-		protocol = CDW10 >> 24;
+		protocol = boost::numeric_cast<BYTE>(CDW10 >> 24);
+		comid = boost::numeric_cast<WORD>((CDW10 & 0xFFFFFF) >> 8);
 	}
 
 	if (protocol == 1)
 	{
 		jcvos::auto_interface<jcvos::IBinaryBuffer> bb;
 		Payload->GetData(bb);
-		COM_PACKET* pp = reinterpret_cast<COM_PACKET*>(bb->Lock());
-		ComPacket^ com_packet = gcnew ComPacket(pp, Payload->Length);
-		WriteObject(com_packet);
+		BYTE* buf = bb->Lock();
+		if (comid == 1 && receive)
+		{
+//			L0DISCOVERY_HEADER* hh = reinterpret_cast<L0DISCOVERY_HEADER*>(buf);
+			L0Discovery^ l0discovery = gcnew L0Discovery(buf, bb->GetSize());
+			WriteObject(l0discovery);
+		}
+		else
+		{
+			COM_PACKET* pp = reinterpret_cast<COM_PACKET*>(buf);
+			ComPacket^ com_packet = gcnew ComPacket(pp, Payload->Length);
+			WriteObject(static_cast<System::Object^>(com_packet) );
+		}
+		bb->Unlock(buf);
 	}
 	else
 	{

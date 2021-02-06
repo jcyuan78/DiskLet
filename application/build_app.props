@@ -6,6 +6,10 @@
     <OutDir>$(BUILD_DIR)\app\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(BUILD_DIR)\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
-  <ItemDefinitionGroup />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(WORKSPACE)\application\jccmdlet-comm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

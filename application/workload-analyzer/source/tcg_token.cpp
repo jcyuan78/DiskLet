@@ -177,6 +177,10 @@ bool MidAtomToken::ParseToken(BYTE*& begin, BYTE* end, BYTE * start)
 		m_len = MAKELONG(MAKEWORD(begin[3], begin[2]), begin[1]);
 		begin += 4;
 	}
+	//else if ((token == 0xFF))
+	//{
+
+	//}
 	else
 	{
 		THROW_ERROR(ERR_APP, L"unexpected atom token, token=0x%02X, offset=%d", token, begin - start);
@@ -315,21 +319,32 @@ void NameToken::Print(FILE* ff, int indentation)
 bool CStatePhrase::ParseToken(BYTE*& begin, BYTE* end, BYTE* start)
 {
 	CONSUME_TOKEN(begin, end, start, CTcgTokenBase::START_LIST);
-	MidAtomToken* t1 = MidAtomToken::ParseAtomToken(begin, end, start);
-	if (t1 == nullptr) THROW_ERROR(ERR_APP, L"expected atome. offset=%zd", start);
-	m_s0 = boost::numeric_cast<UINT>(t1->GetValue());
-	delete t1;
 
-	t1 = MidAtomToken::ParseAtomToken(begin, end, start);
-	if (t1 == nullptr) THROW_ERROR(ERR_APP, L"expected atome. offset=%zd", start);
-	m_s1 = boost::numeric_cast<UINT>(t1->GetValue());
-	delete t1;
+	for (int ii = 0; ii < 3; ++ii)
+	{
+		if (*begin == EMPTY_TOKEN)
+		{
+			CONSUME_TOKEN(begin, end, start, CTcgTokenBase::EMPTY_TOKEN);
+			m_empty[ii] = 1;
+		}
+		else
+		{
+			MidAtomToken* t1 = MidAtomToken::ParseAtomToken(begin, end, start);
+			if (t1 == nullptr) THROW_ERROR(ERR_APP, L"expected atome. offset=%zd", start);
+			m_state[ii] = boost::numeric_cast<UINT>(t1->GetValue());
+			delete t1;
+		}
 
-	t1 = MidAtomToken::ParseAtomToken(begin, end, start);
-	if (t1 == nullptr) THROW_ERROR(ERR_APP, L"expected atome. offset=%zd", start);
-	m_s1 = boost::numeric_cast<UINT>(t1->GetValue());
-	delete t1;
+		//t1 = MidAtomToken::ParseAtomToken(begin, end, start);
+		//if (t1 == nullptr) THROW_ERROR(ERR_APP, L"expected atome. offset=%zd", start);
+		//m_s1 = boost::numeric_cast<UINT>(t1->GetValue());
+		//delete t1;
 
+		//t1 = MidAtomToken::ParseAtomToken(begin, end, start);
+		//if (t1 == nullptr) THROW_ERROR(ERR_APP, L"expected atome. offset=%zd", start);
+		//m_s1 = boost::numeric_cast<UINT>(t1->GetValue());
+		//delete t1;
+	}
 	CONSUME_TOKEN(begin, end, start, CTcgTokenBase::END_LIST);
 	return true;
 }
@@ -337,31 +352,38 @@ bool CStatePhrase::ParseToken(BYTE*& begin, BYTE* end, BYTE* start)
 void CStatePhrase::Print(FILE* ff, int indentation)
 {
 	const wchar_t* str_state;
-	switch (m_s0)
+	if (m_empty[0]) str_state = L"<EMPTY>";
+	else
 	{
-	case 0x00: str_state = L"SUCCESS"; break;
-	case 0x01: str_state = L"NOT_AUTHORIZED"; break;
-	case 0x03: str_state = L"SP_BUSY"; break;
-	case 0x04: str_state = L"SP_FAILED"; break;
-	case 0x05: str_state = L"SP_DISABLED"; break;
-	case 0x06: str_state = L"SP_FROZEN"; break;
-	case 0x07: str_state = L"NO_SESSIONS_AVAILABLE"; break;
-	case 0x08: str_state = L"UNIQUENESS_CONFLICT"; break;
-	case 0x09: str_state = L"INSUFFICIENT SPACE"; break;
-	case 0x0A: str_state = L"INSUFFICIENT ROWS"; break;
-	case 0x0C: str_state = L"INVALID_PARAMETER"; break;
-	case 0x0F: str_state = L"TPER_MALFUNCTION"; break;
-	case 0x10: str_state = L"TRANSACTION_FAILURE"; break;
-	case 0x11: str_state = L"PESPONSE_OVERFLOW"; break;
-	case 0x12: str_state = L"AUTHORITY_LOCKED_OUT"; break;
-	case 0x3F: str_state = L"FAIL"; break;
-	
-	case 0x0D: 
-	case 0x0E: 
-	case 0x02: str_state = L"OBSOLETE"; break;
-	default:   str_state = L"Unkonw State Code"; break;
+		switch (m_state[0])
+		{
+		case 0x00: str_state = L"SUCCESS"; break;
+		case 0x01: str_state = L"NOT_AUTHORIZED"; break;
+		case 0x03: str_state = L"SP_BUSY"; break;
+		case 0x04: str_state = L"SP_FAILED"; break;
+		case 0x05: str_state = L"SP_DISABLED"; break;
+		case 0x06: str_state = L"SP_FROZEN"; break;
+		case 0x07: str_state = L"NO_SESSIONS_AVAILABLE"; break;
+		case 0x08: str_state = L"UNIQUENESS_CONFLICT"; break;
+		case 0x09: str_state = L"INSUFFICIENT SPACE"; break;
+		case 0x0A: str_state = L"INSUFFICIENT ROWS"; break;
+		case 0x0C: str_state = L"INVALID_PARAMETER"; break;
+		case 0x0F: str_state = L"TPER_MALFUNCTION"; break;
+		case 0x10: str_state = L"TRANSACTION_FAILURE"; break;
+		case 0x11: str_state = L"PESPONSE_OVERFLOW"; break;
+		case 0x12: str_state = L"AUTHORITY_LOCKED_OUT"; break;
+		case 0x3F: str_state = L"FAIL"; break;
+
+		case 0x0D:
+		case 0x0E:
+		case 0x02: str_state = L"OBSOLETE"; break;
+		default:   str_state = L"Unkonw State Code"; break;
+		}
 	}
-	fwprintf_s(ff, L"STATE=%s(0x%02X), 0x%02X, 0x%02X\n", str_state, m_s0, m_s1, m_s2);
+	fwprintf_s(ff, L"STATE=%s(0x%02X), 0x%02X, 0x%02X\n", str_state, 
+		m_empty[0]?0xFFF:m_state[0], 
+		m_empty[1]?0xFFF:m_state[1], 
+		m_empty[2]?0xFFF:m_state[2]);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -598,59 +620,69 @@ void CUidMap::LoadParameter(boost::property_tree::wptree& param_pt, std::vector<
 
 bool CUidMap::Load(const std::wstring& fn)
 {
-	boost::property_tree::wptree root_pt;
 	std::string str_fn;
 	jcvos::UnicodeToUtf8(str_fn, fn);
-	boost::property_tree::read_json(str_fn, root_pt);
-	// Load UIDs
-	boost::property_tree::wptree& uids_pt = root_pt.get_child(L"UIDs");
-	auto end_it = uids_pt.end();
-	for (auto it = uids_pt.begin(); it != end_it; ++it)
-	{
-		UID_INFO uinfo;
-		std::wstring & str_uid = (*it).second.get<std::wstring>(L"UID");
-		uinfo.m_uid = StringToUid(str_uid);
-		uinfo.m_name = (*it).second.get<std::wstring>(L"Name");
-		std::wstring& str_class = (*it).second.get<std::wstring>(L"class");
-		uinfo.m_class = StringToClass(str_class);
-		uinfo.m_method = nullptr;
-		m_map.insert(std::make_pair(uinfo.m_uid, uinfo));
-	}
 
-	// Load method defines
-	boost::property_tree::wptree& methods_pt = root_pt.get_child(L"Methods");
-	end_it = methods_pt.end();
-	for (auto it = methods_pt.begin(); it != end_it; ++it)
-	{
-		boost::property_tree::wptree& pt = (*it).second;
-		UINT64 uid = StringToUid(pt.get<std::wstring>(L"UID"));
-		METHOD_INFO* method = new METHOD_INFO;
-		UID_INFO* uidinfo = GetUidInfo(uid);
-		if (uidinfo)
+//	try
+//	{
+		boost::property_tree::wptree root_pt;
+		boost::property_tree::read_json(str_fn, root_pt);
+		// Load UIDs
+		boost::property_tree::wptree& uids_pt = root_pt.get_child(L"UIDs");
+		auto end_it = uids_pt.end();
+		for (auto it = uids_pt.begin(); it != end_it; ++it)
 		{
-			uidinfo->m_method = method;
+			UID_INFO uinfo;
+			std::wstring& str_uid = (*it).second.get<std::wstring>(L"UID");
+			uinfo.m_uid = StringToUid(str_uid);
+			uinfo.m_name = (*it).second.get<std::wstring>(L"Name");
+			std::wstring& str_class = (*it).second.get<std::wstring>(L"class");
+			uinfo.m_class = StringToClass(str_class);
+			uinfo.m_method = nullptr;
+			m_map.insert(std::make_pair(uinfo.m_uid, uinfo));
 		}
-//		if (uidinfo == nullptr)
-		else
-		{
-			UID_INFO _uidinfo;
-			LOG_NOTICE(L"add new uid=%016llX, ", uid);
-			_uidinfo.m_uid = uid;
-			_uidinfo.m_name = pt.get<std::wstring>(L"Name");
-			_uidinfo.m_class = UID_INFO::Method;
-			_uidinfo.m_method = method;
-			m_map.insert(std::make_pair(uid, _uidinfo));
-		}
-//			THROW_ERROR(ERR_APP, L"method %016llX is not defined", uid);
-//		method = new METHOD_INFO;
-		method->m_id = uid;
 
-//		boost::property_tree::wptree& request_pt = pt.get_child(L"Requested");
-		auto req_param = pt.get_child_optional(L"Requested");
-		if (req_param) LoadParameter((*req_param), method->m_required_param);
-		auto opt_param = pt.get_child_optional(L"Optional");
-		if (opt_param)	LoadParameter((*opt_param), method->m_option_param);
-	}
+		// Load method defines
+		boost::property_tree::wptree& methods_pt = root_pt.get_child(L"Methods");
+		end_it = methods_pt.end();
+		for (auto it = methods_pt.begin(); it != end_it; ++it)
+		{
+			boost::property_tree::wptree& pt = (*it).second;
+			UINT64 uid = StringToUid(pt.get<std::wstring>(L"UID"));
+			METHOD_INFO* method = new METHOD_INFO;
+			UID_INFO* uidinfo = GetUidInfo(uid);
+			if (uidinfo)
+			{
+				uidinfo->m_method = method;
+			}
+			//		if (uidinfo == nullptr)
+			else
+			{
+				UID_INFO _uidinfo;
+				LOG_NOTICE(L"add new uid=%016llX, ", uid);
+				_uidinfo.m_uid = uid;
+				_uidinfo.m_name = pt.get<std::wstring>(L"Name");
+				_uidinfo.m_class = UID_INFO::Method;
+				_uidinfo.m_method = method;
+				m_map.insert(std::make_pair(uid, _uidinfo));
+			}
+			//			THROW_ERROR(ERR_APP, L"method %016llX is not defined", uid);
+			//		method = new METHOD_INFO;
+			method->m_id = uid;
+
+			//		boost::property_tree::wptree& request_pt = pt.get_child(L"Requested");
+			auto req_param = pt.get_child_optional(L"Requested");
+			if (req_param) LoadParameter((*req_param), method->m_required_param);
+			auto opt_param = pt.get_child_optional(L"Optional");
+			if (opt_param)	LoadParameter((*opt_param), method->m_option_param);
+		}
+	//}
+	//catch (std::exception& err)
+	//{
+	//	std::wstring err_msg;
+	//	jcvos::Utf8ToUnicode(err_msg, err.what());
+	//	LOG_ERROR(L"[err] failed on parsing json %s", err_msg.c_str());
+	//}
 
 	return true;
 }

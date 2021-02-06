@@ -1,15 +1,22 @@
 ﻿#include "pch.h"
 
+LOCAL_LOGGER_ENABLE(L"wla", LOGGER_LEVEL_DEBUGINFO);
+
 #include "workload-analyzer.h"
-#include "../include/utility.h"
+//#include "../include/utility.h"
 #include <boost/cast.hpp>
 using namespace System::Runtime::InteropServices;
 
-LOCAL_LOGGER_ENABLE(L"wla", LOGGER_LEVEL_DEBUGINFO);
+// {DFE09968-2E36-45AD-97C9-AEBB2C10E81D}
+const GUID CAddressRank::m_guid =
+{ 0xdfe09968, 0x2e36, 0x45ad, { 0x97, 0xc9, 0xae, 0xbb, 0x2c, 0x10, 0xe8, 0x1d } };
+
 
 GlobalInit global;
+
 GlobalInit::GlobalInit(void) 
 	: m_fn_mapping(nullptr), m_lba_mapping(nullptr), m_fid_map(nullptr)
+	, m_statistic(nullptr)
 {
 	// for test
 	wchar_t dllpath[MAX_PATH] = { 0 };
@@ -37,12 +44,13 @@ GlobalInit::GlobalInit(void)
 GlobalInit::~GlobalInit(void)
 {
 	ClearMapping();
+	RELEASE(m_statistic);
+	CSingleTonEntry::Unregister();
 }
 
 void GlobalInit::SetMaping(FN_MAP * fn_map, LBA_INFO * lba_map, size_t map_size, uint64_t offset)
 {
 	ClearMapping();
-//	m_fn_mapping = fn_map;		//JCASSERT(m_fn_mapping);
 	m_fn_mapping = new FN_MAP;
 	m_lba_mapping = lba_map;	//JCASSERT(m_lba_mapping);
 	m_map_size = map_size;
@@ -122,21 +130,21 @@ void GlobalInit::ClearMapping(void)
 
 
 
-void WLA::WLABase::ProcessRecord()
-{
-	try
-	{
-		InternalProcessRecord();
-	}
-	catch (std::exception & err)
-	{
-		System::String ^ msg = gcnew System::String(err.what());
-		System::Exception ^ exp = gcnew PipelineStoppedException(msg);
-		ErrorRecord ^er = gcnew	ErrorRecord(exp, L"stderr", ErrorCategory::FromStdErr, this);
-		WriteError(er);
-	}
-//	ShowPipeMessage();
-}
+//void WLA::WLABase::ProcessRecord()
+//{
+//	try
+//	{
+//		InternalProcessRecord();
+//	}
+//	catch (std::exception & err)
+//	{
+//		System::String ^ msg = gcnew System::String(err.what());
+//		System::Exception ^ exp = gcnew PipelineStoppedException(msg);
+//		ErrorRecord ^er = gcnew	ErrorRecord(exp, L"stderr", ErrorCategory::FromStdErr, this);
+//		WriteError(er);
+//	}
+////	ShowPipeMessage();
+//}
 
 
 
@@ -196,8 +204,8 @@ void WLA::SetStaticMapping::InternalProcessRecord()
 		m_cur_file_info->length = 0;
 		global.AddFile(fid, m_cur_file_info);
 	}
-	m_cur_file_info->segments.push_back(SEGMENT(start_cluster, m_cur_file_info->length, cluster_num));
-	m_cur_file_info->length += cluster_num;
+	m_cur_file_info->segments.push_back(SEGMENT(start_cluster, m_cur_file_info->length, boost::numeric_cast<UINT32>(cluster_num) ));
+	m_cur_file_info->length += boost::numeric_cast<UINT32>(cluster_num);
 
 }
 
@@ -212,7 +220,7 @@ void WLA::ProcessTrace::InternalProcessRecord()
 	{
 		fid = finfo->fid;
 		// 如果lba不属于任何文件， 则给出相对c:盘的lba
-		if (fid < 0) file_offset = lba - global.m_first_lba;
+		if (fid < 0) file_offset = boost::numeric_cast<UINT32>(lba - global.m_first_lba);
 		// 如果lba属于某个文件，则给出相对文件的offset
 		else file_offset = finfo->file_offset*8;
 	}
@@ -229,21 +237,6 @@ void WLA::ProcessTrace::InternalProcessRecord()
 	input_obj->Members->Add(fn_item);
 	WriteObject(input_obj);
 }
-//
-//template <typename T>
-//void AddPropertyMember(PSObject ^ list, String ^ name, T ^ val)
-//{
-//	PSNoteProperty ^ item = gcnew PSNoteProperty(name, val);
-//	list->Members->Add(item);
-//}
-//
-//template <typename T1, typename T2>
-//void AddPropertyMember(PSObject ^ list, String ^ name, const T2 & val)
-//{
-//	PSNoteProperty ^ item = gcnew PSNoteProperty(name, gcnew T1(val));
-//	list->Members->Add(item);
-//}
-//
 
 void WLA::AddFileMapping::InternalProcessRecord()
 {
@@ -273,14 +266,14 @@ void WLA::AddFileMapping::InternalProcessRecord()
 		// 这一段拥有的cluster数量
 		uint64_t clusters = System::Convert::ToUInt64(ss->Members[L"secs"]->Value) / 8;
 
-		file_info->segments.push_back(SEGMENT(start, file_info->length, clusters));
+		file_info->segments.push_back(SEGMENT(start, file_info->length, boost::numeric_cast<UINT32>(clusters) ));
 		//wprintf_s(L"segment: file offset = %d/offset=%lld, cluster num = %lld, start lba=%lld\n", file_info->length, offset, start, clusters);
 		file_info->length += boost::numeric_cast<uint32_t>(clusters);
 
 		for (uint32_t jj = 0; jj < clusters; ++jj)
 		{
 			lba_mapping[start + jj].fid = fid;
-			lba_mapping[start + jj].file_offset = offset;
+			lba_mapping[start + jj].file_offset = boost::numeric_cast<UINT32>(offset);
 			offset++;
 		}
 	}
@@ -352,24 +345,46 @@ void WLA::TraceStatistics::BeginProcessing()
 	memset(m_read_count, 0, sizeof(UINT) * m_cluster_num);
 	m_write_count = new UINT[m_cluster_num];
 	memset(m_write_count, 0, sizeof(UINT) * m_cluster_num);
+	m_cmd_num = 0;
 }
 
 void WLA::TraceStatistics::EndProcessing()
 {
 	LOG_DEBUG(L"start saving counting");
+	wprintf_s(L"cluster num=%lld, command num=%lld\n", m_cluster_num, m_cmd_num);
+
+	CAddressRank* rank = CAddressRankInstance::Instance();
+	if (rank == nullptr) throw gcnew System::ApplicationException(L"address rank object is null");
+	//CAddressRank::VALUE_TYPE vtype = rank->GetValueType();
+
 	size_t lines = 0;
-	for (UINT64 cc = 0; cc < m_cluster_num; ++cc)
+	for (UINT cc = 0; cc < m_cluster_num; ++cc)
 	{
 		if (m_read_count[cc] == 0 && m_write_count[cc] == 0) continue;
-		PSNoteProperty^ cluster = gcnew PSNoteProperty(L"cluster", cc);
-		PSNoteProperty^ read_count = gcnew PSNoteProperty(L"read_count", m_read_count[cc]);
-		PSNoteProperty^ write_count = gcnew PSNoteProperty(L"write_count", m_write_count[cc]);
+		//PSNoteProperty^ cluster = gcnew PSNoteProperty(L"cluster", cc);
+		//PSNoteProperty^ read_count = gcnew PSNoteProperty(L"read_count", m_read_count[cc]);
+		//PSNoteProperty^ write_count = gcnew PSNoteProperty(L"write_count", m_write_count[cc]);
+
 		PSObject^ obj = gcnew PSObject;
-		obj->Members->Add(cluster);
-		obj->Members->Add(read_count);
-		obj->Members->Add(write_count);
+		AddPropertyMember<UINT64>(obj, L"cluster", cc);
+		AddPropertyMember<UINT64>(obj, L"read_count", m_read_count[cc]);
+		AddPropertyMember<UINT64>(obj, L"write_count", m_write_count[cc]);
+//		AddPropertyMember<UINT64>(obj, L"access_count", add.access_count);
+
+		//obj->Members->Add(cluster);
+		//obj->Members->Add(read_count);
+		//obj->Members->Add(write_count);
 		WriteObject(obj);
 		lines++;
+
+		//switch (vtype)
+		//{
+		//case CAddressRank::VALUE_READ_COUNT:	rank->AddAddress(cc, m_read_count[cc]); break;
+		//case CAddressRank::VALUE_WRITE_COUNT:	rank->AddAddress(cc, m_write_count[cc]); break;
+		//case CAddressRank::VALUE_ACCESS_COUNT:	rank->AddAddress(cc, m_read_count[cc] + m_write_count[cc]); break;
+		//}
+		rank->AddAddress(cc, m_read_count[cc], m_write_count[cc]);
+
 	}
 	LOG_DEBUG(L"completed saving. total lines=%d", lines);
 
@@ -396,23 +411,60 @@ void WLA::TraceStatistics::InternalProcessRecord()
 		throw gcnew	System::ApplicationException(str);
 	}
 
-	//for (; start_cluster < end_cluster; )
-	//{
+	for (; start_cluster < end_cluster; start_cluster++)
+	{
+		if (cmd == L"Write")		m_write_count[start_cluster] ++;
+		else if (cmd == L"Read")	m_read_count[start_cluster] ++;
+		m_cmd_num++;
+	}
 
+
+	//if (cmd == L"Write")
+	//{
+	//	for (; start_cluster < end_cluster; start_cluster ++)	m_write_count[start_cluster] ++;
+	//}
+	//	
+	//else if (cmd == L"Read")
+	//{
+	//	for (; start_cluster < end_cluster; start_cluster ++)	m_read_count[start_cluster] ++;
 	//}
 
-	if (cmd == L"Write")
-	{
-		for (; start_cluster < end_cluster; start_cluster ++)	m_write_count[start_cluster] ++;
-	}
-		
-	else if (cmd == L"Read")
-	{
-		for (; start_cluster < end_cluster; start_cluster ++)	m_read_count[start_cluster] ++;
-	}
 }
 
 void WLA::SetDiskInfo::InternalProcessRecord()
 {
 	global.SetDiskInfo(offset, capacity);
+}
+
+
+void WLA::TraceInterval::BeginProcessing()
+{
+	UINT64 secs = global.GetDiskCapacity();
+	m_cluster_num = (secs - 1) / 8 + 1;
+	LOG_DEBUG(L"start counting, cluster number = %d", m_cluster_num);
+
+	m_read_timestamp = new UINT[m_cluster_num];
+	memset(m_read_timestamp, 0, sizeof(UINT) * m_cluster_num);
+	m_write_timestamp = new UINT[m_cluster_num];
+	memset(m_write_timestamp, 0, sizeof(UINT) * m_cluster_num);
+	m_cmd_id = 0;
+
+//	m_show_first = !(ignore_first.ToBool());
+	m_show_first = false;
+}
+
+
+void WLA::TraceIntervalTime::BeginProcessing()
+{
+	UINT64 secs = global.GetDiskCapacity();
+	m_cluster_num = (secs - 1) / 8 + 1;
+	LOG_DEBUG(L"start counting, cluster number = %d", m_cluster_num);
+
+	m_read_timestamp = new double[m_cluster_num];
+	memset(m_read_timestamp, 0, sizeof(UINT) * m_cluster_num);
+	m_write_timestamp = new double[m_cluster_num];
+	memset(m_write_timestamp, 0, sizeof(UINT) * m_cluster_num);
+
+//	m_show_first = !(ignore_first.ToBool());
+	m_show_first = false;
 }
