@@ -111,7 +111,7 @@
       <AdditionalIncludeDirectories>..\jccmdlet-comm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies />
+      <AdditionalDependencies>user32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">
@@ -148,12 +148,13 @@
       <AdditionalIncludeDirectories>..\jccmdlet-comm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies />
+      <AdditionalDependencies>user32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Resource.h" />
     <ClInclude Include="source\pch.h" />
+    <ClInclude Include="source\windows-automation.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc" />
@@ -177,6 +178,7 @@
     <ClCompile Include="source\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="source\windows-automation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\jccmdlet\jccmdlet.vcxproj">

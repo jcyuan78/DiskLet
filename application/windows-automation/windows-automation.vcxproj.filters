@@ -21,6 +21,9 @@
     <ClInclude Include="source\pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="source\windows-automation.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc">
@@ -37,6 +40,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\pch.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\windows-automation.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
