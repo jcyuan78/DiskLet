@@ -128,26 +128,6 @@ void GlobalInit::ClearMapping(void)
 	delete[] m_lba_mapping;
 }
 
-
-
-//void WLA::WLABase::ProcessRecord()
-//{
-//	try
-//	{
-//		InternalProcessRecord();
-//	}
-//	catch (std::exception & err)
-//	{
-//		System::String ^ msg = gcnew System::String(err.what());
-//		System::Exception ^ exp = gcnew PipelineStoppedException(msg);
-//		ErrorRecord ^er = gcnew	ErrorRecord(exp, L"stderr", ErrorCategory::FromStdErr, this);
-//		WriteError(er);
-//	}
-////	ShowPipeMessage();
-//}
-
-
-
 WLA::SetStaticMapping::SetStaticMapping(void) : /*m_fn_mapping(nullptr), */m_lba_mapping(nullptr)
 {
 }
@@ -417,25 +397,7 @@ void WLA::TraceStatistics::InternalProcessRecord()
 		else if (cmd == L"Read")	m_read_count[start_cluster] ++;
 		m_cmd_num++;
 	}
-
-
-	//if (cmd == L"Write")
-	//{
-	//	for (; start_cluster < end_cluster; start_cluster ++)	m_write_count[start_cluster] ++;
-	//}
-	//	
-	//else if (cmd == L"Read")
-	//{
-	//	for (; start_cluster < end_cluster; start_cluster ++)	m_read_count[start_cluster] ++;
-	//}
-
 }
-
-void WLA::SetDiskInfo::InternalProcessRecord()
-{
-	global.SetDiskInfo(offset, capacity);
-}
-
 
 void WLA::TraceInterval::BeginProcessing()
 {

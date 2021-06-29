@@ -1,0 +1,41 @@
+
+1. Dependency
+	- Windows 10 x64
+	- Powershell x64
+	- Visual C++ redistributable
+	https://support.microsoft.com/en-us/topic/the-latest-supported-visual-c-downloads-2647da03-1eea-4433-9aff-95f26a218cc0
+
+2. Preparing data
+	- We suppose your data forlder is <tar>
+	- Take trace by PCIe analyzer (we suggest to use LeCory)
+	- Convert the trace to csv and saved as <tar>\list.csv
+	- export the payload for all security receive/send commands
+		* LeCory export payload in text.
+		* format: 1 byte each column, 16 columns. need offset
+		* file name: <tar>\cmd-<xx>, the <xx> is the NVMe command id in the trace
+
+3. Enviroment preparing
+	- Start Powershell x64
+	
+	- Invoke below command to enable running scrip (only once)
+	>  Set-ExecutionPolicy Unrestricted
+	
+	- Enter the tool folder (tcg-parser) 
+	> cd tcg-parser
+	
+	- invoke the following commands in Powershell
+	> Import-module tcg-parser.dll
+	> Import-module jccmdlet.dll
+	> import-uids $pwd\uids.json	
+	
+4. parsing
+	- invoke the following command to preprocess data (once for each trace): <tat> is your data folder name
+	> .\ProcessPlyload.ps1 <tar>
+	
+	- invoke the following command to parse data, the parsing result will show on the screen. You can select and copy it to text file.
+	> .\Process-tcg.ps1 <tar>
+	
+	
+	
+	
+	

@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClInclude Include="Resource.h" />
     <ClInclude Include="source\pch.h" />
+    <ClInclude Include="source\pcmark10_trace.h" />
     <ClInclude Include="source\ssd-simulator.h" />
     <ClInclude Include="source\trace-statistic.h" />
     <ClInclude Include="source\workload-analyzer.h" />
@@ -180,6 +181,7 @@
     <ClCompile Include="source\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="source\pcmark10_trace.cpp" />
     <ClCompile Include="source\ssd-simulator.cpp" />
     <ClCompile Include="source\trace-statistic.cpp" />
     <ClCompile Include="source\workload-analyzer.cpp" />

@@ -10,6 +10,7 @@
 #include <jccmdlet-comm.h>
 
 #include <boost/cast.hpp>
+#include <boost/functional/hash.hpp>
 
 
 #pragma make_public(ITraceStatistic)
@@ -275,8 +276,31 @@ namespace WLA {
 		property UINT64 capacity;
 
 	public:
-		virtual void InternalProcessRecord() override;
+		virtual void InternalProcessRecord() override
+		{
+			global.SetDiskInfo(offset, capacity);
+		}
 	};
+
+	[CmdletAttribute(VerbsCommon::Get, "DiskInfo")]
+	public ref class GetDiskInfo : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		GetDiskInfo(void) { };
+		~GetDiskInfo(void) {};
+
+	public:
+
+	public:
+		virtual void InternalProcessRecord() override
+		{
+			UINT64 capacity = global.GetDiskCapacity();
+			PSObject^ obj = gcnew PSObject;
+			AddPropertyMember<UINT64>(obj, L"capacity", capacity);
+			WriteObject(obj);
+		}
+	};
+
 
 	[CmdletAttribute(VerbsData::Initialize, "AddressRank")]
 	public ref class InitAddressRank : public JcCmdLet::JcCmdletBase
@@ -301,6 +325,8 @@ namespace WLA {
 			rank->InitialRank(rank_size);
 		}
 	};
+
+
 
 
 	[CmdletAttribute(VerbsCommon::Get, "AddressRank")]
@@ -353,8 +379,6 @@ namespace WLA {
 		property String^ name;
 
 	public:
-		//virtual void BeginProcessing()	override;
-		//virtual void EndProcessing()	override;
 		virtual void InternalProcessRecord() override
 		{
 			std::wstring str_name;
@@ -482,11 +506,6 @@ namespace WLA {
 			HelpMessage = "input object")]
 		property PSObject^ input_obj;
 
-		//[Parameter(Position = 0, ValueFromPipeline = true,
-		//	ValueFromPipelineByPropertyName = true, Mandatory = true,
-		//	HelpMessage = "ignore the first command")]
-		//property SwitchParameter ignore_first;
-
 	public:
 		virtual void BeginProcessing()	override;
 		virtual void EndProcessing()	override
@@ -519,7 +538,6 @@ namespace WLA {
 			UINT ts = max(read_ts, write_ts);
 
 			// 输出command
-//			AddObjectMember(input_obj, L"interval", delta);
 			if (m_show_first || ts > 0)
 			{
 				UINT delta = m_cmd_id - ts;
@@ -619,7 +637,6 @@ namespace WLA {
 			double ts = max(read_ts, write_ts);
 
 			// 输出command
-//			AddObjectMember(input_obj, L"interval", delta);
 			if (m_show_first || ts > 0)
 			{
 				double delta = cur_ts - ts;
@@ -656,6 +673,8 @@ namespace WLA {
 	};
 
 
+///////////////////////////////////////////////////////////////////////////////
+// -- Simulator
 	public ref class SSDrive : public Object
 	{
 	public:
@@ -665,6 +684,23 @@ namespace WLA {
 
 	public:
 		CSSDSimulator* GetSimulator(void) { return m_ssd; }
+		void EnableHotIndex(int enable)
+		{
+			m_ssd->EnableHotIndex(enable);
+		}
+
+
+	public:
+		property float logical_saturation {float get(void) { return m_ssd->GetLogicalSaturation(); }}
+		property UINT data_block {UINT get(void) { return m_ssd->GetDataBlockNum(); }}
+		property UINT slc_block {UINT get(void) { return m_ssd->GetSLCBlockNum(); }}
+		property UINT empty_block {UINT get(void) { return m_ssd->GetEmptyBlockNum(); }}
+		property UINT64 slc_read {UINT64 get(void) { return m_ssd->m_SLC_read; }}
+		property UINT64 tlc_read {UINT64 get(void) { return m_ssd->m_TLC_read; }}
+		property UINT64 nomapping_read {UINT64 get(void) { return m_ssd->m_unmapping_read; }}
+		property UINT64 host_write {UINT64 get(void) { return m_ssd->m_host_write; }}
+		property UINT64 nand_write {UINT64 get(void) { return m_ssd->m_nand_write; }}
+
 	protected:
 		CSSDSimulator* m_ssd;
 	};
@@ -682,6 +718,11 @@ namespace WLA {
 		[Parameter(Position = 0, ValueFromPipeline = true,
 			ValueFromPipelineByPropertyName = true, Mandatory = true,
 			HelpMessage = "configuration file name, json")]
+		property String^ name;
+
+		[Parameter(Position = 1, ValueFromPipeline = true,
+			ValueFromPipelineByPropertyName = true, Mandatory = true,
+			HelpMessage = "configuration file name, json")]
 		property String^ config;
 
 
@@ -691,7 +732,9 @@ namespace WLA {
 			std::wstring str_fn;
 			ToStdString(str_fn, config);
 
-			CSSDSimulator* ssd = new CSSDSimulator;
+			CSSDSimulator* ssd = nullptr;
+			if (name == L"greedy") ssd = new CSSDSimulator;
+			else if (name == L"hot_index") ssd = static_cast<CSSDSimulator*>(new CSSDSimulator_2);
 			ssd->Create(str_fn);
 
 			SSDrive^ drive = gcnew SSDrive(ssd);
@@ -774,13 +817,20 @@ namespace WLA {
 
 			if (trace)
 			{
-				lba = System::Convert::ToUInt32(trace->Members[L"lba"]->Value);
-				secs = System::Convert::ToUInt32(trace->Members[L"secs"]->Value);
 				cmd = trace->Members[L"cmd"]->Value->ToString();
+				{
+					lba = System::Convert::ToInt64(trace->Members[L"lba"]->Value);
+					if (lba < 0) return;
+					secs = System::Convert::ToInt64(trace->Members[L"secs"]->Value);
+				}
 			}
 			if (cmd == L"Write")	_drive->WriteSecs(lba, secs);
 			else if (cmd == L"Read")   _drive->ReadSecs(lba, secs);
 		}
 	};
+
+
+
+
 
 }
