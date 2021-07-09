@@ -12,7 +12,7 @@ using namespace System::Management::Automation;
 #pragma make_public(IPartitionInfo)
 #pragma make_public(IStorageDevice)
 
-#include "jcbuffer.h"
+//#include "jcbuffer.h"
 
 #define SEC_1GB (2*1024*1024LL)
 #define SEC_1TB (2*1024*1024*1024LL)
@@ -228,3 +228,37 @@ namespace Clone
 
 }
 
+
+Clone::PartitionType GuidToPartitionType(System::Guid^ type_id);
+
+inline System::Guid^ GptTypeToGuid(const Clone::PartitionType& type)
+{
+	System::Guid^ type_id = nullptr;
+
+	switch (type)
+	{
+	case Clone::PartitionType::EFI_Partition:
+		type_id = gcnew System::Guid("{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}");
+		break;
+	case Clone::PartitionType::Microsoft_Reserved:
+		type_id = gcnew System::Guid("{e3c9e316-0b5c-4db8-817d-f92df00215ae}");
+		break;
+	case Clone::PartitionType::Basic_Data:
+		type_id = gcnew System::Guid("{ebd0a0a2-b9e5-4433-87c0-68b6b72699c7}");
+		break;
+	case Clone::PartitionType::LDM_Metadata:
+		type_id = gcnew System::Guid("{5808c8aa-7e8f-42e0-85d2-e1e90434cfb3}");
+		break;
+	case Clone::PartitionType::LDM_Data:
+		type_id = gcnew System::Guid("{af9b60a0-1431-4f62-bc68-3311714a69ad}");
+		break;
+	case Clone::PartitionType::Microsoft_Recovery:
+		type_id = gcnew System::Guid("{de94bba4-06d1-4d40-a16a-bfd50179d6ac}");
+		break;
+	default:
+		type_id = gcnew System::Guid();
+		break;
+	}
+	return type_id;
+
+}

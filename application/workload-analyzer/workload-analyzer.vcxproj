@@ -153,6 +153,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="source\file-mapping.h" />
     <ClInclude Include="source\pch.h" />
     <ClInclude Include="source\pcmark10_trace.h" />
     <ClInclude Include="source\ssd-simulator.h" />
@@ -178,6 +179,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\AssemblyInfo.cpp" />
+    <ClCompile Include="source\file-mapping.cpp" />
     <ClCompile Include="source\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
     </ClCompile>

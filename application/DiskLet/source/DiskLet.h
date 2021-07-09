@@ -11,7 +11,7 @@ using namespace System::Management::Automation;
 #include "../include/disk_info.h"
 
 
-extern StaticInit global;
+//extern StaticInit global;
 
 namespace DiskLet
 {

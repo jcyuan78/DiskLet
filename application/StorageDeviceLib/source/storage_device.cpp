@@ -7,6 +7,29 @@
 
 LOCAL_LOGGER_ENABLE(L"storage_device", LOGGER_LEVEL_NOTICE);
 
+#define SCSIOP_SECURITY_IN		0xA2
+#define SCSIOP_SECURITY_OUT		0xB5
+
+#define CDB12GENERIC_LENGTH                  12
+
+#define Lo
+
+//
+// SCSI bus status codes.
+//
+
+//#define SCSISTAT_GOOD                  0x00
+//#define SCSISTAT_CHECK_CONDITION       0x02
+//#define SCSISTAT_CONDITION_MET         0x04
+//#define SCSISTAT_BUSY                  0x08
+//#define SCSISTAT_INTERMEDIATE          0x10
+//#define SCSISTAT_INTERMEDIATE_COND_MET 0x14
+//#define SCSISTAT_RESERVATION_CONFLICT  0x18
+//#define SCSISTAT_COMMAND_TERMINATED    0x22
+//#define SCSISTAT_QUEUE_FULL            0x28
+//#define SCSISTAT_ACA_ACTIVE			   0x30
+//#define SCSISTAT_TASK_ABORTED		   0x40
+
 
 CStorageDeviceComm::CStorageDeviceComm(void)
 	: m_hdev(INVALID_HANDLE_VALUE)
@@ -159,7 +182,80 @@ BYTE CStorageDeviceComm::ScsiCommand(READWRITE rd_wr, BYTE * buf, size_t length,
 
 	if (sense) memcpy_s(sense, sense_len, sptdwb.ucSenseBuf, min(SPT_SENSE_LENGT, sense_len));
 	if (!success)	THROW_WIN32_ERROR(L"failed on calling IOCTL_SCSI_PASS_THROUGH_DIRECT ");
-	return sptdwb.ucSenseBuf[0xC];
+//	return sptdwb.ucSenseBuf[0xC];
+	return sptdwb.sptd.ScsiStatus;
+}
+
+const wchar_t* ScsiStatusCodeToString(BYTE code)
+{
+	switch (code)
+	{
+	case SCSISTAT_GOOD:				return L"Good"; 
+	case SCSISTAT_CHECK_CONDITION:	return L"Check condition";
+	case SCSISTAT_CONDITION_MET:	return L"Busy";
+	case SCSISTAT_BUSY:				return L"Busy";
+	case SCSISTAT_INTERMEDIATE:		return L"Intermediate";
+	case SCSISTAT_INTERMEDIATE_COND_MET:	return L"Intermediate cond met";
+	case SCSISTAT_RESERVATION_CONFLICT:		return L"Reservation conflict";
+	case SCSISTAT_COMMAND_TERMINATED:		return L"Command terminated";
+	case SCSISTAT_QUEUE_FULL:				return L"Task set full";
+	case SCSISTAT_ACA_ACTIVE:				return L"ACA active";
+	case SCSISTAT_TASK_ABORTED:				return L"Task aborted";
+	default: return L"Unknonw status";
+	}
+}
+
+BYTE CStorageDeviceComm::SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid)
+{
+	BYTE cdb[16];
+	memset(cdb, 0, 16);
+	cdb[0] = SCSIOP_SECURITY_IN;
+	cdb[1] = (BYTE)(protocolid & 0xFF);
+	cdb[2] = (BYTE)((comid >> 8) & 0xFF);
+	cdb[3] = (BYTE)(comid & 0xFF);
+	cdb[6] = HIBYTE(HIWORD(buf_len));
+	cdb[7] = LOBYTE(HIWORD(buf_len));
+	cdb[8] = HIBYTE(LOWORD(buf_len));
+	cdb[9] = LOBYTE(LOWORD(buf_len));
+
+	SENSE_DATA sense;
+
+	BYTE res = ScsiCommand(IStorageDevice::read, buf, buf_len, cdb, CDB12GENERIC_LENGTH, 
+		(BYTE*)&sense, sizeof(SENSE_DATA), 600);
+	if (res != SCSISTAT_GOOD) LOG_ERROR(L"[err] device returns error (0x%02X): %s", res, ScsiStatusCodeToString(res));
+	return res;
+}
+
+BYTE CStorageDeviceComm::SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid)
+{
+	BYTE cdb[16];
+	memset(cdb, 0, 16);
+	cdb[0] = SCSIOP_SECURITY_OUT;
+	cdb[1] = (BYTE)(protocolid & 0xFF);
+	cdb[2] = (BYTE)((comid >> 8) & 0xFF);
+	cdb[3] = (BYTE)(comid & 0xFF);
+	cdb[6] = HIBYTE(HIWORD(buf_len));
+	cdb[7] = LOBYTE(HIWORD(buf_len));
+	cdb[8] = HIBYTE(LOWORD(buf_len));
+	cdb[9] = LOBYTE(LOWORD(buf_len));
+
+	SENSE_DATA sense;
+
+	BYTE res = ScsiCommand(IStorageDevice::write, buf, buf_len, cdb, CDB12GENERIC_LENGTH,
+		(BYTE*)&sense, sizeof(SENSE_DATA), 600);
+	if (res != SCSISTAT_GOOD) LOG_ERROR(L"[err] device returns error (0x%02X): %s", res, ScsiStatusCodeToString(res));
+	return res;
 }
 
 
+
+///////////////////////////////////////////////////////////////////////////////
+// -- TCG features
+
+//bool CStorageDeviceComm::L0Discovery(BYTE* buf)
+//{
+//	bool br = SecurityReceive(buf, 512, 0x01, 0x01);
+//	if (!br) { LOG_ERROR(L"[err] failed on calling security receive command"); }
+//	return br;
+//}
+//

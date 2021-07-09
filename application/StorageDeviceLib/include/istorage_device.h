@@ -74,6 +74,21 @@ public:
 	BYTE m_percentage_used;
 };
 
+// define SCSI status code
+
+const BYTE SCSISTAT_GOOD = 0x00;
+const BYTE SCSISTAT_CHECK_CONDITION = 0x02;
+const BYTE SCSISTAT_CONDITION_MET = 0x04;
+const BYTE SCSISTAT_BUSY = 0x08;
+const BYTE SCSISTAT_INTERMEDIATE = 0x10;
+const BYTE SCSISTAT_INTERMEDIATE_COND_MET = 0x14;
+const BYTE SCSISTAT_RESERVATION_CONFLICT = 0x18;
+const BYTE SCSISTAT_COMMAND_TERMINATED = 0x22;
+const BYTE SCSISTAT_QUEUE_FULL = 0x28;
+const BYTE SCSISTAT_ACA_ACTIVE = 0x30;
+const BYTE SCSISTAT_TASK_ABORTED = 0x40;
+
+
 class IStorageDevice : virtual public IJCInterface
 {
 public:
@@ -123,6 +138,9 @@ public:
 	//virtual bool Recognize() = 0;
 	//virtual void Detach(HANDLE & dev) = 0;
 
+	virtual BYTE SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid) = 0;
+	virtual BYTE SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid) = 0;
+
 #ifdef _DEBUG
 	//virtual HANDLE GetHandle() = 0;
 #endif
@@ -135,3 +153,4 @@ public:
 	virtual bool GetLogPage(BYTE lid, WORD numld, BYTE * data, size_t data_len) = 0;
 	virtual bool NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length) = 0;
 };
+

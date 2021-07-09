@@ -128,24 +128,6 @@ typedef jcvos::CGlobalSingleToneNet<CAddressRank> CAddressRankInstance;
 
 namespace WLA {
 	// -- my cmdlet base class, to handle exceptions	
-//	public ref class WLABase : public Cmdlet
-//	{
-//	public:
-//		virtual void InternalProcessRecord() {};
-//	protected:
-////		void ShowPipeMessage(void);
-//
-//	public:
-//
-//	protected:
-////		void ShowProgress(IProgress * progress, int id, String ^ activity);
-//
-//
-//	protected:
-//		virtual void ProcessRecord() override;
-//	};
-
-
 	[CmdletAttribute(VerbsCommon::Set, "StaticMapping")]
 	public ref class SetStaticMapping : public JcCmdLet::JcCmdletBase
 	{

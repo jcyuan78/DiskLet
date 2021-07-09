@@ -10,7 +10,9 @@ class PARAM_INFO
 public:
 	typedef std::vector<PARAM_INFO> PARAM_LIST;
 	enum PARAM_TYPE {
-		OtherType, UidRef, 
+		OtherType, 
+		Err_MissingRequest,	// dummy type: 表示错误，遗漏了相应的requested parameter
+		UidRef, 
 	};
 public:
 	DWORD m_num;

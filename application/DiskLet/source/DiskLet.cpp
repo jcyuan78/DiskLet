@@ -10,7 +10,9 @@
 #pragma comment (lib, "wbemuuid.lib")
 #pragma comment (lib, "OleAut32.lib")
 
-#include "../include/utility.h"
+//#include "../include/utility.h"
+#include <jccmdlet-comm.h>
+#include "global_init.h"
 
 
 using namespace DiskLet;

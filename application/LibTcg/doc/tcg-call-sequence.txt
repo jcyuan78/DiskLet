@@ -1,0 +1,44 @@
+InitialSet(Password)
+	- TakeOwnership(password)
+		-- GetDefaultPassword()
+		-- SetSIDPassword(password)
+		
+	- ActiveLockingSP(password)
+		-- 
+	- ConfigureLockingRange(...)
+		--
+	- SetLockingRange(...)
+	- SetMBREnable(password) / optional
+	
+enablelockingrange 0 debug /dev/sdc
+
+
+setlockingrange 0 lk debug /dev/sdc
+
+
+setmbrdone off debug /dev/sdc
+
+
+gunzip /usr/sedutil/UEFI64-n.nn.img.gz <-- Replace n.nn with the release number.
+sedutil-cli --loadpbaimage debug /usr/sedutil/UEFI64-n.nn.img /dev/sdc <-- Replace n.nn with the release number.
+
+sedutil-cli --setsidpassword debug yourrealpassword /dev/sdc
+sedutil-cli --setadmin1pwd debug yourrealpassword /dev/sdc
+
+sedutil-cli --setmbrdone on yourrealpassword /dev/sdc
+
+
+(*) Recovery
+
+sedutil-cli -–disableLockingRange 0 <password> <drive>  
+sedutil-cli –-setMBREnable off <password> <drive>
+
+sedutil-cli --revertnoerase <password> <drive>
+
+
+reverttper <password> <drive>
+
+RevertTPer(password)
+	- StartSession(ADMINSP, password, SID/PSID)
+	- ADMINSP, REVERT
+	- 

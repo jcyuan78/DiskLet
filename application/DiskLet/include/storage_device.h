@@ -53,6 +53,25 @@ namespace Clone
 		HEALTH_INFO ^ GetHealthInfo(void);
 		INQUIRY ^ Inquiry(void);
 
+		JcCmdLet::BinaryType^ ReadSectors(UINT64 lba, size_t secs)
+		{
+			return nullptr;
+
+		}
+
+		void WriteSectors(UINT64 lba, size_t secs, JcCmdLet::BinaryType^ data)
+		{
+
+		}
+
+		void GetStorageDevice(IStorageDevice*& dev)
+		{
+			JCASSERT(dev == NULL);
+			dev = m_storage;
+			if (dev) dev->AddRef();
+		}
+
+/*
 		JcCmdLet::BinaryType ^ Test1(void)
 		{
 			INVMeDevice * nvme = dynamic_cast<INVMeDevice*>(m_storage);
@@ -86,7 +105,7 @@ namespace Clone
 //			if (!br) throw gcnew System::ApplicationException(L"failed on getting log page");
 			return gcnew JcCmdLet::BinaryType(buf);
 		}
-
+*/
 	protected:
 		IStorageDevice *m_storage;
 	};

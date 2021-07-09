@@ -30,13 +30,13 @@
     <ClCompile Include="source\disk_info.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="source\jcbuffer.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="source\pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\storage_device.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\security.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -56,13 +56,13 @@
     <ClInclude Include="include\disk_info.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="include\jcbuffer.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="include\storage_device.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="source\pch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="source\security.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
