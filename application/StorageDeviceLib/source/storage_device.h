@@ -6,7 +6,28 @@
 #define CDB10GENERIC_LENGTH	(16)
 
 
-class CStorageDeviceComm : virtual public IStorageDevice
+#pragma pack(push, sensedata, 1)
+typedef struct _SENSE_DATA {
+	UCHAR ErrorCode : 7;
+	UCHAR Valid : 1;
+	UCHAR SegmentNumber;
+	UCHAR SenseKey : 4;
+	UCHAR Reserved : 1;
+	UCHAR IncorrectLength : 1;
+	UCHAR EndOfMedia : 1;
+	UCHAR FileMark : 1;
+	UCHAR Information[4];
+	UCHAR AdditionalSenseLength;
+	UCHAR CommandSpecificInformation[4];
+	UCHAR AdditionalSenseCode;
+	UCHAR AdditionalSenseCodeQualifier;
+	UCHAR FieldReplaceableUnitCode;
+	UCHAR SenseKeySpecific[3];
+} SENSE_DATA, * PSENSE_DATA;
+#pragma pack(pop, sensedata)
+
+
+class CStorageDeviceComm : virtual public IStorageDevice/*, virtual public ITcgDevice*/
 {
 protected:
 	CStorageDeviceComm(void);
@@ -51,6 +72,11 @@ public:
 		_In_ const BYTE *cb, size_t cb_length,		// input of command block
 		_Out_ BYTE *sense, size_t sense_len,		// output of sense buffer
 		UINT timeout);
+
+	virtual BYTE SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
+	virtual BYTE SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
+
+	//virtual bool L0Discovery(BYTE* buf);
 
 
 protected:

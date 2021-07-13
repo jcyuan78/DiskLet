@@ -96,8 +96,12 @@ namespace tcg_parser
             version = ff->version >> 4;
             length = ff->length;
         }
-
+        virtual System::String^ GetFeatureName(void) { return L"Unknown"; }
     public:
+        property System::String^ feature_name 
+        {
+            System::String^ get(void) { return GetFeatureName(); }
+        };
         WORD feature_code;
         BYTE version;
         BYTE length;
@@ -117,6 +121,7 @@ namespace tcg_parser
             Streaming_Supported = data & 0x10;
             ComID_Mgnt_Supported = data & 0x40;
         }
+        virtual System::String^ GetFeatureName(void) override { return L"Tper Feature"; }
 
     public:
         bool ComID_Mgnt_Supported;
@@ -140,6 +145,8 @@ namespace tcg_parser
             MBR_Enabled = data & 0x10;
             MBR_Done = data & 0x20;
         }
+        virtual System::String^ GetFeatureName(void) override { return L"Locking Feature"; }
+
     public:
         bool MBR_Done;
         bool MBR_Enabled;
@@ -161,6 +168,8 @@ namespace tcg_parser
             alignment_granularity = endian_reverse(f0->alignment_granularity);
             lowest_aligned_lba = endian_reverse(f0->lowest_aligned_lba);
          }
+        virtual System::String^ GetFeatureName(void) override { return L"Geometry Reporting Feature"; }
+
     public:
         bool align;
         DWORD logical_block_size;
@@ -173,7 +182,6 @@ namespace tcg_parser
     public:
         TcgFeatureSingleUser(L0DISCOVERY_FEATURE* ff) : TcgFeatureBase(ff)
         {
-//            BYTE *data = ff->data;
             number_of_locking_objects = MAKELONG(MAKEWORD(ff->data[3], ff->data[2]), 
                 MAKEWORD(ff->data[1], ff->data[0]));
             BYTE data = ff->data[4];
@@ -181,6 +189,8 @@ namespace tcg_parser
             all = data & 0x02;
             policy = data & 0x04;
         }
+        virtual System::String^ GetFeatureName(void) override { return L"Single User Mode Feature"; }
+
     public:
         DWORD number_of_locking_objects;
         bool policy;
@@ -198,6 +208,8 @@ namespace tcg_parser
             max_total_size = endian_reverse(f0->max_total_size);
             datastore_table_size_alignment = endian_reverse(f0->total_size_alignment);
         }
+        virtual System::String^ GetFeatureName(void) override { return L"Datastore Table Feature"; }
+
     public:
         WORD max_datastore_table;
         DWORD max_total_size;
@@ -218,6 +230,8 @@ namespace tcg_parser
             initial_c_pin_sid = f0->initial_c_pin_sid;
             behavior_of_c_pin_sid = f0->behavior_of_c_pin_sid;
         }
+        virtual System::String^ GetFeatureName(void) override { return L"Opal SSC Feature"; }
+
     public:
         WORD base_comid;
         WORD num_of_comid;

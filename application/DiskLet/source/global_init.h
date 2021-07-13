@@ -1,11 +1,10 @@
-#pragma once
+ï»¿#pragma once
 
-//#include "storage_device.h"
 #include "../../StorageDeviceLib/storage_device_lib.h"
+#include <LibTcg.h>
 
 using namespace System;
 //using namespace System::Runtime::InteropServices;
-
 
 class StaticInit
 {
@@ -14,7 +13,6 @@ public:
 	~StaticInit(void);
 
 public:
-	// ±£´æµ±Ç°device
 	void SelectDevice(IStorageDevice * dev);
 	void GetDevice(IStorageDevice * & dev);
 	//Clone::StorageDevice ^ GetDevice(void);
@@ -26,10 +24,14 @@ public:
 
 public:
 	IStorageManager * m_manager;
+	CL0DiscoveryDescription m_feature_description;
 
 protected:
 	IStorageDevice * m_cur_dev;
 	IDiskInfo * m_cur_disk;
 	IPartitionInfo * m_cur_partition;
+
 //	Clone::StorageManager m_manager;
 };
+
+extern StaticInit global;

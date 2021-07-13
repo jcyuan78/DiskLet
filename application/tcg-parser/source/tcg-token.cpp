@@ -471,14 +471,27 @@ bool CallToken::ParseRequestedParameter(PARAM_INFO::PARAM_LIST & param_list, BYT
 	size_t param_size = param_list.size();
 	for (size_t ii = 0; ii < param_size; ++ii)
 	{
+		//if (*begin == END_LIST)
+		//{
+		//	LOG_ERROR(L"[err] missing requested parameter");
+		//	return false;
+		//}
 		PARAM_INFO& param_info = param_list[ii];
 		CParameter param;
 		param.m_num = param_info.m_num;
 		param.m_name = param_info.m_name;
 		param.m_type = param_info.m_type_id;
 		// <TODO> 根据不同的type解析参数
-		param.m_token_val = CTcgTokenBase::Parse(begin, end, start);
-		if (param.m_token_val == nullptr) THROW_ERROR(ERR_APP, L"failed on parsing token, offset=%zd", begin - start);
+		if (*begin == END_LIST)
+		{
+			param.m_type = PARAM_INFO::Err_MissingRequest;
+			param.m_token_val = nullptr;
+		}
+		else
+		{
+			param.m_token_val = CTcgTokenBase::Parse(begin, end, start);
+			if (param.m_token_val == nullptr) THROW_ERROR(ERR_APP, L"failed on parsing token, offset=%zd", begin - start);
+		}
 		m_parameters.push_back(param);
 	}
 	return true;
@@ -575,10 +588,15 @@ void CallToken::Print(FILE* ff, int indentation)
 void CallToken::CParameter::Print(FILE* ff, int indentation)
 {
 	fwprintf_s(ff, L"\t %s=", m_name.c_str());
-	if (!m_token_val) return;
+//	if (!m_token_val) return;
 	switch (m_type)
 	{
 	case PARAM_INFO::UidRef: {
+		//if (!m_token_val)
+		//{
+		//	fwprintf_s(ff, L"<!missing param value>");
+		//	break;
+		//}
 		MidAtomToken* mt = dynamic_cast<MidAtomToken*>(m_token_val);
 		if (!mt)
 		{
@@ -586,11 +604,15 @@ void CallToken::CParameter::Print(FILE* ff, int indentation)
 			break;
 		}
 		UINT64 uid = mt->GetValue();
-		const UID_INFO * uid_info = g_uid_map.GetUidInfo(uid);
+		const UID_INFO* uid_info = g_uid_map.GetUidInfo(uid);
 		if (uid_info) fwprintf_s(ff, L"%s ", uid_info->m_name.c_str());
-//		for (int ii=0; ii<8; ++ii)
 		fwprintf_s(ff, L"(UID=%016llX)", uid);
 		break; }
+
+	case PARAM_INFO::Err_MissingRequest: {
+		fwprintf_s(ff, L"<!missing requested parameter>");
+		break;
+	}
 
 	default:
 		if (m_token_val) m_token_val->Print(ff, 0);

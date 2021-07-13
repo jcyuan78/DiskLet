@@ -47,8 +47,17 @@ import-csv $tcg_cmd_fn | %{
 #	write-host "cmd $($cmd.cmd_id) $($cmd.cmd): protocol=$protocol,  session=($TSN, $HSN)";
     	$sub_packet = $packet.packet.sub_packet;
 #	Out-Binary -data $sub_packet.payload;
-    	$token = Convert-TcgToken -payload $sub_packet.payload -receive $receive;
-        $token.Print();
+        try {
+            $token = Convert-TcgToken -payload $sub_packet.payload -receive $receive;
+            $token.Print();           
+        }
+        catch {
+            write-warning "detect error in the following command"
+            $packet;
+            Write-Warning "payload = ";
+            $sub_packet.payload | Out-Binary;
+        }
+
     }
     else 
     {

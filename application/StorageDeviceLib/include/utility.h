@@ -166,13 +166,13 @@ inline UINT64 ByteToMB(UINT64 size)
 	return size / _1MB;
 }
 
-// 向上取整对齐
+// 向上取整对苼E
 inline UINT64 ByteToMB_Up(UINT64 size)
 {
 	return ((size-1) >>20) +1;
 }
 
-// 向下取整对齐
+// 向下取整对苼E
 inline UINT64 ByteToMB_Down(UINT64 size)
 {
 	return (size >>20);

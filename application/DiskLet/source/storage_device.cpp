@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "../include/storage_device.h"
+#include <boost/cast.hpp>
 
 using namespace Clone;
 using namespace System;
