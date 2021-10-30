@@ -31,6 +31,8 @@ namespace rational {
 		}
 		static CRational * Convert(const wchar_t * & start, const wchar_t * end);
 
+		void ToLoopDecimal(std::wstring& int_part, std::wstring& fix_part, std::wstring& loop_part);
+
 	public:
 		void Add(const CRational& a);
 		void Sub(const CRational& a);
@@ -67,13 +69,35 @@ namespace rational {
 	public:
 		static Rational^ operator + (Rational^ r1, Rational^ r2)
 		{
-//			CRational r3 = ((*(r1->m_rat)) + (*(r2->m_rat)));
-//			return gcnew Rational(&r3);
 			Rational^ r3 = gcnew Rational(r1);
 			r3->m_rat->Add(*r2->m_rat);
+			r3->m_rat->Simplify();
 			return r3;
 		}
+		static Rational^ operator - (Rational^ r1, Rational^ r2)
+		{
+			Rational^ r3 = gcnew Rational(r1);
+			r3->m_rat->Sub(*r2->m_rat);
+			r3->m_rat->Simplify();
+			return r3;
+		}
+		static Rational^ operator * (Rational^ r1, Rational^ r2)
+		{
+			Rational^ r3 = gcnew Rational(r1);
+			r3->m_rat->Mul(*r2->m_rat);
+			r3->m_rat->Simplify();
+			return r3;
+		}
+		static Rational^ operator / (Rational^ r1, Rational^ r2)
+		{
+			Rational^ r3 = gcnew Rational(r1);
+			r3->m_rat->Dev(*r2->m_rat);
+			r3->m_rat->Simplify();
+			return r3;
+		}
+
 		virtual String^ ToString(System::String^ format, IFormatProvider^ formatprovider);
+		virtual String^ ToString(System::String^ format) { return ToString(format, nullptr); }
 
 		
 		//整数部分，分子，分母

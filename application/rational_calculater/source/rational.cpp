@@ -19,11 +19,11 @@ bool is_number(wchar_t ch)
 
 String^ rational::Rational::ToString(System::String^ format, IFormatProvider^ formatprovider)
 {
-	if (format == nullptr || format == "F")
+	if (format == nullptr || format == L"F")
 	{	// 假分数形式显示
 		return String::Format(L"[{0}/{1}]", m_rat->m_mol, m_rat->m_den);
 	}
-	else if (format == "T")
+	else if (format == L"T")
 	{	// 整数加真分数形式显示
 		if (abs(m_rat->m_mol) >= m_rat->m_den)
 		{
@@ -31,6 +31,24 @@ String^ rational::Rational::ToString(System::String^ format, IFormatProvider^ fo
 				m_rat->m_den);
 		}
 		else return String::Format(L"[{0}/{1}]", m_rat->m_mol, m_rat->m_den);
+	}
+	else if (format == L"D")
+	{
+		return String::Format(L"{0}", (double)m_rat->m_mol / m_rat->m_den);
+	}
+	else if (format == L"L")
+	{	// 循环小数表示
+		std::wstring int_part, fix_part, loop_part;
+		m_rat->ToLoopDecimal(int_part, fix_part, loop_part);
+		String^ res = gcnew String(int_part.c_str());
+		if (!fix_part.empty() || !loop_part.empty())
+		{
+			res += L".";
+			if (!fix_part.empty()) res += gcnew String(fix_part.c_str());
+			if (!loop_part.empty()) res += L"[" + gcnew String(loop_part.c_str()) + L"]";
+		}
+		return res;
+
 	}
 	return nullptr;
 }
@@ -355,6 +373,56 @@ CRational* CRational::Convert(const wchar_t*& start, const wchar_t* end)
 	}
 	throw gcnew System::ApplicationException(L"不完整的表达式");
 	return nullptr;
+}
+
+// 被除数和商对
+struct rr_qq
+{
+	rr_qq(UINT r, UINT q) : rr(r), qq(q) {};
+	UINT rr, qq;
+	bool operator== (const rr_qq && v) { return (rr == v.rr); }
+};
+
+static bool operator == (const rr_qq& v1, const rr_qq& v2)
+{
+	return (v1.rr == v2.rr);
+}
+
+void rational::CRational::ToLoopDecimal(std::wstring& str_int_part, std::wstring& fix_part, std::wstring& loop_part)
+{	// 有理分数化循环小数，长除法。
+	int int_part = m_mol / m_den;  // 整数部分
+	str_int_part = std::to_wstring(int_part);
+
+	std::vector<rr_qq> result_list;
+	UINT rr = m_mol % m_den;		// 余数部分
+	std::vector<rr_qq>::iterator it=result_list.end();
+	while (rr > 0)
+	{
+		JCASSERT(rr < m_den);
+		rr *= 10;
+		UINT qq = rr / m_den;
+		JCASSERT(qq < 10);
+		// 查找循环节
+		it = std::find(result_list.begin(), result_list.end(), rr_qq(rr, 0));
+		if (it != result_list.end()) break;
+		result_list.push_back(rr_qq(rr, qq));
+		rr = rr % m_den;
+		if (rr == 0)
+		{
+			it = result_list.end();
+			break;
+		}
+	}
+	// 非循环小数部分
+	for (auto ii = result_list.begin(); ii != it; ++ii)
+	{
+		fix_part += std::to_wstring(ii->qq);
+	}
+	for (auto ii = it; ii != result_list.end(); ++ii)
+	{
+		loop_part += std::to_wstring(ii->qq);
+	}
+
 }
 
 
