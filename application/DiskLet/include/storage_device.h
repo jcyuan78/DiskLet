@@ -49,6 +49,7 @@ namespace Clone
 	public:
 		// for debug
 		JcCmdLet::BinaryType ^ GetLogPage(BYTE page_id, size_t secs);
+		JcCmdLet::BinaryType^ ReadIdentifyControl(void);
 
 		HEALTH_INFO ^ GetHealthInfo(void);
 		INQUIRY ^ Inquiry(void);
@@ -66,7 +67,7 @@ namespace Clone
 
 		void GetStorageDevice(IStorageDevice*& dev)
 		{
-			JCASSERT(dev == NULL);
+			JCASSERT(dev == nullptr);
 			dev = m_storage;
 			if (dev) dev->AddRef();
 		}

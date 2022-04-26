@@ -39,3 +39,63 @@ Clone::PartitionType GuidToPartitionType(System::Guid ^ type_id)
 }
 
 */
+
+void GetComError(wchar_t* out_msg, size_t buf_size, HRESULT res, const wchar_t* msg, ...)
+{
+	va_list argptr;
+	va_start(argptr, msg);
+
+	IErrorInfo* com_err = NULL;
+	GetErrorInfo(res, &com_err);
+	int pp = 0;
+	BSTR disp;
+	if (com_err)
+	{
+		com_err->GetDescription(&disp);
+		pp = swprintf_s(out_msg, buf_size, L"[com err] %s; ", disp);
+		com_err->Release();
+		SysFreeString(disp);
+	}
+	else
+	{
+		pp = swprintf_s(out_msg, buf_size, L"[com err] unkonw error=0x%08X;", res);
+	}
+	vswprintf_s(out_msg + pp, buf_size - pp, msg, argptr);
+}
+
+void GetWmiError(wchar_t* out_msg, size_t buf_size, HRESULT res, const wchar_t* msg, ...)
+{
+	static HMODULE module_wbem = NULL;
+	if (module_wbem == nullptr) module_wbem = LoadLibrary(L"C:\\Windows\\System32\\wbem\\wmiutils.dll");
+
+	va_list argptr;
+	va_start(argptr, msg);
+
+	IErrorInfo* com_err = NULL;
+	GetErrorInfo(res, &com_err);
+	int pp = 0;
+	BSTR disp;
+	if (com_err)
+	{
+		com_err->GetDescription(&disp);
+		pp = swprintf_s(out_msg, buf_size, L"[com err] (0x%08X) %s; ", res, disp);
+		com_err->Release();
+		SysFreeString(disp);
+	}
+	else if (module_wbem)
+	{
+		LPTSTR strSysMsg;
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE,
+			module_wbem, res, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+			(LPTSTR)&strSysMsg, 0, NULL);
+		pp = swprintf_s(out_msg, buf_size, L"[wmi err] (0x%8X) %s", res, strSysMsg);
+		LocalFree(strSysMsg);
+
+		//		CloseHandle(mm);
+	}
+	else
+	{
+		pp = swprintf_s(out_msg, buf_size, L"[com err] unkonw error=0x%08X;", res);
+	}
+	vswprintf_s(out_msg + pp, buf_size - pp, msg, argptr);
+}

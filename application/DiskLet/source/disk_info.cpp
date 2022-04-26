@@ -75,7 +75,7 @@ VolumeInfo ^ Clone::PartInfo::GetVolume(void)
 {
 	jcvos::auto_interface<IVolumeInfo> vol;
 	bool br = m_part_info->GetVolume(vol);
-	if (!br || vol == NULL) throw gcnew System::ApplicationException(L"volume is null");
+	if (!br || vol == nullptr) throw gcnew System::ApplicationException(L"volume is null");
 	return gcnew VolumeInfo(vol);
 }
 
@@ -111,7 +111,7 @@ PartInfo ^ Clone::PartInfo::Resize(UINT64 mb)
 
 bool Clone::PartInfo::GetPartitionInfo(IPartitionInfo * & part)
 {
-	JCASSERT(part == NULL);
+	JCASSERT(!part);
 	part = m_part_info;
 	part->AddRef();
 	return true;
@@ -198,7 +198,7 @@ PartInfo ^ Clone::DiskInfo::GetPartition(int index)
 	JCASSERT(m_disk_info);
 	jcvos::auto_interface<IPartitionInfo> partition;
 	bool br = m_disk_info->GetPartition(partition, index);
-	if (!br || partition == NULL) return nullptr;
+	if (!br || partition == nullptr) return nullptr;
 	PartInfo ^ part = gcnew PartInfo(partition);
 	return part;
 }
@@ -208,15 +208,15 @@ StorageDevice ^ Clone::DiskInfo::GetStorageDevice(void)
 	JCASSERT(m_disk_info);
 	jcvos::auto_interface<IStorageDevice> storage;
 	bool br = m_disk_info->GetStorageDevice(storage);
-	if (!br || storage == NULL) throw gcnew System::ApplicationException(L"Failed on getting storage device");
+	if (!br || storage == nullptr) throw gcnew System::ApplicationException(L"Failed on getting storage device");
 	return gcnew StorageDevice(storage);
 }
 
 PartInfo ^ Clone::DiskInfo::CreatePartition(UINT64 offset, UINT64 size, GUID type)
 {
 	jcvos::auto_interface<IPartitionInfo> out_part;
-	bool br = m_disk_info->CreatePartition(out_part, offset, size, NULL, type, { 0 }, 0);
-	if (!br || out_part == NULL) return nullptr;
+	bool br = m_disk_info->CreatePartition(out_part, offset, size, nullptr, type, { 0 }, 0);
+	if (!br || out_part == nullptr) return nullptr;
 	return gcnew PartInfo(out_part);
 }
 

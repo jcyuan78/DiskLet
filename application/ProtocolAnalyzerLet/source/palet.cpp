@@ -10,7 +10,7 @@ void palet::OpenTrace::InternalProcessRecord()
 	ToStdString(str_fn, fn);
 	jcvos::auto_interface<pa::IAnalyzer> analyzer;
 	pa::CreateAnalyzer(analyzer, true);
-	if (analyzer == NULL) throw gcnew System::ApplicationException(L"failed on creating pe analyzer");
+	if (analyzer == nullptr) throw gcnew System::ApplicationException(L"failed on creating pe analyzer");
 	jcvos::auto_interface<pa::ITrace> _trace;
 	analyzer->OpenTrace(_trace, str_fn);
 
@@ -22,10 +22,10 @@ void palet::GetPacket::InternalProcessRecord()
 {
 	jcvos::auto_interface<pa::ITrace> _trace;
 	trace->GetTracePtr(_trace);
-	if (_trace == NULL) throw gcnew System::ApplicationException(L"input trace is empty");
+	if (_trace == nullptr) throw gcnew System::ApplicationException(L"input trace is empty");
 	jcvos::auto_interface<pa::IPacket> _packet;
 	_trace->GetPacket(_packet, index);
-	if (_packet == NULL) throw gcnew System::ApplicationException(L"failed on getting packet");
+	if (_packet == nullptr) throw gcnew System::ApplicationException(L"failed on getting packet");
 
 	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
 	_packet->GetPacketData(buf);
@@ -39,7 +39,7 @@ void palet::ExportTrace::InternalProcessRecord()
 {
 	jcvos::auto_interface<pa::ITrace> _trace;
 	trace->GetTracePtr(_trace);
-	if (_trace == NULL) throw gcnew System::ApplicationException(L"input trace is empty");
+	if (_trace == nullptr) throw gcnew System::ApplicationException(L"input trace is empty");
 
 	std::wstring str_fn;
 	ToStdString(str_fn, fn);
@@ -50,7 +50,7 @@ void palet::GetPalyload::InternalProcessRecord()
 {
 	jcvos::auto_interface<pa::ITrace> _trace;
 	trace->GetTracePtr(_trace);
-	if (_trace == NULL) throw gcnew System::ApplicationException(L"input trace is empty");
+	if (_trace == nullptr) throw gcnew System::ApplicationException(L"input trace is empty");
 	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
 	_trace->GetCommandPayload(buf, start_time, start_addr, data_size, receive);
 

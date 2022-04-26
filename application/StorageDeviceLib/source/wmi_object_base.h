@@ -327,7 +327,7 @@ public:
 
 		// Execute Method
 		hres = InternalInvokeMethodAsync(progress, name, in_signaure);
-		if (FAILED(hres) || progress == NULL) THROW_COM_ERROR(hres, L"failed on invoking method (%s)", name);
+		if (FAILED(hres) || progress == nullptr) THROW_COM_ERROR(hres, L"failed on invoking method (%s)", name);
 		return 0;
 	}
 

@@ -104,7 +104,7 @@ void CDiskInfo::AddPartition(CPartitionInfo * part)
 {
 	UINT index = part->GetIndex();
 	if (index >= m_partitions.size())	m_partitions.resize(index+1);
-	JCASSERT(m_partitions.at(index) == NULL);
+	JCASSERT(m_partitions.at(index) == nullptr);
 	m_partitions.at(index) = part;
 	part->AddRef();
 
@@ -115,7 +115,7 @@ void CDiskInfo::AddPartition(const std::wstring & path)
 {
 	jcvos::auto_interface<CPartitionInfo> part;
 	bool br = CPartitionInfo::CreatePartitionInfo(part, path, this, m_manager);
-	if (!br || part == NULL) { LOG_ERROR(L"failed on create partition %s", path.c_str()); }
+	if (!br || !part ) { LOG_ERROR(L"failed on create partition %s", path.c_str()); }
 	AddPartition(part);
 }
 
@@ -133,9 +133,9 @@ void CDiskInfo::RefreshPartitionList(void)
 		ULONG count = 0;
 		hres = penum->Next(WBEM_INFINITE, 1, &obj, &count);
 		if (FAILED(hres)) LOG_COM_ERROR(hres, L"failed on getting object");
-		if (hres == S_FALSE || obj == NULL) break;
+		if (hres == S_FALSE || obj == nullptr) break;
 		prop_tree::wptree prop;
-		if (!(obj == NULL)) ReadWmiObject(prop, obj);
+		if (!(obj == nullptr)) ReadWmiObject(prop, obj);
 		std::wstring & disk_path = prop.get<std::wstring>(L"Disk");
 		std::wstring & partition_path = prop.get<std::wstring>(L"Partition");
 		// find disk
@@ -161,7 +161,7 @@ void CDiskInfo::RemovePartition(CPartitionInfo * part)
 
 bool CDiskInfo::GetPartition(IPartitionInfo *& part, UINT32 index)
 {
-	JCASSERT(part == NULL);
+	JCASSERT(!part);
 	size_t num = m_partitions.size();
 	if (index >= num)
 	{
@@ -214,8 +214,8 @@ int CDiskInfo::Online(bool on_off)
 	}
 	if (FAILED(hres)) THROW_COM_ERROR(hres, L"failed on calling (Online)");
 //	result->GetCallStatus()
-	BSTR str_res=NULL;
-	if (!(result == NULL)) hres = result->GetResultString(WBEM_INFINITE, &str_res);
+	BSTR str_res=nullptr;
+	if (!(result == nullptr)) hres = result->GetResultString(WBEM_INFINITE, &str_res);
 	if (FAILED(hres))
 	{
 		LOG_COM_ERROR(hres, L"failed on getting result");
@@ -250,9 +250,9 @@ bool CDiskInfo::CreatePartition(IPartitionInfo *& part, UINT64 offset, UINT64 si
 {
 	auto_unknown<IWbemClassObject> out_param;
 
-	const wchar_t * v_offset = NULL;
+	const wchar_t * v_offset = nullptr;
 	if (offset < m_property.m_size) v_offset = L"Offset";
-	const wchar_t * v_type = NULL;
+	const wchar_t * v_type = nullptr;
 	if (m_property.m_style == DISK_PROPERTY::PARTSTYLE_GPT && type != GUID({ 0 })) v_type = L"GptType";
 	if (size == 0)
 	{	// size为0，表示剩下的所有空间
@@ -278,7 +278,7 @@ bool CDiskInfo::CreatePartition(IPartitionInfo *& part, UINT64 offset, UINT64 si
 		IUnknown * obj = ((VARIANT&)partition_val).punkVal;	JCASSERT(obj);
 		auto_unknown<IWbemClassObject> part_obj;
 		hres = obj->QueryInterface(&part_obj);
-		if (SUCCEEDED(hres) && !(part_obj == NULL))
+		if (SUCCEEDED(hres) && !(part_obj == nullptr))
 		{
 			jcvos::auto_interface<CPartitionInfo> part_info;
 			bool br = CPartitionInfo::CreatePartitionInfo(part_info, part_obj, this, m_manager);
@@ -306,7 +306,7 @@ bool CDiskInfo::CacheGptHeader(void)
 	m_hdisk = OpenDisk(GENERIC_READ | GENERIC_WRITE);
 	if (m_hdisk == INVALID_HANDLE_VALUE)
 	{
-		m_hdisk = NULL;
+		m_hdisk = nullptr;
 		THROW_WIN32_ERROR(L"failed on opening disk");
 	}
 	m_header = new GptHeader;
@@ -315,11 +315,11 @@ bool CDiskInfo::CacheGptHeader(void)
 	BOOL br = ReadFile(m_hdisk, m_header, SECTOR_SIZE, &read, NULL);
 	if (!br) THROW_WIN32_ERROR(L"failed on reading GPT");
 
-	JCASSERT(m_pentry == NULL);
+	JCASSERT(m_pentry == nullptr);
 	m_pentry = new PartitionEntry[m_header->entry_num];
 	DWORD offset = (DWORD)(SECTOR_SIZE * m_header->starting_lba);
-	SetFilePointer(m_hdisk, offset, NULL, FILE_BEGIN);
-	br = ReadFile(m_hdisk, (BYTE*)m_pentry, (DWORD)(m_header->entry_size * m_header->entry_num), &read, NULL);
+	SetFilePointer(m_hdisk, offset, nullptr, FILE_BEGIN);
+	br = ReadFile(m_hdisk, (BYTE*)m_pentry, (DWORD)(m_header->entry_size * m_header->entry_num), &read, nullptr);
 	if (!br) THROW_WIN32_ERROR(L"failed on reading entries");
 	return true;
 }
@@ -390,11 +390,11 @@ bool CDiskInfo::UpdateGptHeader(void)
 void CDiskInfo::CloseCache(void)
 {
 	if (m_hdisk)		CloseHandle(m_hdisk); 
-	m_hdisk = NULL;
+	m_hdisk = nullptr;
 	delete m_header; 
-	m_header = NULL;
+	m_header = nullptr;
 	delete[] m_pentry; 
-	m_pentry = NULL;
+	m_pentry = nullptr;
 }
 
 
@@ -408,7 +408,7 @@ CDiskInfo::PROTOCOL CDiskInfo::DetectDevice(IStorageDevice *& dev, HANDLE handle
 		return ATA_DEVICE;
 	case DISK_PROPERTY::BUS_NVMe: {
 		jcvos::auto_interface<CNVMeDevice> sdev(jcvos::CDynamicInstance<CNVMeDevice>::Create());
-		if (sdev == NULL) THROW_ERROR(ERR_APP, L"failed on creating NVMe device");
+		if (!sdev ) THROW_ERROR(ERR_APP, L"failed on creating NVMe device");
 		if (sdev) sdev->Connect(handle, false);
 		jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
 		sdev->NVMeTest(buf);
@@ -419,7 +419,7 @@ CDiskInfo::PROTOCOL CDiskInfo::DetectDevice(IStorageDevice *& dev, HANDLE handle
 	case DISK_PROPERTY::BUS_USB: {	// 尝试不同连接
 		// （1） ATA PASS THROW
 		jcvos::auto_interface<CAtaPassThroughDevice> sdev(jcvos::CDynamicInstance<CAtaPassThroughDevice>::Create());
-		if (sdev == NULL) THROW_ERROR(ERR_APP, L"failed on creating ATA pass through device");
+		if (!sdev ) THROW_ERROR(ERR_APP, L"failed on creating ATA pass through device");
 		bool br = sdev->Connect(handle, false);
 		br = sdev->Detect();
 		if (br)
@@ -439,7 +439,7 @@ CDiskInfo::PROTOCOL CDiskInfo::DetectDevice(IStorageDevice *& dev, HANDLE handle
 	case DISK_PROPERTY::BUS_RAID: {
 		// （1） ATA PASS THROW
 		jcvos::auto_interface<CAtaPassThroughDevice> sdev(jcvos::CDynamicInstance<CAtaPassThroughDevice>::Create());
-		if (sdev == NULL) THROW_ERROR(ERR_APP, L"failed on creating ATA pass through device");
+		if (!sdev ) THROW_ERROR(ERR_APP, L"failed on creating ATA pass through device");
 		bool br = sdev->Connect(handle, false);
 		br = sdev->Detect();
 		if (br)

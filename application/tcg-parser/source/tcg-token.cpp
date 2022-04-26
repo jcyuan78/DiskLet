@@ -142,106 +142,176 @@ void CTcgTokenBase::Print(FILE* ff, int indentation)
 bool MidAtomToken::ParseToken(BYTE*& begin, BYTE* end, BYTE * start)
 {	// 解析所有长度大于 8 字节的atom token。
 	// 如果长度小于等于8， 返回后转换成小token。
-	bool binary = false;
-	bool signe_int = false;
+	//bool bytes = false;
+	//bool signe_int = false;
 	BYTE token = begin[0];
+#ifdef _DEBUG
+	m_token = token;
+#endif
 
 	if ( (token & 0x80) == 0 )
-	{
+	{	// tiny atom
 		m_len = 0;
-		d.m_val = token & 0x3F;
+		m_bytes = false;
+		m_sign = ((token & 0x40) !=0);
+		m_val = token & 0x3F;
 		begin++;
 	}
 	else if ((token & 0xC0) == 0x80)
-	{
+	{	// Short Atom
 		LOG_DEBUG(L"parsing short atom token");
-		binary = ((token & 0x20) != 0);
-		signe_int = ((token & 0x10) != 0);
+		m_bytes = ((token & 0x20) != 0);
+		m_sign = ((token & 0x10) != 0);
 		m_len = (token) & 0x0F;
 		begin++;
 	}
 	else if ((token & 0xE0) == 0xC0)
-	{
+	{	// Mit Atom
 		LOG_DEBUG(L"parsing medium atom token");
-		binary = ((token & 0x10) != 0);
-		signe_int = ((token & 0x08) != 0);
+		m_bytes = ((token & 0x10) != 0);
+		m_sign = ((token & 0x08) != 0);
 		size_t hi = token & 0x07;
 		m_len = MAKEWORD(begin[1], hi);
 		begin += 2;
 	}
 	else if ((token & 0xF0) == 0xE0)
-	{
+	{	// Long Atom
 		LOG_DEBUG(L"parsing long atom token");
-		binary = ((token & 0x02) != 0);
-		signe_int = ((token & 0x01) != 0);
+		m_bytes = ((token & 0x02) != 0);
+		m_sign = ((token & 0x01) != 0);
 		m_len = MAKELONG(MAKEWORD(begin[3], begin[2]), begin[1]);
 		begin += 4;
 	}
-	//else if ((token == 0xFF))
-	//{
 
-	//}
 	else
 	{
 		THROW_ERROR(ERR_APP, L"unexpected atom token, token=0x%02X, offset=%d", token, begin - start);
 	}
 
-	//	if (binary == 0) THROW_ERROR(ERR_APP, L"unsupport integer atom, token=%02X", token);
-	if (!binary)	m_type = CTcgTokenBase::IntegerAtom;
-	else			m_type = CTcgTokenBase::BinaryAtom;
+	//	if (m_bytes == 0) THROW_ERROR(ERR_APP, L"unsupport integer atom, token=%02X", token);
+	if (!m_bytes)	m_type = CTcgTokenBase::IntegerAtom;
+	else	m_type = CTcgTokenBase::BinaryAtom;
 
-	if (signe_int == 1) THROW_ERROR(ERR_APP, L"unspport continue = 1");
-
-	if (m_len == 0) {}
-	else if (m_len <= 8)
+	if (m_len == 0) { /*m_len = 1;*/ }
+	else if (!m_bytes && m_len <= 8)
 	{
-		BYTE* dd = (BYTE*)(&d.m_val);
+		BYTE* dd = (BYTE*)(&m_val);
 		for (size_t ii = 0; ii < m_len; ++ii, ++begin)
 		{
-			if (begin >= end) THROW_ERROR(ERR_APP, L"unexpected end of data, offset = %zd", (begin-start) );
-			dd[m_len-ii-1] = *begin;
+			if (begin >= end) THROW_ERROR(ERR_APP, L"unexpected end of data, offset = %zd", (begin - start));
+			dd[m_len - ii - 1] = *begin;
 		}
-		m_len = 0;
+//		m_len = 0;
 	}
-	else 
+	else
 	{
-		d.m_data = new BYTE[m_len];
+		m_data = new BYTE[m_len];
+		BYTE* dd = (BYTE*)(&m_val);
 		for (size_t ii = 0; ii < m_len; ++ii, ++begin)
 		{
-			if (begin >= end) THROW_ERROR(ERR_APP, L"unexpected end of data, offset = %zd", (begin-start) );
-			d.m_data[ii] = *begin;
+			if (begin >= end) THROW_ERROR(ERR_APP, L"unexpected end of data, offset = %zd", (begin - start));
+			m_data[ii] = *begin;
+			if (m_len <= 8) dd[m_len - ii - 1] = *begin;
 		}
 	}
-
+	if (m_sign) THROW_ERROR(ERR_APP, L"unspport continue = 1");
 	return true;
 }
 
 void MidAtomToken::Print(FILE* ff, int indentation)
 {
-	if (m_len == 0)
-	{
-		fwprintf_s(ff, L"0x%llX", d.m_val);
+	//if (m_len == 0)
+	//{
+	//	fwprintf_s(ff, L"0x%llX", m_val);
+	//}
+	//else
+	//{
+	//	fwprintf_s(ff, L"%s<ATOM %s>: ", INDENTATION - indentation,
+	//		m_type == CTcgTokenBase::BinaryAtom ? L"BIN" : L"INT");
+	//	for (size_t ii = 0; ii < m_len; ++ii)
+	//	{
+	//		fwprintf_s(ff, L"%02X ", d.m_data[ii]);
+	//	}
+	//	fwprintf_s(ff, L"</ATOM>\n");
+	//}
+	std::wstring str;
+	ToString(str);
+	fwprintf_s(ff, L"%s<A>%s</A>: ", INDENTATION - indentation, str.c_str());
+
+}
+
+//UINT64 MidAtomToken::GetValue(void) const
+//{
+//	if (m_len == 0) return d.m_val;
+//	else THROW_ERROR(ERR_APP, L"data length=%d is over UINT64", m_len);
+//}
+
+wchar_t V2Hex(BYTE b)
+{
+	if (b < 10) return '0' + b;
+	else return 'A' + (b - 10);
+}
+
+void MidAtomToken::ToString(std::wstring& str)
+{
+//	str.clear();
+	wchar_t* buf0 = NULL;
+	if (m_bytes)
+	{	// 字符串
+		if (m_len == 0)
+		{
+			str = L"";
+			return;
+		}
+		JCASSERT(m_data);
+		//str.resize(m_len * 4 + 8, 0);
+		buf0 = new wchar_t[m_len * 4 + 8];
+//		memset(buf0, 0, (m_len * 4 + 8) * sizeof(wchar_t));
+//		wchar_t * buf = const_cast<wchar_t*>(str.data());
+		wchar_t* buf = buf0;
+		wchar_t* buf2 = buf + m_len * 3 + 2;
+		buf[0] = '['; buf++;
+		for (size_t ii = 0; ii < m_len; ii++)
+		{
+			BYTE dd = m_data[ii];
+			buf[0] = V2Hex(dd>> 4);
+			buf[1] = V2Hex(dd& 0xF);
+			buf[2] = ' ';
+			buf += 3;
+			buf2[0] = (dd>= '0' && dd< 127) ? dd: '.';
+			buf2++;
+		}
+		buf[0] = ':';
+		buf2[0] = ']'; buf2++;
+		buf2[0] = 0;
+		//size_t ss = buf2 - str.data();
+		//str.resize(ss);
 	}
 	else
 	{
-		fwprintf_s(ff, L"%s<ATOM %s>: ", INDENTATION - indentation,
-			m_type == CTcgTokenBase::BinaryAtom ? L"BIN" : L"INT");
-		for (size_t ii = 0; ii < m_len; ++ii)
+		if (m_data)
 		{
-			fwprintf_s(ff, L"%02X ", d.m_data[ii]);
+			size_t len = m_len * 2 + 10;
+			buf0 = new wchar_t[len];
+			wchar_t *buf = buf0;
+			memset(buf0, 0, len);
+			for (size_t ii = 0; ii < m_len; ++ii)
+			{
+				BYTE dd = m_data[ii];
+				buf[0] = V2Hex(dd >> 4);
+				buf[1] = V2Hex(dd & 0xF);
+				buf += 2;
+			}
 		}
-		fwprintf_s(ff, L"</ATOM>\n");
+		else
+		{
+			buf0 = new wchar_t[32];
+			swprintf_s(buf0, 32, L"0x%llX", m_val);
+		}
 	}
+	str = buf0;
+	delete[] buf0;
 }
-
-UINT64 MidAtomToken::GetValue(void) const
-{
-	if (m_len == 0) return d.m_val;
-	else THROW_ERROR(ERR_APP, L"data length=%d is over UINT64", m_len);
-//	return UINT64();
-}
-
-
 ///////////////////////////////////////////////////////////////////////////////
 // ==== List Tokens ======
 
@@ -290,16 +360,14 @@ void ListToken::Print(FILE* ff, int indentation)
 
 NameToken::~NameToken(void)
 {
+	delete m_name;
 	delete m_value;
 }
 
 bool NameToken::ParseToken(BYTE*& begin, BYTE* end, BYTE * start)
 {
 	CONSUME_TOKEN(begin, end, start, START_NAME);
-	MidAtomToken* nn = MidAtomToken::ParseAtomToken(begin, end, start);
-	if (nn == nullptr) THROW_ERROR(ERR_APP, L"failed on parsing name, offset=%zd", begin - start);
-	m_name = boost::numeric_cast<DWORD>( nn->GetValue());
-	delete nn;
+	m_name = MidAtomToken::ParseAtomToken(begin, end, start);
 	m_value = Parse(begin, end, start);
 	if (m_value == nullptr) THROW_ERROR(ERR_APP, L"failed on parsing data, offset=%zd", begin - start);
 	CONSUME_TOKEN(begin, end, start, END_NAME);
@@ -308,7 +376,10 @@ bool NameToken::ParseToken(BYTE*& begin, BYTE* end, BYTE * start)
 
 void NameToken::Print(FILE* ff, int indentation)
 {
-	fwprintf_s(ff, L"%s<NAME=%d>, val=", INDENTATION - indentation, m_name);
+	// name to string
+	std::wstring str;
+	m_name->ToString(str);
+	fwprintf_s(ff, L"%s<NAME=%s>, val=", INDENTATION - indentation, str.c_str());
 	if (m_value) m_value->Print(ff, 0);
 	fwprintf_s(ff, L"</NAME>\n");
 }
@@ -331,19 +402,12 @@ bool CStatePhrase::ParseToken(BYTE*& begin, BYTE* end, BYTE* start)
 		{
 			MidAtomToken* t1 = MidAtomToken::ParseAtomToken(begin, end, start);
 			if (t1 == nullptr) THROW_ERROR(ERR_APP, L"expected atome. offset=%zd", start);
-			m_state[ii] = boost::numeric_cast<UINT>(t1->GetValue());
+//			m_state[ii] = boost::numeric_cast<UINT>(t1->GetValue());
+			if (t1->m_len > sizeof(UINT))
+				THROW_ERROR(ERR_APP, L"length of state[%d] (%zd) is larger than UINT", ii, t1->m_len);
+			m_state[ii] = t1->GetValue<UINT>();
 			delete t1;
 		}
-
-		//t1 = MidAtomToken::ParseAtomToken(begin, end, start);
-		//if (t1 == nullptr) THROW_ERROR(ERR_APP, L"expected atome. offset=%zd", start);
-		//m_s1 = boost::numeric_cast<UINT>(t1->GetValue());
-		//delete t1;
-
-		//t1 = MidAtomToken::ParseAtomToken(begin, end, start);
-		//if (t1 == nullptr) THROW_ERROR(ERR_APP, L"expected atome. offset=%zd", start);
-		//m_s1 = boost::numeric_cast<UINT>(t1->GetValue());
-		//delete t1;
 	}
 	CONSUME_TOKEN(begin, end, start, CTcgTokenBase::END_LIST);
 	return true;
@@ -404,7 +468,9 @@ bool CallToken::ParseToken(BYTE*& begin, BYTE* end, BYTE* start)
 	// 解析 invoking
 	MidAtomToken* t1 = MidAtomToken::ParseAtomToken(begin, end, start);
 	if (t1 == nullptr) THROW_ERROR(ERR_APP, L"failed on parsing atom offset=%zd", begin - start);
-	m_invoking_id = t1->GetValue();
+	if (t1->m_len > sizeof(UINT64))
+		THROW_ERROR(ERR_APP, L"length of invoking id (%zd) is larger than UNIT64", t1->m_len);
+	m_invoking_id = t1->GetValue<UINT64>();
 	delete t1;
 	t1 = nullptr;
 	const UID_INFO * uid_info = g_uid_map.GetUidInfo(m_invoking_id);
@@ -429,7 +495,9 @@ bool CallToken::ParseToken(BYTE*& begin, BYTE* end, BYTE* start)
 	if (t1 == nullptr) THROW_ERROR(ERR_APP, L"failed on parsing atom offset=%zd", begin - start);
 
 	//t2.Parse(begin, end, start);
-	m_method_id = t1->GetValue();
+	if (t1->m_len > sizeof(UINT64))
+		THROW_ERROR(ERR_APP, L"length of method id (%zd) is larger than UNIT64", t1->m_len);
+	m_method_id = t1->GetValue<UINT64>();
 	delete t1;
 	t1 = nullptr;
 	uid_info = g_uid_map.GetUidInfo(m_method_id);
@@ -513,7 +581,10 @@ bool CallToken::ParseParameter(BYTE* &begin, BYTE* end, BYTE* start)
 			// parse name
 			MidAtomToken* name = MidAtomToken::ParseAtomToken(begin, end, start);
 			if (name == nullptr) THROW_ERROR(ERR_APP, L"failed on parse AtomToken, offset=%zd", (begin - start));
-			DWORD param_num = boost::numeric_cast<DWORD>(name->GetValue());
+//			DWORD param_num = boost::numeric_cast<DWORD>(name->GetValue());
+			if (name->m_len > sizeof(DWORD)) 
+				THROW_ERROR(ERR_APP, L"length of param number (%zd) is larger than DWORD", name->m_len);
+			DWORD param_num = name->GetValue<DWORD>();
 			delete name;
 			param.m_num = param_num;
 			swprintf_s(str, L"OPTION_PARAM[%d]", param_num);
@@ -547,7 +618,10 @@ bool CallToken::ParseOptionalParameter(PARAM_INFO::PARAM_LIST& param_list, BYTE*
 		// parse name
 		MidAtomToken* name = MidAtomToken::ParseAtomToken(begin, end, start);
 		if (name == nullptr) THROW_ERROR(ERR_APP, L"failed on parse AtomToken, offset=%zd", (begin - start));
-		DWORD param_num = boost::numeric_cast<DWORD>(name->GetValue());
+//		DWORD param_num = boost::numeric_cast<DWORD>(name->GetValue());
+		if (name->m_len > sizeof(DWORD))
+			THROW_ERROR(ERR_APP, L"length of param num (%zd) is larger than DWORD", name->m_len);
+		DWORD param_num = name->GetValue<DWORD>();
 		delete name;
 		CParameter param;
 		param.m_num = param_num;
@@ -588,22 +662,18 @@ void CallToken::Print(FILE* ff, int indentation)
 void CallToken::CParameter::Print(FILE* ff, int indentation)
 {
 	fwprintf_s(ff, L"\t %s=", m_name.c_str());
-//	if (!m_token_val) return;
 	switch (m_type)
 	{
 	case PARAM_INFO::UidRef: {
-		//if (!m_token_val)
-		//{
-		//	fwprintf_s(ff, L"<!missing param value>");
-		//	break;
-		//}
 		MidAtomToken* mt = dynamic_cast<MidAtomToken*>(m_token_val);
 		if (!mt)
 		{
 			fwprintf_s(ff, L"<!expected atom value>");
 			break;
 		}
-		UINT64 uid = mt->GetValue();
+		if (mt->m_len > sizeof(UINT64))
+			THROW_ERROR(ERR_APP, L"length of uid (%zd) is larger than UINT64", mt->m_len);
+		UINT64 uid = mt->GetValue<UINT64>();
 		const UID_INFO* uid_info = g_uid_map.GetUidInfo(uid);
 		if (uid_info) fwprintf_s(ff, L"%s ", uid_info->m_name.c_str());
 		fwprintf_s(ff, L"(UID=%016llX)", uid);

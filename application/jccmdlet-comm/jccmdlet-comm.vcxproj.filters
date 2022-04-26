@@ -24,9 +24,6 @@
     <ClInclude Include="include\utility.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="source\cmdlet-buffer.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="jccmdlet-comm.h">
       <Filter>头文件</Filter>
     </ClInclude>

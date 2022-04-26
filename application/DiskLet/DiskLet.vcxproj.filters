@@ -39,6 +39,9 @@
     <ClCompile Include="source\security.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="source\partition_parser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\DiskLet.h">
@@ -63,6 +66,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="source\security.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="source\partition_parser.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

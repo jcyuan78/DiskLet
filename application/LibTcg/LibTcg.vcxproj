@@ -29,16 +29,19 @@
     <ClInclude Include="source\dta_response.h" />
     <ClInclude Include="source\framework.h" />
     <ClInclude Include="source\pch.h" />
+    <ClInclude Include="source\tcg-packet.h" />
     <ClInclude Include="source\tcg_session.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\dta_command.cpp" />
     <ClCompile Include="source\dta_response.cpp" />
     <ClCompile Include="source\l0discovery.cpp" />
-    <ClCompile Include="source\LibTcg.cpp" />
     <ClCompile Include="source\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="source\security-parser.cpp" />
+    <ClCompile Include="source\tcg-packet.cpp" />
     <ClCompile Include="source\tcg_token.cpp" />
     <ClCompile Include="source\tcg_session.cpp" />
   </ItemGroup>
@@ -181,7 +184,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(WORKSPACE)\application\StorageDeviceLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

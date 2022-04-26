@@ -142,6 +142,10 @@ import-csv .\test-1.csv | Convert-FileTrace | select-object ts,path_hash,is_dir,
 	（2）对比PM TRACE和PA TRACE，看是否能够提取PA的相关特征。
 
 
+[20220324]
+JumpStart的trace分析
+(1) 分析一台PC的 trace
+	(1) 加载file mapping
 
 
 

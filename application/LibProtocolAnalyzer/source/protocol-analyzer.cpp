@@ -141,7 +141,7 @@ size_t CPacket::GetRawData(void)
 
 void CPacket::GetPacketData(jcvos::IBinaryBuffer*& buf)
 {
-	JCASSERT(m_packet && (buf == NULL));
+	JCASSERT(m_packet && (!buf));
 	size_t len = GetRawData();
 	if (len > 0)
 	{
@@ -272,7 +272,7 @@ CTrace::~CTrace(void)
 
 void CTrace::Initialize(IPETraceForScript16* trace, IPEAnalyzer* pe)
 {
-	if (trace == NULL) THROW_ERROR(ERR_APP, L"trace is NULL");
+	if (trace == nullptr) THROW_ERROR(ERR_APP, L"trace is NULL");
 	m_trace = trace;
 	m_trace->AddRef();
 	m_packet_count = m_trace->GetPacketsCountEx();
@@ -310,7 +310,7 @@ size_t CTrace::GetReadPayload(BYTE * out_buf, long long start_index, UINT64 star
 	{
 		jcvos::auto_interface<CPacket> _packet(InternalGetPacket(index++));
 		CPacket* packet = (CPacket*)_packet;
-		if (packet == NULL) THROW_ERROR(ERR_APP, L"Failed on getting packet %lld", index - 1);
+		if (packet == nullptr) THROW_ERROR(ERR_APP, L"Failed on getting packet %lld", index - 1);
 		max_check_packets--;
 		//packet->ParsePacket();
 		if (packet->GetPacketType() != pa::PACKET_TYPE_TLP)
@@ -395,7 +395,7 @@ size_t CTrace::GetWritePayload(BYTE *out_buf, long long start_index, UINT64 star
 		LOG_DEBUG(L"get packeg %lld", index);
 		jcvos::auto_interface<CPacket> _packet(InternalGetPacket(index++));
 		CPacket* packet = (CPacket*)_packet;
-		if (packet == NULL) THROW_ERROR(ERR_APP, L"Failed on getting packet %lld", index-1);
+		if (packet == nullptr) THROW_ERROR(ERR_APP, L"Failed on getting packet %lld", index-1);
 		max_check_packets--;
 		//packet->ParsePacket();
 
@@ -430,7 +430,7 @@ CPacket* CTrace::InternalGetPacket(long long index)
 	auto_unknown<IPEPacket1> packet1;
 	HRESULT hres = pp->QueryInterface<IPEPacket1>(&packet1);
 	pp->Release();
-	if (FAILED(hres) || packet1 == NULL) THROW_COM_ERROR(hres, L"failed on getting packet interface");
+	if (FAILED(hres) || packet1 == nullptr) THROW_COM_ERROR(hres, L"failed on getting packet interface");
 
 	CPacket* _packet = jcvos::CDynamicInstance<CPacket>::Create();
 	_packet->Initialize(packet1, index);
@@ -449,13 +449,13 @@ void CTrace::Close(void)
 
 void CTrace::GetPacket(pa::IPacket*& p, UINT64 index)
 {
-	JCASSERT(p == NULL);
+	JCASSERT(p == nullptr);
 	p = static_cast<pa::IPacket*>(InternalGetPacket(index));
 }
 
 void CTrace::GetCommandPayload(jcvos::IBinaryBuffer* & buf, double start_time, UINT64 start_addr, UINT data_len, bool receive)
 {
-	JCASSERT(m_trace && buf == NULL);
+	JCASSERT(m_trace && !buf);
 	int level = 0;
 	long long index = 0;
 	HRESULT hres = m_trace->GetPacketByTime(start_time, 1, &level, &index);
@@ -495,14 +495,14 @@ public:
 public:
 	virtual void OpenTrace(pa::ITrace*& trace, const std::wstring& fn)
 	{
-		JCASSERT(trace == NULL)
+		JCASSERT(trace == nullptr)
 		IDispatch* tt = NULL;
 		tt = m_analyzer->OpenFile(fn.c_str()).Detach();
 		if (!tt) THROW_ERROR(ERR_APP, L"failed on open file %s", fn.c_str());
 		auto_unknown<IPETraceForScript16> new_trace;
 		HRESULT hres = tt->QueryInterface<IPETraceForScript16>(&new_trace);
 		tt->Release();
-		if (FAILED(hres) || new_trace == NULL) THROW_ERROR(ERR_APP, L"failed on converitng dispatch to trace");
+		if (FAILED(hres) || new_trace == nullptr) THROW_ERROR(ERR_APP, L"failed on converitng dispatch to trace");
 
 		CTrace* _trace = jcvos::CDynamicInstance<CTrace>::Create();
 		_trace->Initialize(new_trace, m_analyzer);
@@ -518,7 +518,7 @@ IPEAnalyzer* CAnalyzer::m_analyzer = NULL;
 
 void pa::CreateAnalyzer(IAnalyzer*& aa, bool dll)
 {
-	JCASSERT(aa == NULL);
+	JCASSERT(aa == nullptr);
 	CAnalyzer* an = jcvos::CDynamicInstance<CAnalyzer>::Create();
 	if (!an->m_analyzer)
 	{
@@ -536,7 +536,7 @@ void pa::CreateAnalyzer(IAnalyzer*& aa, bool dll)
 			g_init = true;
 		}
 		hres = CoCreateInstance(CLSID_PEAnalyzer, NULL, CLSCTX_SERVER, IID_IPEAnalyzer, (void**)(&an->m_analyzer));
-		if (FAILED(hres) || an->m_analyzer == NULL) THROW_COM_ERROR(hres, L"failed on creating pe analyzer");
+		if (FAILED(hres) || an->m_analyzer == nullptr) THROW_COM_ERROR(hres, L"failed on creating pe analyzer");
 
 
 

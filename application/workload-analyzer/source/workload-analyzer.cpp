@@ -1,4 +1,5 @@
-﻿#include "pch.h"
+﻿///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "pch.h"
 
 LOCAL_LOGGER_ENABLE(L"wla", LOGGER_LEVEL_DEBUGINFO);
 
@@ -45,7 +46,7 @@ GlobalInit::~GlobalInit(void)
 {
 	ClearMapping();
 	RELEASE(m_statistic);
-	CSingleTonEntry::Unregister();
+//	CSingleTonEntry::Unregister();
 }
 
 void GlobalInit::SetMaping(FN_MAP * fn_map, LBA_INFO * lba_map, size_t map_size, uint64_t offset)
@@ -64,7 +65,7 @@ LBA_INFO * GlobalInit::ClusterToFid(uint64_t cluster)
 	return m_lba_mapping+ cluster;
 }
 
-void GlobalInit::FidToFn(std::wstring & fn, FID fid)
+bool GlobalInit::FidToFn(std::wstring & fn, FID fid)
 {
 	FILE_INFO * file;
 	auto it = m_fn_mapping->find(fid);
@@ -72,7 +73,9 @@ void GlobalInit::FidToFn(std::wstring & fn, FID fid)
 	{
 		file = it->second;
 		if (file) fn = file->fn;
+		return true;
 	}
+	else return false;
 }
 
 void GlobalInit::AddFile(FID fid, FILE_INFO * file)
@@ -188,6 +191,69 @@ void WLA::SetStaticMapping::InternalProcessRecord()
 	m_cur_file_info->length += boost::numeric_cast<UINT32>(cluster_num);
 
 }
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+WLA::SetStaticMapping2::SetStaticMapping2(void) : /*m_fn_mapping(nullptr), */m_lba_mapping(nullptr)
+{
+}
+
+void WLA::SetStaticMapping2::BeginProcessing()
+{
+	m_map_size = (secs + first_lba) / 8;
+	m_first_cluster = first_lba / 8;
+	m_lba_mapping = new LBA_INFO[m_map_size];
+	memset(m_lba_mapping, 0xFF, sizeof(LBA_INFO) * m_map_size);
+	//m_fn_mapping = new FN_MAP;
+	global.SetMaping(nullptr, m_lba_mapping, m_map_size, m_first_cluster);
+	global.m_first_lba = first_lba;
+	m_cur_file_info = nullptr;
+}
+
+void WLA::SetStaticMapping2::EndProcessing()
+{
+}
+
+void WLA::SetStaticMapping2::InternalProcessRecord()
+{
+	System::Collections::Generic::IEnumerator<System::Management::Automation::PSMemberInfo^>^ it
+		= mapping->Members->GetEnumerator();
+	it->Reset();
+	it->MoveNext();
+
+	uint64_t start_lba = System::Convert::ToUInt64(mapping->Members[L"start"]->Value);
+	uint64_t length = System::Convert::ToUInt64(mapping->Members[L"len"]->Value);
+	String^ attr = mapping->Members[L"attr"]->Value->ToString();
+	FID fid = System::Convert::ToInt32(mapping->Members[L"fid"]->Value);
+	if (fid < 0) fid--;
+
+	uint64_t start_cluster = start_lba / 8;
+	uint64_t cluster_num = length / 8;
+	for (uint32_t ii = 0; ii < cluster_num; ++ii)
+	{
+		m_lba_mapping[start_cluster + ii].fid = fid;
+	}
+
+	std::wstring fn;
+	if (!global.FidToFn(fn, fid))
+	{
+		m_cur_file_info = new FILE_INFO;
+		m_cur_file_info->fid = fid;
+		ToStdString(fn, mapping->Members[L"fn"]->Value->ToString());
+		m_cur_file_info->fn = fn;
+		m_cur_file_info->length = 0;
+		global.AddFile(fid, m_cur_file_info);
+	}
+	//}
+	//m_cur_file_info->segments.push_back(SEGMENT(start_cluster, m_cur_file_info->length, boost::numeric_cast<UINT32>(cluster_num)));
+	//m_cur_file_info->length += boost::numeric_cast<UINT32>(cluster_num);
+
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 void WLA::ProcessTrace::InternalProcessRecord()
 {
@@ -429,4 +495,10 @@ void WLA::TraceIntervalTime::BeginProcessing()
 
 //	m_show_first = !(ignore_first.ToBool());
 	m_show_first = false;
+}
+
+void WLA::DecodeNVMeCmd::InternalProcessRecord()
+{
+	uint64_t lba = System::Convert::ToUInt64(input_obj->Members[L"lba"]->Value);
+
 }

@@ -45,12 +45,12 @@ CAtaDeviceComm::~CAtaDeviceComm(void)
 
 bool CAtaDeviceComm::Inquiry(jcvos::IBinaryBuffer *& data)
 {	// identify device
-	JCASSERT(data == NULL);
+	JCASSERT(!data);
 	JCASSERT(m_hdev && m_hdev!=INVALID_HANDLE_VALUE);
 
 	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
 	bool res = jcvos::CreateBinaryBuffer(buf, READ_ATTRIBUTE_BUFFER_SIZE);
-	if (!res || buf == NULL) THROW_ERROR(ERR_APP, L"failed on creating buffer.");
+	if (!res || !buf) THROW_ERROR(ERR_APP, L"failed on creating buffer.");
 	BYTE * _buf = buf->Lock();
 	memset(_buf, 0, READ_ATTRIBUTE_BUFFER_SIZE);
 
@@ -81,7 +81,7 @@ bool CAtaDeviceComm::Inquiry(IDENTIFY_DEVICE & id)
 	static const size_t BUF_LEN = 128;
 	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
 	bool br = Inquiry(buf);
-	if (!br || buf == NULL)
+	if (!br || !buf)
 	{
 		LOG_ERROR(L"[err] failed on reading identify device");
 		return false;
@@ -106,12 +106,12 @@ bool CAtaDeviceComm::Inquiry(IDENTIFY_DEVICE & id)
 
 bool CAtaDeviceComm::ReadSmart(BYTE * _buf, size_t length)
 {
-//	JCASSERT(data == NULL);
+//	JCASSERT(!data);
 	JCASSERT(m_hdev && m_hdev!=INVALID_HANDLE_VALUE);
 
 //	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
 //	bool res = jcvos::CreateBinaryBuffer(buf, READ_ATTRIBUTE_BUFFER_SIZE);
-//	if (!res || buf == NULL) THROW_ERROR(ERR_APP, L"failed on creating buffer.");
+//	if (!res || !buf) THROW_ERROR(ERR_APP, L"failed on creating buffer.");
 //	BYTE * _buf = buf->Lock();
 
 	ATA_REGISTER reg;

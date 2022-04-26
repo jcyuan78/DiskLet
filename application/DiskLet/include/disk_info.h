@@ -194,7 +194,7 @@ namespace Clone
 
 		void GetDiskInfo(IDiskInfo * & info)
 		{
-			JCASSERT(info == NULL && m_disk_info);
+			JCASSERT(info == nullptr && m_disk_info);
 			info = m_disk_info;
 			info->AddRef();
 		}

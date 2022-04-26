@@ -153,7 +153,6 @@
     <ClInclude Include="include\utility.h" />
     <ClInclude Include="jccmdlet-comm.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="source\cmdlet-buffer.h" />
     <ClInclude Include="source\pch.h" />
   </ItemGroup>
   <ItemGroup>

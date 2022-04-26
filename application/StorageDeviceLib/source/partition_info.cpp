@@ -31,7 +31,7 @@ bool CPartitionInfo::GetDiskProperty(DISK_PROPERTY & prop) const
 
 bool CPartitionInfo::GetVolume(IVolumeInfo *& vol)
 {
-	JCASSERT(vol == NULL);
+	JCASSERT(vol == nullptr);
 	vol = m_volume;
 	if (vol) vol->AddRef();
 	return true;
@@ -39,7 +39,7 @@ bool CPartitionInfo::GetVolume(IVolumeInfo *& vol)
 
 bool CPartitionInfo::GetParent(IDiskInfo *& disk)
 {
-	JCASSERT(disk == NULL);
+	JCASSERT(!disk);
 	disk = static_cast<IDiskInfo*>(m_parent);
 	JCASSERT(disk);
 	disk->AddRef();
@@ -110,20 +110,21 @@ bool CPartitionInfo::DeletePartition(void)
 	return true;
 }
 
-bool CPartitionInfo::FormatVolume(IVolumeInfo *& new_vol, const std::wstring & fs_type, const std::wstring & label, bool full, bool compress)
+bool CPartitionInfo::FormatVolume(IVolumeInfo *& new_vol, const std::wstring & fs_type, const std::wstring & label, 
+		bool full, bool compress)
 {
-	if (m_volume == NULL) THROW_ERROR(ERR_APP, L"[err] volume is null");
+	if (m_volume == nullptr) THROW_ERROR(ERR_APP, L"[err] volume is null");
 
 	auto_unknown<IWbemClassObject> vol_obj;
 	bool br = m_volume->FormatVolume(vol_obj, fs_type, label, full, compress);
-	if (!br || vol_obj == NULL)
+	if (!br || !vol_obj )
 	{
 		LOG_ERROR(L"[err] failed on format volume %s", m_volume->m_name.c_str());
 		return false;
 	}
 	jcvos::auto_interface<CVolumeInfo> vol_info;
 	br = CVolumeInfo::CreateVolume(vol_info, vol_obj, m_manager);
-	if (!br || vol_info == NULL)
+	if (!br || !vol_info )
 	{
 		LOG_ERROR(L"[err] failed on creating volume info object");
 		return false;
@@ -151,7 +152,7 @@ bool CPartitionInfo::FormatVolume(IVolumeInfo *& new_vol, const std::wstring & f
 //		IUnknown * obj = ((VARIANT&)volume_val).punkVal;	JCASSERT(obj);
 //		auto_unknown<IWbemClassObject> volume_obj;
 //		hres = obj->QueryInterface(&volume_obj);
-//		if (SUCCEEDED(hres) && !(volume_obj == NULL))
+//		if (SUCCEEDED(hres) && !(volume_obj == nullptr))
 //		{
 //			jcvos::auto_interface<CVolumeInfo> vol_info;
 //			bool br = CVolumeInfo::CreateVolume(vol_info, volume_obj, m_manager);
@@ -263,10 +264,10 @@ bool CPartitionInfo::ListVolumes(void)
 		ULONG count = 0;
 		hres = penum->Next(WBEM_INFINITE, 1, &obj, &count);
 		if (FAILED(hres))	THROW_COM_ERROR(hres, L"failed on getting physical disk, error=0x%X", hres);
-		if (hres == S_FALSE || obj == NULL) break;
+		if (hres == S_FALSE || obj == nullptr) break;
 		// 处理查询结果
 		prop_tree::wptree prop;
-		if (!(obj == NULL)) ReadWmiObject(prop, obj);
+		if (!(obj == nullptr)) ReadWmiObject(prop, obj);
 
 		std::wstring & volume_path = prop.get<std::wstring>(L"Volume");
 		std::wstring & partition_path = prop.get<std::wstring>(L"Partition");

@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "itcg.h"
 #include <boost/property_tree/json_parser.hpp>
 #include <vector>
 #include <map>
@@ -66,12 +66,17 @@ public:
     boost::property_tree::wptree m_features;
 };
 
-class CTcgFeatureSet
+class CTcgFeatureSet: public tcg::ISecurityObject
 {
 public:
-    ~CTcgFeatureSet(void) {};
+    virtual ~CTcgFeatureSet(void) {};
+    virtual void ToString(std::wostream& out, UINT layer, int opt);
+    virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index) {};
+    virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name) {};
+
     const CTcgFeature & GetFeature(const std::wstring& name);
     const CTcgFeature * GetFeature(CTcgFeature::TCG_FEATURE_CODE code);
+
 public:
     std::vector<CTcgFeature> m_features;
     L0DISCOVERY_HEADER m_header;

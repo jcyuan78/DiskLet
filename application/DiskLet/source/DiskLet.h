@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma once
 
 using namespace System;
 using namespace System::Management::Automation;
@@ -9,6 +10,14 @@ using namespace System::Management::Automation;
 //#include "storage_device.h"
 #include "global_init.h"
 #include "../include/disk_info.h"
+#include <jccmdlet-comm.h>
+
+#include <boost/uuid/name_generator.hpp>
+#include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/uuid_hash.hpp>
+#include <boost/functional/hash.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 
 
 //extern StaticInit global;
@@ -333,6 +342,52 @@ namespace DiskLet
 	public:
 		virtual void InternalProcessRecord() override;
 	};
+
+	//-----------------------------------------------------------------------------
+// -- storage device
+	[CmdletAttribute(VerbsCommon::New, "UUID5")]
+	public ref class GenerateUUID : public DiskLetBase
+	{
+	public:
+		GenerateUUID(void) {  };
+		~GenerateUUID(void) {};
+
+	public:
+		[Parameter(Position = 0, Mandatory = true, ValueFromPipeline = true,
+			ValueFromPipelineByPropertyName = true,
+			HelpMessage = "Namespace of UUID ")]
+		property String ^ ns;
+		[Parameter(Position = 0, Mandatory = true, ValueFromPipeline = true,
+			ValueFromPipelineByPropertyName = true,
+			HelpMessage = "String of UUID ")]
+		property String^ str;
+
+	public:
+		virtual void InternalProcessRecord() override
+		{
+			std::wstring wstr, wstr_ns;
+			ToStdString(wstr, str);
+			ToStdString(wstr_ns, ns);
+			std::string string_id, str_ns;
+			jcvos::UnicodeToUtf8(string_id, wstr);
+			jcvos::UnicodeToUtf8(str_ns, wstr_ns);
+			
+
+			boost::uuids::string_generator str_gen;
+//			boost::uuids::uuid dns_namespace_uuid = str_gen("{6ba7b810-9dad-11d1-80b4-00c04fd430c8}");
+			boost::uuids::uuid dns_namespace_uuid = str_gen(str_ns);
+			boost::uuids::name_generator gen(dns_namespace_uuid);
+			boost::uuids::uuid uuid_val = gen(string_id);
+//			id = LODWORD(boost::uuids::hash_value(uuid));
+
+			std::wstring str_uuid;
+			str_uuid = boost::uuids::to_wstring(uuid_val);
+			WriteObject(gcnew String(str_uuid.c_str()));
+		}
+	};
+
+
+	
 };	
 
 //

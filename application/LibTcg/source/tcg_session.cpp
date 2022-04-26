@@ -4,8 +4,9 @@
 
 LOCAL_LOGGER_ENABLE(L"tcg.session", LOGGER_LEVEL_NOTICE);
 
+using tcg::ITcgSession;
 
-CTcgSession::CTcgSession(void) : m_dev(NULL), m_is_open(false)
+CTcgSession::CTcgSession(void) : m_dev(NULL), m_is_open(false), m_feature_set(NULL)
 {
 	m_session_auth = 0;
 	m_hsn = 0;
@@ -14,12 +15,16 @@ CTcgSession::CTcgSession(void) : m_dev(NULL), m_is_open(false)
 #ifdef _DEBUG
 	m_invoking_id = 0;
 #endif
+	m_feature_set = jcvos::CDynamicInstance<CTcgFeatureSet>::Create();
+	if (m_feature_set == nullptr) THROW_ERROR(ERR_APP, L"failed on creating feature set");
 }
 
 CTcgSession::~CTcgSession(void)
 {
 	if (m_is_open) EndSession();
+	RELEASE(m_feature_set);
 	RELEASE(m_dev);
+
 }
 
 bool CTcgSession::ConnectDevice(IStorageDevice* dev)
@@ -43,15 +48,15 @@ bool CTcgSession::ConnectDevice(IStorageDevice* dev)
 		LOG_ERROR(L"[err] failed on loading l0 discovery config");
 		return false;
 	}
-	br = desc.Parse(m_feature_set, buf, SECTOR_SIZE);
+	br = desc.Parse(*m_feature_set, buf, SECTOR_SIZE);
 	if (!br)
 	{
 		LOG_ERROR(L"[err] failed on parsing l0 discovery");
 		return false;
 	}
 
-	const CTcgFeature* feature_opal = m_feature_set.GetFeature(CTcgFeature::FEATURE_OPAL_SSC);
-	if (feature_opal == NULL) THROW_ERROR(ERR_APP, L"the device does not support opal");
+	const CTcgFeature* feature_opal = m_feature_set->GetFeature(CTcgFeature::FEATURE_OPAL_SSC);
+	if (feature_opal == nullptr) THROW_ERROR(ERR_APP, L"the device does not support opal");
 	m_base_comid = feature_opal->m_features.get<WORD>(L"Base ComId");
 	return true;
 }
@@ -61,7 +66,7 @@ BYTE CTcgSession::L0Discovery(BYTE* buf)
 	JCASSERT(m_dev);
 	BYTE ir = m_dev->SecurityReceive(buf, 512, 0x01, 0x01);
 	if (ir != SUCCESS) { LOG_ERROR(L"[err] failed on calling security receive command"); }
-	return ir;
+	return (ir==SUCCESS);
 }
 
 BYTE CTcgSession::StartSession(const TCG_UID sp, const char* host_challenge, const TCG_UID sign_authority, bool write)
@@ -585,9 +590,9 @@ BYTE CTcgSession::Authenticate(vector<uint8_t> Authority, const char* Challenge)
 ////	LOG(D1) << " Exit DtaHashPwd"; // log for hash timing
 //}
 
-void CreateTcgSession(ITcgSession*& session, IStorageDevice* dev)
+void tcg::CreateTcgSession(ITcgSession*& session, IStorageDevice* dev)
 {
-	JCASSERT(session == NULL);
+	JCASSERT(session == nullptr);
 	CTcgSession* ss = jcvos::CDynamicInstance<CTcgSession>::Create();
 	JCASSERT(ss);
 	ss->ConnectDevice(dev);
@@ -596,7 +601,7 @@ void CreateTcgSession(ITcgSession*& session, IStorageDevice* dev)
 
 void CreateTcgTestDevice(IStorageDevice*& dev, const std::wstring & path)
 {
-	JCASSERT(dev == NULL);
+	JCASSERT(dev == nullptr);
 	CTestDevice* dd = jcvos::CDynamicInstance<CTestDevice>::Create();
 	JCASSERT(dd);
 	dd->m_path = path;

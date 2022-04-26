@@ -240,6 +240,7 @@
     <ClCompile Include="source\DiskLet.cpp" />
     <ClCompile Include="source\disk_info.cpp" />
     <ClCompile Include="source\global_init.cpp" />
+    <ClCompile Include="source\partition_parser.cpp" />
     <ClCompile Include="source\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_STATIC|x64'">Create</PrecompiledHeader>
@@ -255,6 +256,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="source\DiskLet.h" />
     <ClInclude Include="source\global_init.h" />
+    <ClInclude Include="source\partition_parser.h" />
     <ClInclude Include="source\pch.h" />
     <ClInclude Include="source\security.h" />
     <ClInclude Include="source\smart-decode.h" />

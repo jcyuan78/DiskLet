@@ -12,6 +12,8 @@
 #include <boost/cast.hpp>
 #include <boost/functional/hash.hpp>
 
+#include "file-mapping.h"
+
 
 #pragma make_public(ITraceStatistic)
 
@@ -28,7 +30,7 @@ inline void LbaToUnit(UINT64 lba, UINT64 secs, UINT& unit, UINT& unit_num)
 }
 
 
-typedef int32_t FID;
+
 
 class LBA_INFO
 {
@@ -60,6 +62,9 @@ public:
 
 typedef std::map<FID, FILE_INFO *> FN_MAP;
 
+
+
+
 class GlobalInit
 {
 public:
@@ -69,7 +74,7 @@ public:
 public:
 	void SetMaping(FN_MAP * fn_map, LBA_INFO * lba_map, size_t map_size, uint64_t offset);
 	LBA_INFO * ClusterToFid(uint64_t cluster);
-	void FidToFn(std::wstring & fn, FID fid);
+	bool FidToFn(std::wstring & fn, FID fid);
 	void AddFile(FID fid, FILE_INFO * file);
 	FID FindFidByName(const std::wstring & fn);
 	uint64_t GetLba(FID fid, uint64_t offset);
@@ -96,7 +101,7 @@ public:
 
 	void GetStatistic(ITraceStatistic*& statistic)
 	{
-		JCASSERT(statistic == NULL);
+		JCASSERT(statistic == nullptr);
 		statistic = m_statistic;
 		if (statistic) statistic->AddRef();
 	}
@@ -128,6 +133,7 @@ typedef jcvos::CGlobalSingleToneNet<CAddressRank> CAddressRankInstance;
 
 namespace WLA {
 	// -- my cmdlet base class, to handle exceptions	
+	// 包含 文件的offset
 	[CmdletAttribute(VerbsCommon::Set, "StaticMapping")]
 	public ref class SetStaticMapping : public JcCmdLet::JcCmdletBase
 	{
@@ -156,6 +162,41 @@ namespace WLA {
 
 	protected:
 		LBA_INFO * m_lba_mapping;
+		// map的大小，以8 sec (4KB）为单位;
+		size_t m_map_size;
+		uint64_t m_first_cluster;
+		FILE_INFO* m_cur_file_info;
+	};
+
+	// 不包含 文件的offset，只考虑文件的占用情况
+	[CmdletAttribute(VerbsCommon::Set, "StaticMapping2")]
+	public ref class SetStaticMapping2 : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		SetStaticMapping2(void);
+		~SetStaticMapping2(void) {};
+
+	public:
+		[Parameter(Position = 0, ValueFromPipeline = true,
+			ValueFromPipelineByPropertyName = true, Mandatory = true,
+			HelpMessage = "input object")]
+		property PSObject^ mapping;
+
+		[Parameter(Position = 1, Mandatory = true,
+			HelpMessage = "disk size, in sector")]
+		property uint64_t secs;
+
+		[Parameter(Position = 2, Mandatory = true,
+			HelpMessage = "offset of the device")]
+		property uint64_t first_lba;
+
+	public:
+		virtual void BeginProcessing()	override;
+		virtual void EndProcessing()	override;
+		virtual void InternalProcessRecord() override;
+
+	protected:
+		LBA_INFO* m_lba_mapping;
 		// map的大小，以8 sec (4KB）为单位;
 		size_t m_map_size;
 		uint64_t m_first_cluster;
@@ -419,7 +460,7 @@ namespace WLA {
 			UINT64 lba, secs;
 			int cmd = 0;
 			
-			if (trace == NULL) throw gcnew System::ApplicationException(L"trace is empty");
+			if (trace == nullptr) throw gcnew System::ApplicationException(L"trace is empty");
 
 			String ^ str_cmd = trace->Members[L"cmd"]->Value->ToString();
 			if (str_cmd == L"Write") cmd = ITraceStatistic::CMD_WRITE;
@@ -462,6 +503,27 @@ namespace WLA {
 		UINT* m_write_count;
 		UINT64 m_cluster_num;
 		UINT64 m_cmd_num;
+	};
+
+	[CmdletAttribute(VerbsData::ConvertFrom, "TLP")]
+	public ref class DecodeNVMeCmd : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		DecodeNVMeCmd(void);
+		~DecodeNVMeCmd(void);
+
+	public:
+		[Parameter(Position = 0, ValueFromPipeline = true,
+			ValueFromPipelineByPropertyName = true, Mandatory = true,
+			HelpMessage = "input object")]
+		property PSObject^ input_obj;
+
+	public:
+		virtual void BeginProcessing()	override;
+		virtual void EndProcessing()	override;
+		virtual void InternalProcessRecord() override;
+
+	protected:
 	};
 
 	[CmdletAttribute(VerbsLifecycle::Invoke, "TraceInterval")]

@@ -48,12 +48,12 @@
     <ClInclude Include="source\tcg_session.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="source\tcg-packet.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\l0discovery.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="source\LibTcg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\pch.cpp">
@@ -69,6 +69,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\tcg_token.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\security-parser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\tcg-packet.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

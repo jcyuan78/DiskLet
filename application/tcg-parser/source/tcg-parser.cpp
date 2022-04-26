@@ -102,7 +102,8 @@ System::String ^ tcg_parser::TcgToken::Print(void)
 	CloseHandle(hfile);
 	return ss;
 #else
-	m_token->Print(stdout, 0);
+	if (m_token)	m_token->Print(stdout, 0);
+	else { wprintf_s(L"[err] token is empty"); }
 	return gcnew System::String(L"\n");
 #endif
 }

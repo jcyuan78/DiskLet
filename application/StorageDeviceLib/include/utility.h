@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <WbemIdl.h>
 #include <vector>
@@ -22,17 +22,23 @@
 void GetComError(wchar_t * out_msg, size_t buf_size, HRESULT res, const wchar_t * msg, ...);
 void GetWmiError(wchar_t * out_msg, size_t buf_size, HRESULT res, const wchar_t * msg, ...);
 
+#ifndef THROW_COM_ERROR
 #define THROW_COM_ERROR(res, msg, ...)	do {\
 	jcvos::auto_array<wchar_t> buf(256);	\
 	GetWmiError(buf, 256, res, msg, __VA_ARGS__);	\
 	jcvos::CJCException err(buf, jcvos::CJCException::ERR_APP);	\
-    LogException(__FUNCTION__, __LINE__, err);	\
+    LogException(__STR2WSTR__(__FUNCTION__), __LINE__, err);	\
     throw err;	} while(0);
+#endif
 
+#ifndef LOG_COM_ERROR
 #define LOG_COM_ERROR(res, msg, ...)	do {\
 	jcvos::auto_array<wchar_t> buf(256);	\
 	GetWmiError(buf, 256, res, msg, __VA_ARGS__);	\
 	LOG_ERROR(buf);	} while(0);
+
+#endif // !LOG_COM_ERROR
+
 
 #define _1MB (1024*1024)
 
@@ -161,18 +167,18 @@ void PrintDrive(IVdsDrive * drive);
 
 inline UINT64 ByteToMB(UINT64 size)
 {
-	// È·±£ÄÜ¹»±»1MBÕû³ý¡£
+	// ç¡®ä¿èƒ½å¤Ÿè¢«1MBæ•´é™¤ã€‚
 	JCASSERT((size &(_1MB - 1)) == 0);
 	return size / _1MB;
 }
 
-// ÏòÉÏÈ¡Õû¶ÔÆE
+// å‘ä¸Šå–æ•´å¯¹è‹¼E
 inline UINT64 ByteToMB_Up(UINT64 size)
 {
 	return ((size-1) >>20) +1;
 }
 
-// ÏòÏÂÈ¡Õû¶ÔÆE
+// å‘ä¸‹å–æ•´å¯¹è‹¼E
 inline UINT64 ByteToMB_Down(UINT64 size)
 {
 	return (size >>20);

@@ -32,6 +32,19 @@ JcCmdLet::BinaryType ^ Clone::StorageDevice::GetLogPage(BYTE page_id, size_t sec
 	return gcnew JcCmdLet::BinaryType(buf);
 }
 
+JcCmdLet::BinaryType^ Clone::StorageDevice::ReadIdentifyControl(void)
+{
+	INVMeDevice* nvme = dynamic_cast<INVMeDevice*>(m_storage);
+	if (nvme == nullptr) throw gcnew System::ApplicationException(L"only support NVMe device");
+	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
+	jcvos::CreateBinaryBuffer(buf, 4096);
+	BYTE* data = buf->Lock();
+	nvme->ReadIdentifyDevice(1, 0, data, 4096);
+	buf->Unlock(data);
+
+	return gcnew JcCmdLet::BinaryType(buf);
+}
+
 HEALTH_INFO ^ Clone::StorageDevice::GetHealthInfo(void)
 {
 	JCASSERT(m_storage);

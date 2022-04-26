@@ -1,5 +1,5 @@
 ﻿#include "pch.h"
-#include "..\include\l0discovery.h"
+#include "../include/l0discovery.h"
 #include <boost/endian.hpp>
 #include <boost/cast.hpp>
 
@@ -147,6 +147,27 @@ bool CL0DiscoveryDescription::Parse(CTcgFeatureSet& feature_set, BYTE* buf, size
 		feature_set.m_features.push_back(feature);
 	}
 	return true;
+}
+
+void CTcgFeatureSet::ToString(std::wostream& out, UINT layer, int opt)
+{
+	out << L"<L0Discovery> (major=" << m_header.major_version << ", minor=" << m_header.minor_version
+		<<", len="<<m_header.length_of_parameter<<")" << std::endl;
+	//if (layer <= 0) return;
+	out << std::showbase << std::left;
+	for (auto it = m_features.begin(); (layer>0) && it != m_features.end(); ++it)
+	{
+		out << L"    " << L"<Feature> : " << std::setw(20) << it->m_name << L" (ver=" << it->m_version
+			/*<< ", len=" << it->m_length*/ << ", code=" << std::hex << it->m_code << std::dec << ")" << std::endl;
+		//if (layer <= 1) continue;
+		for (auto ff = (it->m_features.begin()); (layer>1) &&ff != it->m_features.end(); ++ff)
+		{
+			out << L"        " << std::setw(32) << ff->first.c_str() << " : " << ff->second.get_value<int>() << std::endl;
+		}
+		out << L"    " << L"</Feature>" << std::endl;
+	}
+	out << L"</L0Discovery>" << std::endl;
+	out << std::right <<std::endl;
 }
 
 const CTcgFeature * CTcgFeatureSet::GetFeature(CTcgFeature::TCG_FEATURE_CODE code)

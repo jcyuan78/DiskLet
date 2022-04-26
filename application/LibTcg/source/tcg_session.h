@@ -9,7 +9,7 @@
 #define PROTOCOL_ID_TCG (0x01)
 #define PROTOCOL_ID_TPER (0x02)
 
-class CTcgSession : public ITcgSession
+class CTcgSession : public tcg::ITcgSession
 {
 public:
     CTcgSession(void);
@@ -44,7 +44,7 @@ protected:
     BYTE Authenticate(vector<uint8_t> Authority, const char* Challenge);
 
 protected:
-	CTcgFeatureSet m_feature_set;
+	CTcgFeatureSet * m_feature_set;
 
     IStorageDevice * m_dev;
     bool m_hash_password;
@@ -64,7 +64,7 @@ protected:
 };
 
 //void DtaHashPwd(vector<uint8_t>& hash, char* password, DtaDev* d);
-void CreateTcgSession(ITcgSession*& session, IStorageDevice* dev);
+void CreateTcgSession(tcg::ITcgSession*& session, IStorageDevice* dev);
 
 
 class CTestDevice : public IStorageDevice

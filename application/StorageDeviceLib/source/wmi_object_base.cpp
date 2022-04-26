@@ -64,7 +64,7 @@ bool CWmiObjectBase::IsObject(const std::wstring & path)
 
 bool CWmiObjectBase::GetObjectFromPath(IWbemClassObject *& obj, const std::wstring & path, CStorageManager * manager)
 {
-	JCASSERT(manager && obj == NULL);
+	JCASSERT(manager && obj == nullptr);
 	HRESULT hres = manager->m_services->GetObject(
 		BSTR(path.c_str()), WBEM_FLAG_RETURN_WBEM_COMPLETE,
 		NULL, &obj, NULL);
@@ -74,7 +74,7 @@ bool CWmiObjectBase::GetObjectFromPath(IWbemClassObject *& obj, const std::wstri
 
 HRESULT CWmiObjectBase::InternalInvokeMethodAsync(IJCProgress *& progress, const wchar_t * name, IWbemClassObject * class_instance)
 {
-	JCASSERT(progress == NULL);
+	JCASSERT(progress == nullptr);
 	HRESULT hres;
 	//auto_unknown<IWbemUnsecuredApartment> unsec_app;
 	//CoCreateInstance(CLSID_WbemUnsecuredApartment, NULL, CLSCTX_LOCAL_SERVER,
@@ -97,7 +97,7 @@ HRESULT CWmiObjectBase::InternalInvokeMethodAsync(IJCProgress *& progress, const
 		NULL, class_instance, NULL, &call_result);
 //	if (FAILED(hres)) THROW_COM_ERROR(hres, L"failed on invoking method (%s)", name);
 
-	if (SUCCEEDED(hres) && !(call_result == NULL))
+	if (SUCCEEDED(hres) && !(call_result == nullptr))
 	{
 		CWmiSemisyncProgress * pp = jcvos::CDynamicInstance<CWmiSemisyncProgress>::Create();
 		pp->SetResult(call_result);

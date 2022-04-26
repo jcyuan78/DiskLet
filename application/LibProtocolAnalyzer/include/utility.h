@@ -27,7 +27,7 @@ inline void GetComError(wchar_t* out_msg, size_t buf_size, HRESULT res, const wc
 inline void GetWmiError(wchar_t* out_msg, size_t buf_size, HRESULT res, const wchar_t* msg, ...)
 {
 	static HMODULE module_wbem = NULL;
-	if (module_wbem == NULL) module_wbem = LoadLibrary(L"C:\\Windows\\System32\\wbem\\wmiutils.dll");
+	if (module_wbem == nullptr) module_wbem = LoadLibrary(L"C:\\Windows\\System32\\wbem\\wmiutils.dll");
 
 	va_list argptr;
 	va_start(argptr, msg);
@@ -119,6 +119,7 @@ protected:
 	TYPE* m_ptr;
 };
 
+#if 0  // move to stdex::utility.h
 //#define __round_mask(x, y)	((__typeof__(x))((y)-1))
 template <typename T1, typename T2>
 inline T1 __round_mask(T1 x, T2 y) { return (T1)((y)-1); }
@@ -133,4 +134,4 @@ inline T round_up(T x, T y) { return (((x-1) | __round_mask(x, y)) + 1); }
  *
  * Rounds @x down to next multiple of @y (which must be a power of 2). To perform arbitrary rounding down, use rounddown() below. */
 #define round_down(x, y)	((x) & ~__round_mask(x, y))
-
+#endif

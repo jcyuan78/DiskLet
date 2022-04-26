@@ -182,3 +182,35 @@ public:
 extern const GUID GPT_TYPE_EFI;
 extern const GUID GPT_TYPE_MSR;
 extern const GUID GPT_TYPE_BASIC;
+
+class PartitionEntry
+{
+public:
+	GUID type;
+	GUID part_id;
+	UINT64 first_lba;
+	UINT64 last_lba;
+	UINT64 attribute;
+	wchar_t name[36];
+};
+
+class GptHeader
+{
+public:
+	char signature[8];
+	DWORD revision;
+	DWORD header_size;
+	DWORD header_crc;
+	DWORD reserved1;
+	UINT64 current_lba;
+	UINT64 backup_lba;
+	UINT64 first_usable;
+	UINT64 last_usable;
+	GUID disk_gid;
+	UINT64 starting_lba;
+	DWORD entry_num;
+	DWORD entry_size;
+	DWORD entry_crc;
+	char reserved2[420];
+};
+

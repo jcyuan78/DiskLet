@@ -1,4 +1,5 @@
-﻿#include "pch.h"
+﻿///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "pch.h"
 
 #include "nvme_device.h"
 #include <ntddscsi.h>
@@ -615,19 +616,20 @@ bool CNVMePassthroughDevice::NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAN
 	cdb[1] = protocol & 0xFD;	// send command
 	cdb[4] = 2;
  
-	BYTE data_buf[IDENTIFY_BUFFER_SIZE];
-	memset(data_buf, 0, IDENTIFY_BUFFER_SIZE);
+//	BYTE data_buf[IDENTIFY_BUFFER_SIZE];
+//	memset(data_buf, 0, IDENTIFY_BUFFER_SIZE);
+	jcvos::auto_array<BYTE> data_buf(length, 0);
 
 	DWORD * cdw = (DWORD*)((BYTE*)data_buf);
 	data_buf[0] = 'N'; data_buf[1] = 'V'; data_buf[2] = 'M'; data_buf[3] = 'E';
 	memcpy_s(data_buf + 8, sizeof(NVME_COMMAND), cmd, sizeof(NVME_COMMAND));
 
-	BYTE status = ScsiCommand(write, data_buf, IDENTIFY_BUFFER_SIZE, cdb, 12, sense_buf, 24, 5000);
+	BYTE status = ScsiCommand(write, data_buf, length, cdb, 12, sense_buf, 24, 600);
 
 	if (protocol & 0x02)
 	{
 		cdb[1] = protocol;
-		status = ScsiCommand(read, buf, length, cdb, 12, sense_buf, 24, 50000);
+		status = ScsiCommand(read, buf, length, cdb, 12, sense_buf, 24, 600);
 	}
 
 	return true;

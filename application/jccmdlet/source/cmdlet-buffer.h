@@ -204,12 +204,10 @@ namespace JcCmdLet
 		~CompareBinary(void) {};
 
 	public:
-		[Parameter(Position = 2,
-			HelpMessage = "size of to compare in sectors")]
+		[Parameter(Position = 2, HelpMessage = "size of to compare in sectors")]
 		property size_t Secs;		// in sector
 
-		[Parameter(Position = 0, ValueFromPipeline = true,
-			ValueFromPipelineByPropertyName = true)]
+		[Parameter(Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
 		[ValidateNotNullOrEmpty]
 		property BinaryType^ Data1;
 
@@ -219,6 +217,33 @@ namespace JcCmdLet
 
 	protected:
 		BYTE* CheckData(BinaryType^ data, jcvos::IBinaryBuffer*& buf, size_t& len);
+
+	public:
+		virtual void InternalProcessRecord() override;
+	};
+
+
+//---------------------------------------------------------------------------------------------------------------------
+// -- compare data
+	[CmdletAttribute(VerbsCommon::Join, "Binary")]
+	public ref class JoinBinary : public JcCmdletBase
+	{
+	public:
+		JoinBinary(void) {};
+		~JoinBinary(void) {};
+
+	public:
+		[Parameter(Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true, Mandatory = true,
+			HelpMessage="Join other data to this")]
+		[ValidateNotNullOrEmpty]
+		property BinaryType^ Data1;
+
+		[Parameter(Position = 1, Mandatory = true, HelpMessage="Join data2 to data1")]
+		[ValidateNotNullOrEmpty]
+		property BinaryType^ Data2;
+
+	protected:
+//		BYTE* CheckData(BinaryType^ data, jcvos::IBinaryBuffer*& buf, size_t& len);
 
 	public:
 		virtual void InternalProcessRecord() override;

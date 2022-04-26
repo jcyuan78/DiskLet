@@ -81,3 +81,75 @@ inline System::Guid ^ GptTypeToGuid(const Clone::PartitionType & type)
 }
 
 */
+
+
+void GetComError(wchar_t* out_msg, size_t buf_size, HRESULT res, const wchar_t* msg, ...);
+void GetWmiError(wchar_t* out_msg, size_t buf_size, HRESULT res, const wchar_t* msg, ...);
+
+#ifndef THROW_COM_ERROR
+#define THROW_COM_ERROR(res, msg, ...)	do {\
+	jcvos::auto_array<wchar_t> buf(256);	\
+	GetWmiError(buf, 256, res, msg, __VA_ARGS__);	\
+	jcvos::CJCException err(buf, jcvos::CJCException::ERR_APP);	\
+    LogException(__STR2WSTR__(__FUNCTION__), __LINE__, err);	\
+    throw err;	} while(0);
+#endif
+
+#ifndef  LOG_COM_ERROR
+#define LOG_COM_ERROR(res, msg, ...)	do {\
+	jcvos::auto_array<wchar_t> buf(256);	\
+	GetWmiError(buf, 256, res, msg, __VA_ARGS__);	\
+	LOG_ERROR(buf);	} while(0);
+
+#endif // ! LOG_COM_ERROR
+
+
+namespace JcCmdLet
+{
+
+	template <typename TYPE>
+	class auto_unknown
+	{
+	public:
+		typedef TYPE* PTYPE;
+		explicit auto_unknown(void) : m_ptr(NULL) {};
+		explicit auto_unknown(TYPE* ptr) : m_ptr(ptr) {};
+		~auto_unknown(void) { if (m_ptr) m_ptr->Release(); };
+
+		operator TYPE*& () { return m_ptr; };
+		operator IUnknown* () { return static_cast<IUnknown*>(m_ptr); }
+		auto_unknown<TYPE>& operator = (TYPE* ptr)
+		{
+			JCASSERT(NULL == m_ptr);
+			m_ptr = ptr;
+			return (*this);
+		}
+		operator LPVOID* () { return (LPVOID*)(&m_ptr); }
+
+		TYPE* operator ->() { return m_ptr; };
+
+		PTYPE* operator &() { return &m_ptr; };
+		TYPE& operator *() { return *m_ptr; };
+		bool operator !()	const { return NULL == m_ptr; };
+		bool operator == (const TYPE* ptr)	const { return /*const*/ ptr == m_ptr; };
+		bool valid() const { return NULL != m_ptr; }
+		//operator bool() const	{ return const NULL != m_ptr;};
+
+		template <typename PTR_TYPE>
+		PTR_TYPE d_cast() { return dynamic_cast<PTR_TYPE>(m_ptr); };
+
+		void reset(void) { if (m_ptr) m_ptr->Release(); m_ptr = NULL; };
+
+		template <typename TRG_TYPE>
+		void detach(TRG_TYPE*& type)
+		{
+			JCASSERT(NULL == type);
+			type = dynamic_cast<TRG_TYPE*>(m_ptr);
+			JCASSERT(type);
+			m_ptr = NULL;
+		};
+
+	protected:
+		TYPE* m_ptr;
+	};
+}

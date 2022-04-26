@@ -1,7 +1,7 @@
-#pragma once
+ï»¿#pragma once
 
 #include "storage_device.h"
-#pragma pack (1)	// ½â³ı¶ÔÆë
+#pragma pack (1)	// è§£é™¤å¯¹é½
 class CSmartAttribute
 {
 public:
@@ -53,7 +53,7 @@ public:
 	virtual bool Read(BYTE * buf, FILESIZE lba, size_t secs) { return false; }
 	virtual bool Write(BYTE * buf, FILESIZE lba, size_t secs) { return false; }
 
-	// DeviceÈİÁ¿£¬µ¥Î»:sector
+	// Deviceå®¹é‡ï¼Œå•ä½:sector
 	virtual UINT GetLastInvokeTime(void) { return false; }
 	virtual FILESIZE GetCapacity(void) { return m_max_lba; }
 
@@ -70,7 +70,7 @@ public:
 	virtual bool AtaCommand48(ATA_REGISTER &previous, ATA_REGISTER &current,
 		ATA_PROTOCOL prot, BYTE * buf, size_t secs);
 	virtual bool ReadSmart(BYTE * buf, size_t length);
-	size_t SmartParser(CSmartAttribute * attri,	// [output] µ÷ÓÃÕßÈ·±£¿Õ¼ä
+	size_t SmartParser(CSmartAttribute * attri,	// [output] è°ƒç”¨è€…ç¡®ä¿ç©ºé—´
 		size_t attri_size, BYTE * buf, size_t length);
 
 protected:
@@ -80,7 +80,7 @@ protected:
 	FILESIZE	m_max_lba;
 	bool		m_feature_lba48;
 	FILESIZE	m_capacity;		// capacitance in sector
-	// ÓÃÓÚĞÔÄÜ²âÊÔ£¬µ¥Î»us¡£
+	// ç”¨äºæ€§èƒ½æµ‹è¯•ï¼Œå•ä½usã€‚
 	LONGLONG	m_last_invoke_time;
 	bool		m_locked;
 };
@@ -92,7 +92,7 @@ protected:
 	virtual ~CAtaPassThroughDevice(void) {}
 
 public:
-	// ÓÃÓÚ¼ì²âÁ¬½ÓµÄdeviceÊÇ·ñÖ§³Öata pass through
+	// ç”¨äºæ£€æµ‹è¿æ¥çš„deviceæ˜¯å¦æ”¯æŒata pass through
 //	bool Detect(void);
 
 public:

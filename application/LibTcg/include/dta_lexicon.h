@@ -1,4 +1,4 @@
-/* C:B**************************************************************************
+﻿/* C:B**************************************************************************
 This software is Copyright 2014-2017 Bright Plaza Inc. <drivetrust@drivetrust.com>
 
 This file is part of sedutil.

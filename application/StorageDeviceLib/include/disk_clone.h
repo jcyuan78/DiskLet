@@ -4,7 +4,7 @@
 #include "idiskinfo.h"
 #include "istorage_device.h"
 #include "stratage_maker.h"
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 class CCopyProgress : public IJCProgress
 {
@@ -110,8 +110,10 @@ template <class FUNC>
 class CAsyncCall : public CCopyProgress
 {
 public:
-	CAsyncCall(FUNC & f) : m_func(f) {}
+	CAsyncCall(void) { JCASSERT(0); }
+	CAsyncCall(const FUNC & f) : m_func(f) {}
 	~CAsyncCall(void) {}
+	void SetFunc(FUNC& f) { m_func = f; }
 
 public:
 	bool Run(void)
@@ -145,8 +147,9 @@ protected:
 };
 
 template <class FUNC>
-CAsyncCall<FUNC> * CreateAsyncCall(FUNC & f)
+CAsyncCall<FUNC> * CreateAsyncCall(const FUNC & f)
 {
-	CAsyncCall<FUNC> *ff = new jcvos::CDynamicInstance<CAsyncCall<FUNC> >(f);
+	CAsyncCall<FUNC> *ff = jcvos::CDynamicInstance<CAsyncCall<FUNC> >::Create<FUNC>(f);
+//	ff->SetFunc(f);
 	return ff;
 }

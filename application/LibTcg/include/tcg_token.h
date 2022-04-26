@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <boost/property_tree/json_parser.hpp>
+#include "itcg.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //// ==== data structus ====
@@ -29,7 +30,9 @@ public:
 	std::vector<PARAM_INFO> m_option_param;
 };
 
-class CTcgTokenBase
+class CUidMap;
+
+class CTcgTokenBase : public tcg::ISecurityObject
 {
 public:
 	enum TokenType
@@ -37,7 +40,7 @@ public:
 		BinaryAtom, IntegerAtom, List, Name, Call, Transaction, EndOfData, EndOfSession, Empty, TopToken, UnknownToken,
 	};
 	CTcgTokenBase(void) : m_type(UnknownToken) {}
-	CTcgTokenBase(TokenType type) : m_type(type) {};
+	CTcgTokenBase(const TokenType &type) : m_type(type) {};
 	virtual ~CTcgTokenBase(void) {};
 
 public:
@@ -46,10 +49,12 @@ public:
 		START_NAME = 0xF2, END_NAME = 0xF3,
 		END_OF_DATA = 0xF9, END_OF_SESSION = 0xFA,
 		TOKEN_CALL = 0xF8,
+		START_TRANSACTION = 0xFB, END_TRANSACTION = 0xFC,
 		EMPTY_TOKEN = 0xFF,
 	};
 
 public:
+	static void SetUidMap(CUidMap* map);
 	static CTcgTokenBase* Parse(BYTE*& begin, BYTE* end, BYTE * start);
 	static CTcgTokenBase* SyntaxParse(BYTE*& begin, BYTE* end, BYTE* start, bool receive);
 	/// <summary> 解析Token </summary>
@@ -57,13 +62,27 @@ public:
 	/// <param name="end"> stream的结束位置 </param>
 	/// <param name="end"> stream的原始位置，用于显示错误信息 </param>
 	/// <returns></returns>
-	virtual bool ParseToken(BYTE*& begin, BYTE* end, BYTE * start) { return false; }
+	bool ParseToken(BYTE*& begin, BYTE* end, BYTE* start);
+	virtual bool InternalParse(BYTE*& begin, BYTE* end) { JCASSERT(0); return false; }
 	virtual void Print(int indetation);
 	virtual void Print(FILE* ff, int indentation);
+	size_t GetPayloadLen(void) { return m_payload_len; }
 	TokenType GetType(void) { return m_type; }
+
+	// interface for ISecurityObject
+	///<param name="opt"> 最高字节为indenttation</param>
+	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
+	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name) {};
+
+
+
 
 public:
 	TokenType m_type;
+	BYTE* m_payload_begin;
+	size_t m_payload_len;
+	std::wstring m_name;
 
 	// 用于遍历
 	//std::vector<CTcgTokenBase*>::iterator m_cur_it;
@@ -72,18 +91,30 @@ public:
 class MidAtomToken : public CTcgTokenBase
 {
 public:
-	MidAtomToken(void) : CTcgTokenBase(CTcgTokenBase::BinaryAtom), m_len(0) { d.m_val = 0; };
-	~MidAtomToken(void) { if (m_len > 0) delete[] d.m_data; };
+	MidAtomToken(void) : CTcgTokenBase(CTcgTokenBase::BinaryAtom), m_len(0), m_data(NULL) {};
+	~MidAtomToken(void) { if (m_len>8 && m_data) delete[] m_data; };
 
 public:
-	virtual bool ParseToken(BYTE*& begin, BYTE* end, BYTE * start);
+	virtual bool InternalParse(BYTE*& begin, BYTE* end);
 	virtual void Print(FILE* ff, int indentation);
+	// interface for ISecurityObject
+	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	//virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
 
-	UINT64 GetValue(void) const;
+	UINT64 FormatToInt(void) const;
+	bool FormatToString(std::wstring& str)const ;
+	template <typename T>
+	bool GetValue(T& out) const
+	{
+		if (m_len > 8) return false;
+		out = boost::numeric_cast<T>(FormatToInt());
+		return true;
+	}
 
 	static MidAtomToken* ParseAtomToken(BYTE*& begin, BYTE* end, BYTE* start)
 	{
-		MidAtomToken* tt = new MidAtomToken;
+//		MidAtomToken* tt = new MidAtomToken;
+		MidAtomToken* tt = jcvos::CDynamicInstance<MidAtomToken>::Create();
 		tt->ParseToken(begin, end, start);
 		return tt;
 	}
@@ -93,18 +124,25 @@ public:
 	union
 	{
 		BYTE* m_data;
-		UINT64 m_val;
-	} d;
+		BYTE  m_data_val[8];
+//		UINT64 m_val;
+	};
+	bool m_signe;
 };
 
 class ListToken : public CTcgTokenBase
 {
 public:
-	ListToken(CTcgTokenBase::TokenType type) : CTcgTokenBase(type) {};
+	ListToken(const CTcgTokenBase::TokenType &type) : CTcgTokenBase(type) {};
+	ListToken(void) { JCASSERT(0); }
 	virtual ~ListToken(void);
 public:
-	virtual bool ParseToken(BYTE*& begin, BYTE* end, BYTE* start);
+	virtual bool InternalParse(BYTE*& begin, BYTE* end);
 	virtual void Print(FILE* ff, int indentation);
+	// interface for ISecurityObject
+	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name);
+
 	void AddToken(CTcgTokenBase* tt) { m_tokens.push_back(tt); }
 public:
 	std::vector<CTcgTokenBase*> m_tokens;
@@ -116,11 +154,18 @@ public:
 	NameToken(void) : CTcgTokenBase(CTcgTokenBase::Name), m_value(nullptr) {};
 	~NameToken(void);
 public:
-	virtual bool ParseToken(BYTE*& begin, BYTE* end, BYTE* start);
+	virtual bool InternalParse(BYTE*& begin, BYTE* end);
 	virtual void Print(FILE* ff, int indentation);
-//	virtual CTcgTokenBase* Begin() { return nullptr; };
+	// interface for ISecurityObject
+	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name) 
+	{
+		if (m_value) m_value->GetSubItem(sub_item, name);
+	};
+
 public:
-	DWORD m_name;
+	//DWORD m_name_value;
+	CTcgTokenBase* m_name_id;
 	CTcgTokenBase* m_value;
 };
 
@@ -137,12 +182,64 @@ public:
 	~CStatePhrase(void) {};
 
 public:
-	virtual bool ParseToken(BYTE*& begin, BYTE* end, BYTE* start);
+	virtual bool InternalParse(BYTE*& begin, BYTE* end);
 	virtual void Print(FILE* ff, int indentation);
+	// interface for ISecurityObject
+	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	//virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
+
 
 protected:
 	UINT m_empty[3];
 	UINT m_state[3];
+};
+
+class CErrorToken : public CTcgTokenBase
+{
+
+	virtual bool InternalParse(BYTE*& begin, BYTE* end) { begin = end; return true; }
+
+	virtual void Print(FILE* ff, int indentation) {}
+	virtual void ToString(std::wostream& out, UINT layer, int opt) 
+	{
+		out << L"[err] " << m_error_msg << std::endl;
+	}
+	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name)
+	{
+	}
+
+public:
+	std::wstring m_error_msg;
+};
+
+class CParameterToken : public CTcgTokenBase
+{
+public:
+	virtual bool InternalParse(BYTE*& begin, BYTE* end)
+	{
+		m_token_val = CTcgTokenBase::Parse(begin, end, m_payload_begin);
+		if (m_token_val == nullptr) THROW_ERROR(ERR_APP, L"failed on parsing token, offset=%zd", begin - m_payload_begin);
+		return true;
+	}
+	virtual void Print(FILE* ff, int indentation);
+	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name)
+	{
+		if (name == L"")
+		{
+			sub_item = m_token_val;
+			if (sub_item) sub_item->AddRef();
+		}
+		else if (m_token_val) m_token_val->GetSubItem(sub_item, name);
+	}
+
+public:
+	PARAM_INFO::PARAM_TYPE m_type;
+	DWORD m_num;
+	//std::wstring m_name;
+	UINT64 m_atom_val;
+	CTcgTokenBase* m_token_val;
+
 };
 
 
@@ -150,25 +247,31 @@ protected:
 //// ==== Call Token ====
 class CallToken : public CTcgTokenBase
 {
-	class CParameter
-	{
-	public:
-		PARAM_INFO::PARAM_TYPE m_type;
-		DWORD m_num;
-		std::wstring m_name;
-		UINT64 m_atom_val;
-		CTcgTokenBase* m_token_val;
-	public:
-		void Print(FILE* ff, int indentation);
-	};
+	//class CParameter
+	//{
+	//public:
+	//	PARAM_INFO::PARAM_TYPE m_type;
+	//	DWORD m_num;
+	//	std::wstring m_name;
+	//	UINT64 m_atom_val;
+	//	CTcgTokenBase* m_token_val;
+	//public:
+	//	void Print(FILE* ff, int indentation);
+	//	void ToString(std::wostream& out, UINT layer, int opt);
+	//};
 
 public:
-	CallToken(void) : CTcgTokenBase(CTcgTokenBase::Call) {};
+	CallToken(void) : CTcgTokenBase(CTcgTokenBase::Call), m_state(NULL){};
 	~CallToken(void);
 
 public:
-	virtual bool ParseToken(BYTE*& begin, BYTE* end, BYTE * start);
+	virtual bool InternalParse(BYTE*& begin, BYTE* end);
 	virtual void Print(FILE* ff, int indentation);
+	// interface for ISecurityObject
+	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	//virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
+	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name);
+
 
 //	virtual CTcgTokenBase* Begin() { return nullptr; };
 protected:
@@ -186,8 +289,8 @@ protected:
 	std::wstring m_invoking_name;
 	UINT64 m_method_id;
 	std::wstring m_method_name;
-	std::vector<CParameter> m_parameters;
-	CStatePhrase m_state;
+	std::vector<CTcgTokenBase*> m_parameters;
+	CStatePhrase *m_state;
 };
 
 
@@ -233,4 +336,4 @@ protected:
 	//std::map<UINT64, METHOD_INFO> m_method_map;
 };
 
-extern CUidMap g_uid_map;
+//extern CUidMap * g_uid_map;

@@ -26,24 +26,18 @@ JcCmdLet::BinaryType::BinaryType(jcvos::IBinaryBuffer * ibuf)
 JcCmdLet::BinaryType::~BinaryType(void)
 {
 	LOG_STACK_TRACE();
-	if (m_locked) m_data->Unlock(m_locked);
-	m_locked = nullptr;
-	jcvos::IBinaryBuffer * tmp = m_data; m_data = NULL;
-	if (tmp) tmp->Release();
+	CleanData();
 }
 
 JcCmdLet::BinaryType::!BinaryType(void)
 {
 	LOG_STACK_TRACE();
-	if (m_locked) m_data->Unlock(m_locked);
-	m_locked = nullptr;
-	jcvos::IBinaryBuffer * tmp = m_data; m_data = NULL;
-	if (tmp) tmp->Release();
+	CleanData();
 }
 
 BYTE* JcCmdLet::BinaryType::LockData(void)
 {
-	JCASSERT(m_data && m_locked == NULL);
+	JCASSERT(m_data && m_locked == nullptr);
 	m_locked = m_data->Lock();
 	return m_locked;
 }
@@ -153,7 +147,7 @@ void JcCmdLet::ImportBinary::InternalProcessRecord()
 	{
 		br = jcvos::LoadBinaryFromFile(buf, str_fn);
 	}
-	if (!br || buf == NULL) gcnew ApplicationException(L"failed loading binary");
+	if (!br || !buf) gcnew ApplicationException(L"failed loading binary");
 	BinaryType ^ val = gcnew BinaryType(buf);
 	WriteObject(val);
 }
@@ -259,7 +253,7 @@ void JcCmdLet::ConvertBinaryToArray::InternalProcessRecord()
 
 BYTE * JcCmdLet::CompareBinary::CheckData(BinaryType ^ data, jcvos::IBinaryBuffer *& ibuf, size_t & len)
 {
-	JCASSERT(ibuf == NULL);
+	JCASSERT(ibuf == nullptr);
 	size_t cmp_len = SECTOR_TO_BYTE(Secs);
 	if (!data) throw gcnew System::ApplicationException(L"missing data");
 	data->GetData(ibuf);
@@ -286,6 +280,30 @@ void JcCmdLet::CompareBinary::InternalProcessRecord()
 	WriteObject(ir);
 }
 
+void JcCmdLet::JoinBinary::InternalProcessRecord()
+{
+	jcvos::auto_interface<jcvos::IBinaryBuffer> buf1;
+	Data1->GetData(buf1);
+	jcvos::auto_interface<jcvos::IBinaryBuffer> buf2;
+	Data2->GetData(buf2);
+
+	size_t size1 = buf1->GetSize();
+	size_t total_size = size1 + buf2->GetSize();
+	jcvos::auto_interface<jcvos::IBinaryBuffer> buf3;
+	jcvos::CreateBinaryBuffer(buf3,total_size);
+	BYTE* d3 = buf3->Lock();
+
+	BYTE* d1 = buf1->Lock();
+	memcpy_s(d3, total_size, d1, size1);
+	buf1->Unlock(d1);
+	d1 = buf2->Lock();
+	memcpy_s(d3 + size1, total_size - size1, d1, buf2->GetSize());
+	buf2->Unlock(d1);
+	buf3->Unlock(d3);
+
+	Data1->SetData(buf3);
+	WriteObject(Data1);
+}
 
 void JcCmdLet::JcCmdletBase::ProcessRecord()
 {
@@ -306,3 +324,4 @@ void JcCmdLet::JcCmdletBase::ProcessRecord()
 	}
 //			ShowPipeMessage();
 }
+

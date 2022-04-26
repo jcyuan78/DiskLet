@@ -36,6 +36,17 @@
 	> .\Process-tcg.ps1 <tar>
 	
 	
-	
-	
-	
+B - new version (with PE automation)
+	1, Preparing data
+		- NVMe trace	(trace.pex)
+		- Export NVMe transaction to csv file, using the same file name (trace.csv)
+		
+	2, Import modules
+Import-Module ..\DEBUG_DYNAMIC\jccmdlet.dll
+Import-Module ..\DEBUG_DYNAMIC\ProtocolAnalyzerLet.dll
+Import-Module ..\DEBUG_DYNAMIC\tcg-parser.dll
+Import-UIDs $pwd\tcg-parser\script-tcg-parser\UIDs.json
+
+	3, Analysis TCG commands
+	> cd tcg-parser\scrip-tcg-parser\
+	> .\parse-security.ps1 -nvm_fn <trace.csv> [-trace_fn <trace.pex>] [-start <start nvme#>] [-end <end nvme#>]

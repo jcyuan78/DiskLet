@@ -72,14 +72,22 @@ public:
 class MidAtomToken : public CTcgTokenBase
 {
 public:
-	MidAtomToken(void) : CTcgTokenBase(CTcgTokenBase::BinaryAtom), m_len(0) { d.m_val = 0; };
-	~MidAtomToken(void) { if (m_len > 0) delete[] d.m_data; };
+	MidAtomToken(void) : CTcgTokenBase(CTcgTokenBase::BinaryAtom), m_len(0), m_data(NULL) { m_val = 0; };
+	~MidAtomToken(void) { delete[] m_data; };
 
 public:
 	virtual bool ParseToken(BYTE*& begin, BYTE* end, BYTE * start);
 	virtual void Print(FILE* ff, int indentation);
 
-	UINT64 GetValue(void) const;
+	//UINT64 GetValue(void) const;
+	template <typename T> T GetValue(void) const
+	{
+		//if (m_bytes)	
+		//	THROW_ERROR(ERR_APP, L"Atom is not a integer");
+		if (m_len > sizeof(T))
+			THROW_ERROR(ERR_APP, L"data len (%zd) is longer than type (%d)", m_len, sizeof(T));
+		return boost::numeric_cast<T>(m_val);
+	}
 
 	static MidAtomToken* ParseAtomToken(BYTE*& begin, BYTE* end, BYTE* start)
 	{
@@ -88,13 +96,17 @@ public:
 		return tt;
 	}
 
+	void ToString(std::wstring& str);
+
 public:
+	bool m_bytes;
+	bool m_sign;
 	size_t m_len;
-	union
-	{
-		BYTE* m_data;
-		UINT64 m_val;
-	} d;
+	BYTE* m_data;
+	UINT64 m_val;
+#ifdef _DEBUG
+	BYTE m_token;
+#endif
 };
 
 class ListToken : public CTcgTokenBase
@@ -113,18 +125,19 @@ public:
 class NameToken : public CTcgTokenBase
 {
 public:
-	NameToken(void) : CTcgTokenBase(CTcgTokenBase::Name), m_value(nullptr) {};
+	NameToken(void) : CTcgTokenBase(CTcgTokenBase::Name), m_value(nullptr), m_name(NULL) {};
 	~NameToken(void);
 public:
 	virtual bool ParseToken(BYTE*& begin, BYTE* end, BYTE* start);
 	virtual void Print(FILE* ff, int indentation);
 //	virtual CTcgTokenBase* Begin() { return nullptr; };
 public:
-	DWORD m_name;
+//	DWORD m_name;
+	MidAtomToken* m_name;	// 必须是整数或者字符串，不能是复合型
 	CTcgTokenBase* m_value;
 };
 
-///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// ==== Call Token ====
 class CStatePhrase : public CTcgTokenBase
 {

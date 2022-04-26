@@ -38,8 +38,25 @@ namespace JcCmdLet
 
 	public:
 		void GetData(jcvos::IBinaryBuffer * & data) { data = m_data; data->AddRef(); }
+		void SetData(jcvos::IBinaryBuffer*& data)
+		{
+			m_data = data;
+			if (m_data) m_data->AddRef();
+		}
 		BYTE* LockData(void);
 		void Unlock(void);
+
+	protected:
+		void CleanData()
+		{
+			if (m_data)
+			{
+				if (m_locked) m_data->Unlock(m_locked);
+				m_locked = nullptr;
+				jcvos::IBinaryBuffer* tmp = m_data; m_data = NULL;
+				tmp->Release();
+			}
+		}
 		//bool GetData(void * & data);
 	protected:
 		jcvos::IBinaryBuffer * m_data;
