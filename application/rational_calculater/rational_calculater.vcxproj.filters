@@ -24,6 +24,9 @@
     <ClInclude Include="source\rational.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="source\permutation.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc">
@@ -43,6 +46,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\rational.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\permutation.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

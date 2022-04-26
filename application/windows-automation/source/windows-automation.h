@@ -156,4 +156,41 @@ namespace WAPP
 			}
 		}
 	};
+
+	[CmdletAttribute(VerbsCommon::Get, "Screen")]
+	public ref class CmdSetCursorPos : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		CmdSetCursorPos(void) { action = L""; };
+		~CmdSetCursorPos(void) {};
+
+	public:
+		[Parameter(Position = 0, ValueFromPipeline = true,
+			ValueFromPipelineByPropertyName = true, Mandatory = true,
+			HelpMessage = "x position")]
+		property int x;
+
+		[Parameter(Position = 1, Mandatory = true,
+			HelpMessage = "y position")]
+		property int y;
+
+		[Parameter(Position = 2,
+			HelpMessage = "mouse click")]
+		property String^ action;
+
+	public:
+		virtual void InternalProcessRecord() override
+		{
+			if (action == L"move")
+			{
+				SetCursorPos(x, y);
+			}
+			else if (action == L"left")
+			{
+				mouse_event(MOUSEEVENTF_LEFTDOWN, x, y, 0, 0);
+				Sleep(50);
+				mouse_event(MOUSEEVENTF_LEFTUP, x, y, 0, 0);
+			}
+		}
+	};
 }

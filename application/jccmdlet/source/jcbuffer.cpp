@@ -153,7 +153,7 @@ void JcCmdLet::ImportBinary::InternalProcessRecord()
 	{
 		br = jcvos::LoadBinaryFromFile(buf, str_fn);
 	}
-	if (!br || buf == NULL) gcnew ApplicationException(L"failed loading binary");
+	if (!br || !buf) gcnew ApplicationException(L"failed loading binary");
 	BinaryType ^ val = gcnew BinaryType(buf);
 	WriteObject(val);
 }

@@ -952,6 +952,7 @@ public:
 
 //<YUAN>    // 递归查找所有的element
     void FindAllElements(std::vector<XMLElement*>& out, const std::wstring& name);
+    void FindAllElements(std::vector<XMLElement*>& out, const std::wstring& name, const std::wstring & class_name, const std::wstring & id);
 
 protected:
     explicit XMLNode( XMLDocument* );

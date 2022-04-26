@@ -101,7 +101,7 @@ bool CDiskClone::CopyVolumeBySector(CCopyProgress * progress, IVolumeInfo * vsrc
 	if (shadow)
 	{
 		bool br = vsrc->CreateShadowVolume(src_vol);
-		if (!br || src_vol == NULL) THROW_ERROR(ERR_APP, L"failed on getting shadow for %s", src_name.c_str());
+		if (!br || !src_vol) THROW_ERROR(ERR_APP, L"failed on getting shadow for %s", src_name.c_str());
 		src_vol->GetProperty(vprop);
 		src_name = vprop.m_name;
 	}
@@ -161,7 +161,7 @@ bool CDiskClone::CopyVolumeToFile(CCopyProgress * progress, IVolumeInfo * vscr, 
 	if (true)
 	{
 		bool br = vscr->CreateShadowVolume(src_vol);
-		if (!br || src_vol == NULL) THROW_ERROR(ERR_APP, L"failed on getting shadow for %s", src_name.c_str());
+		if (!br || !src_vol) THROW_ERROR(ERR_APP, L"failed on getting shadow for %s", src_name.c_str());
 		src_vol->GetProperty(vprop);
 		src_name = vprop.m_name;
 	}
@@ -556,7 +556,7 @@ bool CDiskClone::MakeBootPartitionForMBRSource(IDiskInfo * dst, UINT boot_index,
 
 	jcvos::auto_interface<IPartitionInfo> boot_part;
 	bool br = dst->GetPartition(boot_part, boot_index);
-	if (!br || boot_part == NULL) THROW_ERROR(ERR_APP, L"failed on getting boot partition.");
+	if (!br || !boot_part ) THROW_ERROR(ERR_APP, L"failed on getting boot partition.");
 
 	jcvos::auto_interface<IVolumeInfo> boot_vol;
 	boot_part->FormatVolume(boot_vol, L"FAT32", L"", false, false);
@@ -567,7 +567,7 @@ bool CDiskClone::MakeBootPartitionForMBRSource(IDiskInfo * dst, UINT boot_index,
 
 	jcvos::auto_interface<IPartitionInfo> sys_part;
 	br = dst->GetPartition(sys_part, sys_index);
-	if (!br || sys_part == NULL) THROW_ERROR(ERR_APP, L"failed on getting system partition.");
+	if (!br || !sys_part ) THROW_ERROR(ERR_APP, L"failed on getting system partition.");
 	swprintf_s(path, MAX_PATH, L"%C:\\", sys_letter);
 	LOG_NOTICE(L"mount system partition to %s", path);
 	sys_part->Mount((wchar_t*)path);
@@ -1325,7 +1325,7 @@ bool CDiskClone::MakeCopyStrategy(std::vector<CopyStrategy> & strategy, IDiskInf
 	{
 		jcvos::auto_interface<IPartitionInfo> src_part;
 		src->GetPartition(src_part, ii);
-		if (src_part == NULL) continue;
+		if (!src_part) continue;
 
 		PARTITION_ITEM & partition = partitions[pid++];
 
@@ -1436,7 +1436,7 @@ bool CDiskClone::MakeCopyStrategy(std::vector<CopyStrategy> & strategy, IDiskInf
 
 			jcvos::auto_interface<IPartitionInfo> src_part;
 			src->GetPartition(src_part, ii);
-			if (src_part == NULL) continue;
+			if (!src_part) continue;
 			PARTITION_PROPERTY prop;
 			src_part->GetProperty(prop);
 			if (!src_mbr)
@@ -1546,10 +1546,10 @@ bool CDiskClone::CopyDisk(CCopyProgress * progress, std::vector<CopyStrategy> & 
 
 					jcvos::auto_interface<IVolumeInfo> src_vol;
 					bool br = src_part->GetVolume(src_vol);
-					if (!br || src_vol == NULL) THROW_ERROR(ERR_APP, L"failed on getting source volume");
+					if (!br || !src_vol) THROW_ERROR(ERR_APP, L"failed on getting source volume");
 					jcvos::auto_interface<IVolumeInfo> shadow_vol;
 					br = src_vol->CreateShadowVolume(shadow_vol);
-					if (!br || shadow_vol == NULL) THROW_ERROR(ERR_APP, L"failed on getting shadow");
+					if (!br || !shadow_vol) THROW_ERROR(ERR_APP, L"failed on getting shadow");
 #ifndef _IGNORE_COPY
 					CopyVolumeBySector(progress, shadow_vol, dst_part, false, true);
 #endif
@@ -1559,10 +1559,10 @@ bool CDiskClone::CopyDisk(CCopyProgress * progress, std::vector<CopyStrategy> & 
 				{	// size- expand 或者 no change
 					jcvos::auto_interface<IVolumeInfo> src_vol;
 					bool br = src_part->GetVolume(src_vol);
-					if (!br || src_vol == NULL) THROW_ERROR(ERR_APP, L"failed on getting source volume");
+					if (!br || !src_vol) THROW_ERROR(ERR_APP, L"failed on getting source volume");
 					jcvos::auto_interface<IVolumeInfo> shadow_vol;
 					br = src_vol->CreateShadowVolume(shadow_vol);
-					if (!br || shadow_vol == NULL) THROW_ERROR(ERR_APP, L"failed on getting shadow");
+					if (!br || !shadow_vol) THROW_ERROR(ERR_APP, L"failed on getting shadow");
 #ifndef _IGNORE_COPY
 					CopyVolumeBySector(progress, shadow_vol, dst_part, false, true);
 #endif
@@ -1618,7 +1618,7 @@ UINT32 CDiskClone::CreatePartition(IPartitionInfo * &part, IDiskInfo * disk,
 	LOG_NOTICE(L"request offset=%lld MB, size=%lld MB", offset_mb, size_mb);
 	UINT64 size_byte = MbToByte(size_mb);
 	bool br = disk->CreatePartition(part, UINT64(-1), size_byte, L"", type, { 0 }, 0);
-	if (!br || part == NULL)
+	if (!br || !part)
 	{
 		LOG_ERROR(L"[err] failed on create partition");
 		offset_mb += size_mb;

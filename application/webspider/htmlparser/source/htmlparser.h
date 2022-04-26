@@ -7,10 +7,6 @@ using namespace System::Management::Automation;
 
 namespace htmlparser {
 
-	//ref class HtmlElement;
-
-	//typedef array<HtmlElement^> HtmlElementList;
-
 	public ref class HtmlElement : public System::Object
 	{
 	public:
@@ -19,21 +15,7 @@ namespace htmlparser {
 		!HtmlElement(void) {};
 
 	public:
-		//HtmlElement^ FindTag(String^ tag_name, String^ id)
-		//{
-		//	JCASSERT(m_element);
-		//	std::wstring wstr;
-		//	ToStdString(wstr, tag_name);
-		//	std::vector<tinyxml2::XMLElement*> eles;
-		//	m_element->FindAllElements(eles, wstr);
-		//	if (eles.empty()) return nullptr;
-		//	else
-		//	{
-		//		auto it = eles.begin();
-		//		return gcnew HtmlElement(*it);
-		//	}
-		//}
-		System::Collections::ArrayList^ FindAllTags(String^ tag_name)
+		System::Collections::ArrayList^ FindAllTags(String^ tag_name, String ^ class_namne, String ^ id)
 		{
 			JCASSERT(m_element);
 			std::wstring wstr;
@@ -47,6 +29,15 @@ namespace htmlparser {
 				list->Add(gcnew HtmlElement(*it));
 			}
 			return list;
+		}
+
+		String^ GetAttribute(String^ attr_name)
+		{
+			std::wstring str_attr_name;
+			ToStdString(str_attr_name, attr_name);
+			const wchar_t* str_attr = m_element->Attribute(str_attr_name.c_str());
+			String^ attr = gcnew String(str_attr);
+			return attr;
 		}
 
 
@@ -82,16 +73,18 @@ namespace htmlparser {
 			return gcnew HtmlElement(ele);
 		}
 
-		System::Collections::ArrayList^ FindAllTags(String^ tag_name)
+		System::Collections::ArrayList^ FindAllTags(String^ tag_name, String^ class_namne, String^ id)
 		{
-			std::wstring wstr;
+			std::wstring wstr, str_class, str_id;
 			ToStdString(wstr, tag_name);
+			if (class_namne) ToStdString(str_class, class_namne);
+			if (id) ToStdString(str_id, id);
 			std::vector<tinyxml2::XMLElement*> eles;
 
 			tinyxml2::XMLElement* ele = m_doc->RootElement();
 			while (ele)
 			{
-				ele->FindAllElements(eles, wstr);
+				ele->FindAllElements(eles, wstr, str_class, str_id);
 				ele = ele->NextSiblingElement();
 			}
 			System::Collections::ArrayList^ list = gcnew System::Collections::ArrayList;
@@ -151,7 +144,7 @@ namespace htmlparser {
 //			m_contents += wstr;
 //			System::Runtime::InteropServices::Marshal::FreeHGlobal(IntPtr((void*)wstr));
 			m_contents += html;
-
+			m_contents += L"\n";
 		}
 
 	protected:

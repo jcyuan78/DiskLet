@@ -62,31 +62,31 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\external_libs.props" />
-    <Import Project="..\..\jcvos2\support_jcvos.props" />
-    <Import Project="..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\build_app.props" />
+    <Import Project="..\..\..\build\external_libs.props" />
+    <Import Project="..\..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\build_app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\external_libs.props" />
-    <Import Project="..\..\jcvos2\support_jcvos.props" />
-    <Import Project="..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\build_app.props" />
+    <Import Project="..\..\..\build\external_libs.props" />
+    <Import Project="..\..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\build_app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\external_libs.props" />
-    <Import Project="..\..\jcvos2\support_jcvos.props" />
-    <Import Project="..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\build_app.props" />
+    <Import Project="..\..\..\build\external_libs.props" />
+    <Import Project="..\..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\build_app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\external_libs.props" />
-    <Import Project="..\..\jcvos2\support_jcvos.props" />
-    <Import Project="..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\build_app.props" />
+    <Import Project="..\..\..\build\external_libs.props" />
+    <Import Project="..\..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\build_app.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">
@@ -187,7 +187,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\jccmdlet\jccmdlet.vcxproj">
+    <ProjectReference Include="..\..\jccmdlet\jccmdlet.vcxproj">
       <Project>{103af91b-360e-49c1-b502-2a10c4f59b41}</Project>
     </ProjectReference>
   </ItemGroup>

@@ -39,7 +39,7 @@ bool CPartitionInfo::GetVolume(IVolumeInfo *& vol)
 
 bool CPartitionInfo::GetParent(IDiskInfo *& disk)
 {
-	JCASSERT(disk == NULL);
+	JCASSERT(!disk);
 	disk = static_cast<IDiskInfo*>(m_parent);
 	JCASSERT(disk);
 	disk->AddRef();
@@ -123,7 +123,7 @@ bool CPartitionInfo::FormatVolume(IVolumeInfo *& new_vol, const std::wstring & f
 	}
 	jcvos::auto_interface<CVolumeInfo> vol_info;
 	br = CVolumeInfo::CreateVolume(vol_info, vol_obj, m_manager);
-	if (!br || vol_info == NULL)
+	if (!br || !vol_info )
 	{
 		LOG_ERROR(L"[err] failed on creating volume info object");
 		return false;

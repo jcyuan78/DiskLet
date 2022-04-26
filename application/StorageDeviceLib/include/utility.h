@@ -26,7 +26,7 @@ void GetWmiError(wchar_t * out_msg, size_t buf_size, HRESULT res, const wchar_t 
 	jcvos::auto_array<wchar_t> buf(256);	\
 	GetWmiError(buf, 256, res, msg, __VA_ARGS__);	\
 	jcvos::CJCException err(buf, jcvos::CJCException::ERR_APP);	\
-    LogException(__FUNCTION__, __LINE__, err);	\
+    LogException(__STR2WSTR__( __FUNCTION__), __LINE__, err);	\
     throw err;	} while(0);
 
 #define LOG_COM_ERROR(res, msg, ...)	do {\

@@ -107,7 +107,7 @@ void GetDisks::InternalProcessRecord()
 	{
 		jcvos::auto_interface<IDiskInfo> disk;
 		bool br = global.m_manager->GetPhysicalDisk(disk, index);
-		if (!br || disk == NULL)
+		if (!br || !disk)
 		{
 			String ^ err = String::Format(L"[err] failed on getting disk[{0}]", index);
 			throw gcnew System::ApplicationException(err);
@@ -121,7 +121,7 @@ void GetDisks::InternalProcessRecord()
 		{
 			jcvos::auto_interface<IDiskInfo> disk;
 			bool br = global.m_manager->GetPhysicalDisk(disk, ii);
-			if (!br || disk == NULL)
+			if (!br || !disk)
 			{
 				LOG_ERROR(L"[err] failed on getting disk[%d]", ii);
 				continue;
@@ -136,7 +136,7 @@ void DiskLet::GetDiskPartition::InternalProcessRecord()
 {
 	jcvos::auto_interface<IDiskInfo> disk;
 	GetDisk(disk);
-	if (disk == NULL) throw gcnew System::ApplicationException(L"Invalid disk object (NULL)");
+	if (!disk) throw gcnew System::ApplicationException(L"Invalid disk object (NULL)");
 
 	UINT part_num = disk->GetParttionNum();
 	if (PartitionNumber == 0 || PartitionNumber > part_num)
@@ -196,25 +196,25 @@ void DiskLet::CopyPartition::InternalProcessRecord()
 
 	jcvos::auto_interface<IPartitionInfo> src_part;
 	src->GetPartitionInfo(src_part);
-	if (src_part == NULL) throw gcnew System::ApplicationException(L"failed on getting src partition");
+	if (!src_part) throw gcnew System::ApplicationException(L"failed on getting src partition");
 	jcvos::auto_interface<IDiskInfo> src_disk;
 	src_part->GetParent(src_disk);
-	if (src_disk == NULL) throw gcnew System::ApplicationException(L"failed on getting src disk");
+	if (!src_disk) throw gcnew System::ApplicationException(L"failed on getting src disk");
 	jcvos::auto_interface<IStorageDevice> src_dev;
 	src_disk->GetStorageDevice(src_dev);
-	if (src_dev == NULL) throw gcnew System::ApplicationException(L"failed on getting storage device");
+	if (!src_dev ) throw gcnew System::ApplicationException(L"failed on getting storage device");
 	jcvos::auto_interface<IVolumeInfo> src_vol;
 	src_part->GetVolume(src_vol);
 
 	jcvos::auto_interface<IPartitionInfo> dst_part;
 	if (dst) dst->GetPartitionInfo(dst_part);
-	if (dst_part == NULL) throw gcnew System::ApplicationException(L"failed on getting dst partition");
+	if (!dst_part ) throw gcnew System::ApplicationException(L"failed on getting dst partition");
 	jcvos::auto_interface<IDiskInfo> dst_disk;
 	dst_part->GetParent(dst_disk);
-	if (dst_disk == NULL) throw gcnew System::ApplicationException(L"failed on getting dst disk");
+	if (!dst_disk ) throw gcnew System::ApplicationException(L"failed on getting dst disk");
 	jcvos::auto_interface<IStorageDevice> dst_dev;
 	dst_disk->GetStorageDevice(dst_dev);
-	if (dst_dev == NULL) throw gcnew System::ApplicationException(L"failed on getting storage device");
+	if (!dst_dev ) throw gcnew System::ApplicationException(L"failed on getting storage device");
 
 
 
@@ -376,7 +376,7 @@ void DiskLet::SetPartitionSize::InternalProcessRecord()
 	{
 		Partition->GetPartitionInfo(part);
 	}
-	if (part == NULL) throw gcnew System::ApplicationException(L"Invalid partition object (NULL)");
+	if (!part) throw gcnew System::ApplicationException(L"Invalid partition object (NULL)");
 	UINT64 size_byte = size_mb * 1024 * 1024;
 
 	jcvos::auto_interface<IJCProgress> progress;
@@ -440,7 +440,7 @@ void DiskLet::SelectDevice::InternalProcessRecord()
 
 	jcvos::auto_interface<IDiskInfo> disk;
 	bool br = global.m_manager->GetPhysicalDisk(disk, index);
-	if (!br || disk == NULL)
+	if (!br || !disk)
 	{
 		String ^ err = String::Format(L"[err] failed on getting disk[{0}]", index);
 		throw gcnew System::ApplicationException(err);
@@ -467,7 +467,7 @@ void DiskLet::SelectDisk::InternalProcessRecord()
 
 	jcvos::auto_interface<IDiskInfo> disk;
 	bool br = global.m_manager->GetPhysicalDisk(disk, index);
-	if (!br || disk == NULL)
+	if (!br || !disk)
 	{
 		String ^ err = String::Format(L"[err] failed on getting disk[{0}]", index);
 		throw gcnew System::ApplicationException(err);

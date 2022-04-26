@@ -22,6 +22,9 @@ while (1)
     write-debug "total items=$($Global:item_num), read item=$read";
     if ($read -ge $Global:item_num)   {      break;   }
     $page ++;
-    Start-Sleep -Seconds 5;
+    $delay = get-random -inputobject (100..200);
+    $delay /= 20;
+    Write-Host "delay $delay seconds"
+    Start-Sleep -Seconds $delay;
 }
 #$table | export-csv $fn -encoding UTF8;

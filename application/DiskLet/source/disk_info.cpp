@@ -111,7 +111,7 @@ PartInfo ^ Clone::PartInfo::Resize(UINT64 mb)
 
 bool Clone::PartInfo::GetPartitionInfo(IPartitionInfo * & part)
 {
-	JCASSERT(part == NULL);
+	JCASSERT(!part);
 	part = m_part_info;
 	part->AddRef();
 	return true;

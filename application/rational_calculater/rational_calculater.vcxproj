@@ -28,6 +28,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'" Label="Configuration">
+   <VcpkgConfiguration>Debug</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -35,6 +36,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'" Label="Configuration">
+    <VcpkgConfiguration>Release</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -42,6 +44,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'" Label="Configuration">
+    <VcpkgConfiguration>Debug</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -49,6 +52,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'" Label="Configuration">
+    <VcpkgConfiguration>Release</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -157,6 +161,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="source\permutation.h" />
     <ClInclude Include="source\rational.h" />
     <ClInclude Include="source\pch.h" />
   </ItemGroup>
@@ -179,6 +184,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\AssemblyInfo.cpp" />
+    <ClCompile Include="source\permutation.cpp" />
     <ClCompile Include="source\rational.cpp" />
     <ClCompile Include="source\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>

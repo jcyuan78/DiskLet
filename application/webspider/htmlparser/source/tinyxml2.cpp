@@ -50,15 +50,16 @@ LOCAL_LOGGER_ENABLE(L"tinyxml", LOGGER_LEVEL_DEBUGINFO);
 	{
 		va_list va;
 		va_start( va, format );
-//		const int result = vsnprintf_s( buffer, size, _TRUNCATE, format, va );
-		const int result = _vsnwprintf_s( buffer, size, _TRUNCATE, format, va );
+//		const int result = _vsnwprintf_s( buffer, size, _TRUNCATE, format, va );
+		const int result = vswprintf_s( buffer, size, format, va );
 		va_end( va );
 		return result;
 	}
 
 	static inline int TIXML_VSNPRINTF( wchar_t* buffer, size_t size, const wchar_t* format, va_list va )
 	{
-		const int result = _vsnwprintf_s( buffer, size, _TRUNCATE, format, va );
+//		const int result = _vsnwprintf_s( buffer, size, _TRUNCATE, format, va );
+		const int result = vswprintf_s( buffer, size, format, va );
 		return result;
 	}
 
@@ -204,7 +205,8 @@ void StrPair::SetStr( const wchar_t* str, int flags )
     size_t len = wcslen( str );
     TIXMLASSERT( _start == 0 );
     _start = new wchar_t[ len+1 ];
-    memcpy( _start, str, len+1 );
+    wcscpy_s(_start, len+1, str);
+    memcpy_s( _start, (len+1) * sizeof(wchar_t), str, (len+1) * sizeof(wchar_t) );
     _end = _start + len;
     _flags = flags | NEEDS_DELETE;
 }
@@ -857,6 +859,33 @@ void XMLNode::FindAllElements(std::vector<XMLElement*>& out, const std::wstring&
     }
 }
 
+void XMLNode::FindAllElements(std::vector<XMLElement*>& out, const std::wstring& name, const std::wstring& class_name, const std::wstring& id)
+{
+    XMLElement* first = FirstChildElement();
+    while (first)
+    {
+        if (name == first->Name())
+        {
+            do
+            {
+                if (!class_name.empty())
+                {
+                    const wchar_t* this_class = first->Attribute(L"class");
+                    if (!this_class || class_name != this_class) break;
+                }
+                if (!id.empty())
+                {
+                    const wchar_t* this_id = first->Attribute(L"id");
+                    if (!this_id || id != this_id) break;
+                }
+                out.push_back(first);
+            }while (0);
+        }
+        first->FindAllElements(out, name, class_name, id);
+        first = first->NextSiblingElement();
+    }
+}
+
 XMLNode::XMLNode( XMLDocument* doc ) :
     _document( doc ),
     _parent( 0 ),
@@ -1214,7 +1243,9 @@ bool XMLNode::ParseDeep( wchar_t* & p, StrPair* parentEndTag, int* curLineNumPtr
 //                    if (!XMLUtil::StringEqual(endTag.GetStr(), ele->Name()))
                     if (str_end != ele->Name())
                     {   //<YUAN> tag mismatch
-                        mismatch = true;
+                        //<TODO> 有可能某个tag没有关闭，导致和外层tag冲突。需要逐层弹出，已找到可以匹配的外层
+                        LOG_WARNING(L"node:%s miss match end tat %s", ele->Name(), str_end.c_str());
+//                        mismatch = true;
                     }
                 }
             }
@@ -1774,7 +1805,12 @@ std::wstring XMLElement::GetContents(void) const
         const XMLElement* ele;
         if (node->ToComment()) continue;
         else if (node->ToText()) buf += node->Value();
-        else if (ele = node->ToElement()) buf += ele->GetContents();
+        else if (ele = node->ToElement())
+        {
+            if (wcscmp(ele->Name(), L"BR") == 0) 
+                buf += L"\n";
+            buf += ele->GetContents();
+        }
         node = node->NextSibling();
     }
 
@@ -2185,6 +2221,8 @@ bool XMLElement::ParseDeep( wchar_t* &p, StrPair* parentEndTag, int* curLineNumP
     p = ParseAttributes( p, curLineNumPtr );
     if ( !p || !*p || _closingType != OPEN ) 
     {
+        m_name = _value.GetStr();
+        std::transform(m_name.begin(), m_name.end(), m_name.begin(), ::toupper);
         return p!=nullptr;
     }
 
@@ -2603,7 +2641,8 @@ void XMLDocument::SetError( XMLError error, int lineNum, const wchar_t* format, 
     wchar_t* buffer = new wchar_t[BUFFER_SIZE];
 
     TIXMLASSERT(sizeof(error) <= sizeof(int));
-    TIXML_SNPRINTF(buffer, BUFFER_SIZE, L"Error=%s ErrorID=%d (0x%x) Line number=%d", ErrorIDToName(error), int(error), int(error), lineNum);
+    TIXML_SNPRINTF(buffer, BUFFER_SIZE, L"Error=%s ErrorID=%d (0x%x) Line number=%d", ErrorIDToName(error), 
+        int(error), int(error), lineNum);
 
 	if (format) {
 		size_t len = wcslen(buffer);
