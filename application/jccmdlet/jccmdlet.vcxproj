@@ -36,6 +36,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'" Label="Configuration">
+    <VcpkgConfiguration>Debug</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -50,6 +51,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'" Label="Configuration">
+    <VcpkgConfiguration>Release</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -57,6 +59,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'" Label="Configuration">
+    <VcpkgConfiguration>Debug</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -71,6 +74,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'" Label="Configuration">
+    <VcpkgConfiguration>Release</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -154,6 +158,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies />
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_STATIC|x64'">

@@ -3,6 +3,7 @@
 
 #include "../include/itcg.h"
 #include "../include/tcg_token.h"
+//#define BOOST_EDIAN_DEPRECATED_NAMES
 #include <boost/endian.hpp>
 
 #define SUBPACKET_KIND_DATA		(0)
