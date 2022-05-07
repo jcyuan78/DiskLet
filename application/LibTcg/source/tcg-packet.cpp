@@ -83,7 +83,7 @@ void CTcgComPacket::GetSubItem(ISecurityObject*& sub_item, const std::wstring& n
 
 #define MAX_TOKEN_SIZE	(1024*4)
 
-bool CTcgComPacket::ParseData(BYTE* buf, size_t buf_len, bool receive)
+bool CTcgComPacket::ParseData(const BYTE* buf, size_t buf_len, bool receive)
 {
 	// copy data
 	m_data.reset(new BYTE[buf_len]);

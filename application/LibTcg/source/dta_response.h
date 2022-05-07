@@ -22,12 +22,11 @@ along with sedutil.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include "../include/dta_structures.h"
 #include "../include/dta_lexicon.h"
+#include "../include/tcg_token.h"
 
 
-/** Object containing the parsed tokens.
- * a vector of vector<uint8_T> that contains each token
- * returned in the TCG response
- */
+/** Object containing the parsed tokens. 
+    a vector of vector<uint8_T> that contains each token returned in the TCG response */
 class DtaResponse 
 {
 public:
@@ -39,6 +38,7 @@ public:
     /** (re)initialize the object using a new buffer
      * @param buffer the response returned by a TCG command */
     void init(void * buffer);
+    void init(BYTE* buffer, size_t len, DWORD protocol, DWORD comid);
     /** return the type of token 
      * @param tokenNum the 0 based number of the token*/
     OPAL_TOKEN tokenIs(uint32_t tokenNum);
@@ -81,10 +81,27 @@ public:
 
     static const wchar_t* MethodStatusCodeToString(BYTE status);
 
+    const BYTE* getPayload(void) const { return m_payload; }
+    size_t getPayloadLen(void) const { return m_data_len; }
+    DWORD getProtocol(void) const { return m_protocol; }
+    DWORD getComId(void) const { return m_comid; }
+    void getResult(tcg::ISecurityObject*& res) 
+    {
+        JCASSERT(res == nullptr);
+        res = m_result; 
+        if (res) res->AddRef(); 
+    }
+
+    WORD getStatusCode(void);
+    void GetResToken(tcg::ISecurityObject*& res);
 
 private:
-
     std::vector<std::vector<uint8_t>> response;   /**< tokenized resonse  */
+    // 开发阶段，同时兼容DtaResponse的解码和TcgToken的解码。
+    BYTE* m_payload = nullptr;
+    size_t m_data_len = 0;
+    DWORD m_protocol, m_comid;
+    tcg::ISecurityObject* m_result= nullptr;
 };
 
 

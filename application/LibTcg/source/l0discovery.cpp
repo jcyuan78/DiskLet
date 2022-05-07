@@ -71,7 +71,7 @@ bool CL0DiscoveryDescription::LoadConfig(const std::wstring& config_fn)
 	return true;
 }
 
-bool CL0DiscoveryDescription::Parse(CTcgFeatureSet& feature_set, BYTE* buf, size_t buf_len)
+bool CL0DiscoveryDescription::Parse(CTcgFeatureSet& feature_set, const BYTE* buf, size_t buf_len)
 {
 	if (buf_len < sizeof(L0DISCOVERY_HEADER)) 
 		THROW_ERROR(ERR_APP, L"buffer length (%zd) is less than header length (%zd)", sizeof(L0DISCOVERY_HEADER));
@@ -92,7 +92,7 @@ bool CL0DiscoveryDescription::Parse(CTcgFeatureSet& feature_set, BYTE* buf, size
 
 	while (consumed < feature_set.m_header.length_of_parameter)
 	{
-		L0DISCOVERY_FEATURE_BASE * ff = reinterpret_cast<L0DISCOVERY_FEATURE_BASE*>(buf);
+		const L0DISCOVERY_FEATURE_BASE * ff = reinterpret_cast<const L0DISCOVERY_FEATURE_BASE*>(buf);
 		CTcgFeature feature;
 		feature.m_code = boost::endian::endian_reverse(ff->feature_code);
 		if (feature.m_code == 0) continue;

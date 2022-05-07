@@ -6,12 +6,201 @@
 
 #include "global.h"
 
+#define RELEASE_INTERFACE(ptr) {if (ptr) ptr->Release(); ptr=NULL; 	}
+
+
 using namespace System;
 using namespace System::Management::Automation;
 //using namespace DiskLet;
 
+//#pragma make_public(tcg::ISecurityObject)
+
 namespace SecureLet
 {
+	public ref class TcgFeature : public System::Object
+	{
+	public:
+		TcgFeature(CTcgFeature* ff)
+		{
+			name = gcnew String(ff->m_name.c_str());
+			code = ff->m_code;
+			version = ff->m_version;
+			length = ff->m_length;
+			for (auto it = (ff->m_features.begin()); it != (ff->m_features.end()); ++it)
+			{
+				fields.Add(gcnew String(it->first.c_str()), it->second.get_value<int>());
+			}
+		}
+	public:
+		property System::String^ name;
+		WORD code;
+		BYTE version;
+		BYTE length;
+		System::Collections::Generic::Dictionary<String^, int> fields;
+	};
+
+	public ref class TcgFeatureSet : public System::Object
+	{
+	public:
+		TcgFeatureSet(tcg::ISecurityObject* ff)
+		{
+			CTcgFeatureSet* _fset = dynamic_cast<CTcgFeatureSet*>(ff);
+			if (_fset == NULL) THROW_ERROR(ERR_APP, L"need CTcgFeature object.");
+			// convert to .net object
+			length = _fset->m_header.length_of_parameter;
+			ver_major = _fset->m_header.major_version;
+			ver_minor = _fset->m_header.minor_version;
+			//feature_set->vendor
+
+			for (auto it = _fset->m_features.begin(); it != _fset->m_features.end(); ++it)
+			{
+				TcgFeature^ feature = gcnew TcgFeature(&(*it));
+#ifdef USING_DIRECTORY_FOR_FEATURE
+				features.Add(gcnew String(feature->name), feature);
+#else
+				features.Add(feature);
+#endif
+			}
+		}
+
+	public:
+		DWORD length;
+		WORD ver_major;
+		WORD ver_minor;
+#ifdef USING_DIRECTORY_FOR_FEATURE
+		System::Collections::Generic::Dictionary<String^, TcgFeature^> features;
+#else
+		System::Collections::ArrayList features;
+#endif
+	};
+
+
+	//=============================================================================
+
+	public enum class TCG_SP
+	{
+		/*SPs*/ THISSP, ADMINSP, LOCKINGSP,
+	};
+	public enum class TCG_AUTHORITY
+	{
+		TCG_NONE, SID, ANYBODY, ADMIN1, USER1,
+		TCG_C_PIN_MSID, TCG_C_PIN_SID,
+	};
+
+	public enum class TCG_TABLE
+	{
+		LOCKING, GLOBAL_RANGE,
+	};
+
+	const TCG_UID& SpToUid(TCG_SP sp);
+	const TCG_UID& AuthorityToUid(TCG_AUTHORITY au);
+	const TCG_UID& ToUid(TCG_TABLE obj);
+
+	public ref class TcgUid : Object
+	{
+	public:
+		static TcgUid^ TableId(TCG_TABLE tab, TCG_TABLE row)
+		{
+			TCG_UID uu;
+			CopyUid(uu, ToUid(tab));
+			AddUid(uu, ToUid(row));
+			TcgUid^ uid = gcnew TcgUid(uu);
+			return uid;
+		}
+
+	public:
+		TcgUid(TCG_UID& uid) { 
+			m_uid = new BYTE[8];
+			memcpy_s(m_uid, 8, uid, 8);
+		}
+		~TcgUid(void) { delete m_uid; }
+
+	public:
+		void GetUid(TCG_UID& uid) { memcpy_s(uid, 8, m_uid, 8); }
+		const BYTE* GetUid(void) { return m_uid; }
+
+	protected:
+		BYTE * m_uid;
+	};
+
+//#define TCG_SP			TCG_OBJ
+//#define TCG_AUTHORITY	TCG_OBJ
+
+	//public enum class TCG_SP
+	//{
+	//	TCG_SP_THISSP, TCG_SP_ADMINSP, TCG_SP_LOCKINGSP,
+	//};
+
+	//public enum class TCG_AUTHORITY
+	//{
+	//	TCG_NONE, TCG_SID, 
+	//};
+
+	public ref class TcgSession : public Object
+	{
+	public:
+		TcgSession(tcg::ITcgSession* session) : m_session(nullptr)
+		{
+			m_session = session; JCASSERT(m_session);
+			m_session->AddRef();
+		};
+		~TcgSession(void) { RELEASE_INTERFACE(m_session); }
+		!TcgSession(void) { RELEASE_INTERFACE(m_session); }
+		void GetSession(tcg::ITcgSession*& session)
+		{
+			JCASSERT(session == nullptr);
+			session = m_session;
+			session->AddRef();
+		}
+
+	public:
+		TcgFeatureSet^ GetFeatures(bool force)
+		{
+			JCASSERT(m_session);
+			jcvos::auto_interface<tcg::ISecurityObject> feature;
+			bool br = m_session->GetFeatures(feature, force);
+			if (!br) return nullptr;
+			return gcnew TcgFeatureSet(feature);
+		}
+
+		void StartSession(TCG_SP sp, TCG_AUTHORITY auth, String^ challenge, bool write)
+		{
+			JCASSERT(m_session);
+			const char* pw = nullptr;
+			std::string str_pw;
+			if (challenge != nullptr)
+			{
+				std::wstring wstr_pwd;
+				ToStdString(wstr_pwd, challenge);
+				if (!wstr_pwd.empty())
+				{
+					jcvos::UnicodeToUtf8(str_pw, wstr_pwd);
+					pw = str_pw.c_str();
+				}
+			}
+
+			BYTE br = m_session->StartSession(SpToUid(sp), pw, AuthorityToUid(auth), write);
+//			return br;
+		}
+
+		void EndSession(void)
+		{
+			JCASSERT(m_session);
+			BYTE br = m_session->EndSession();
+//			return br;
+		}
+
+		void GetTable(TcgUid^ uid, WORD start_col, WORD end_col)
+		{
+			JCASSERT(m_session);
+			jcvos::auto_interface<tcg::ISecurityObject> res;
+			
+			BYTE err = m_session->GetTable(res, uid->GetUid(), start_col, end_col);
+		}
+	protected:
+		tcg::ITcgSession* m_session;
+	};
+
 
 	[CmdletAttribute(VerbsData::Initialize, "SecurityParser")]
 	public ref class InitSecurityParser : public JcCmdLet::JcCmdletBase
@@ -32,60 +221,102 @@ namespace SecureLet
 	};
 
 
-			//[CmdletAttribute(VerbsCommon::Get, "L0Discovery")]
-			//public ref class GetL0Discovery : public JcCmdLet::JcCmdletBase
-			//{
-			//public:
-			//	GetL0Discovery(void);
-			//	~GetL0Discovery(void) {};
+	[CmdletAttribute(VerbsCommon::Get, "TPerProperties")]
+	public ref class GetTPerProperties : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		GetTPerProperties(void) {};
+		~GetTPerProperties(void) {};
 
-			//public:
-			//public:
-			//	//[Parameter(/*Position = 0, ParameterSetName = "ByObject",*/
-			//	//	/*ValueFromPipelineByPropertyName = true,*/ValueFromPipeline = true, Mandatory = false,
-			//	//	HelpMessage = "specify disk")]
-			//	//property Clone::DiskInfo^ Disk;
+	public:
+		[Parameter(Position = 0,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			HelpMessage = "specify device object")]
+		property Clone::StorageDevice^ dev;
 
-			//	//[Parameter(/*Position = 0, */Mandatory = false, /*ParameterSetName = "ByIndex",*/
-			//	//	/*ValueFromPipeline = true, ValueFromPipelineByPropertyName = true,*/
-			//	//	HelpMessage = "Clear a disk")]
-			//	//property int DiskNumber;
+	public:
+		virtual void InternalProcessRecord() override;
+	};
 
-			//	[Parameter(Position = 0, 
-			//		ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
-			//		HelpMessage = "specify device object")]
-			//	property Clone::StorageDevice^ dev;
+	[CmdletAttribute(VerbsCommon::Get, "DefaultPassword")]
+	public ref class GetDefaultPassword : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		GetDefaultPassword(void) {};
+		~GetDefaultPassword(void) {};
 
-			//public:
-			//	virtual void InternalProcessRecord() override
-			//	{
-			//		jcvos::auto_interface<IStorageDevice> dd;
-			//		if (dev) dev->GetStorageDevice(dd);
-			//		else		global.GetDevice(dd);
-			//		if (!dd) throw gcnew System::ApplicationException(L"device is not selected");
+	public:
+		[Parameter(Position = 0,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			HelpMessage = "specify device object")]
+		property Clone::StorageDevice^ dev;
 
-			//		jcvos::auto_interface<ITcgSession> tcg;
-			//		CreateTcgSession(tcg, dd);
-			//		if (!tcg) throw gcnew System::ApplicationException(L"failed on creating tcg session");
+	public:
+		virtual void InternalProcessRecord() override;
+	};
 
-			//		//ITcgDevice* tcg = dd.d_cast<ITcgDevice*>();
-			//		//if (!tcg) throw gcnew System::ApplicationException(L"device does not support TCG");
+	[CmdletAttribute(VerbsCommon::Get, "L0Discovery")]
+	public ref class GetL0Discovery : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		GetL0Discovery(void) {};
+		~GetL0Discovery(void) {};
 
-			//		jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
-			//		jcvos::CreateBinaryBuffer(buf, SECTOR_TO_BYTE(1));
-			//		BYTE* _buf = buf->Lock();
-			//		bool br = tcg->L0Discovery(_buf);
-			//		buf->Unlock(_buf);
-			//		if (!br) wprintf_s(L"[err] failed on calling L0Discovery");
+	public:
+		[Parameter(Position = 0,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			HelpMessage = "specify device object")]
+		property Clone::StorageDevice^ dev;
+		[Parameter(Position = 1,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, 
+			HelpMessage = "output binary data")]
+		property SwitchParameter OutBinary;
 
-			//		JcCmdLet::BinaryType^ data = gcnew JcCmdLet::BinaryType(buf);
-			//		WriteObject(data);
 
-			//	}
+	public:
+		virtual void InternalProcessRecord() override;
 
-			//protected:
+	protected:
+	};
 
-			//};
+	// 解析L0Discovery
+	[CmdletAttribute(VerbsData::ConvertFrom, "L0Discovery")]
+	public ref class CParseL0Discovery : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		CParseL0Discovery(void) {};
+		~CParseL0Discovery(void) {};
+
+	public:
+		[Parameter(Position = 0,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			HelpMessage = "payload data of L0Discovery")]
+		property JcCmdLet::BinaryType^ data;
+
+	public:
+		virtual void InternalProcessRecord() override;
+
+	};
+
+
+	[CmdletAttribute(VerbsCommunications::Connect, "TcgDevice")]
+	public ref class ConnectTcgDevice : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		ConnectTcgDevice(void) {};
+		~ConnectTcgDevice(void) {};
+
+	public:
+		[Parameter(Position = 0,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			HelpMessage = "specify device object")]
+		property Clone::StorageDevice^ dev;
+
+	public:
+		virtual void InternalProcessRecord() override;
+	};
+
+
 
 
 };

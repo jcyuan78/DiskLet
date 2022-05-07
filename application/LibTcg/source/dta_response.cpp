@@ -20,8 +20,7 @@ DtaResponse::DtaResponse(void * buffer)
     init(buffer);
 }
 
-void
-DtaResponse::init(void * buffer)
+void DtaResponse::init(void * buffer)
 {
     //LOG(D1) << "Entering  DtaResponse::init";
     LOG_STACK_TRACE();
@@ -49,6 +48,29 @@ DtaResponse::init(void * buffer)
         }
 		if (bytestring != empty_atom)		response.push_back(bytestring);
     }
+
+
+}
+
+void DtaResponse::init(BYTE* buffer, size_t len, DWORD protocol, DWORD comid)
+{
+    if (m_payload)
+    {
+        delete[] m_payload;
+        m_payload = NULL;
+    }
+    RELEASE(m_result);
+    m_payload = new BYTE[len];
+    m_data_len = len;
+    memcpy_s(m_payload, len, buffer, len);
+    m_protocol = protocol;
+    m_comid = comid;
+    // for my parser
+    jcvos::auto_interface<tcg::ISecurityParser> parser;
+    tcg::GetSecurityParser(parser);
+    parser->ParseSecurityCommand(m_result, m_payload, m_data_len, m_protocol, m_comid, true);
+
+    init(buffer);
 }
 
 OPAL_TOKEN DtaResponse::tokenIs(uint32_t tokenNum)
@@ -56,7 +78,8 @@ OPAL_TOKEN DtaResponse::tokenIs(uint32_t tokenNum)
 //    LOG(D1) << "Entering  DtaResponse::tokenIs";
     LOG_STACK_TRACE();
 
-    if (!(response[tokenNum][0] & 0x80)) { //tiny atom
+    if (!(response[tokenNum][0] & 0x80))
+    { //tiny atom
         if ((response[tokenNum][0] & 0x40))
             return OPAL_TOKEN::DTA_TOKENID_SINT;
         else
@@ -264,6 +287,27 @@ const wchar_t* DtaResponse::MethodStatusCodeToString(BYTE status)
     }
 }
 
+WORD DtaResponse::getStatusCode(void)
+{
+    if (!m_result) return 0xEFF;
+    jcvos::auto_interface<tcg::ISecurityObject> token;
+    m_result->GetSubItem(token, L"token");
+    if (!token) return 0xEFE;
+    jcvos::auto_interface<tcg::ISecurityObject> state;
+    token->GetSubItem(state, L"state");
+    if (!state) return 0xEFD;
+    CStatePhrase* ss = state.d_cast<CStatePhrase*>();
+    if (!ss) return 0xEFC;
+    return ss->getState();
+ }
+
+void DtaResponse::GetResToken(tcg::ISecurityObject*& res)
+{
+    JCASSERT(res == NULL);
+    if (!m_result) return;
+    m_result->GetSubItem(res, L"token");
+}
+
 uint32_t DtaResponse::getTokenCount() const
 {
     LOG_STACK_TRACE();
@@ -274,5 +318,7 @@ DtaResponse::~DtaResponse()
 {
 //    LOG(D1) << "Destroying DtaResponse";
     LOG_STACK_TRACE();
-
+ //   RELEASE(m_res_obj);
+    delete[] m_payload;
+    RELEASE(m_result);
 }

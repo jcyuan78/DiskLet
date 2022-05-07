@@ -109,7 +109,7 @@ public:
 public:
     void Clear(void);
     bool LoadConfig(const std::wstring& config_fn);
-    bool Parse(CTcgFeatureSet& features,  BYTE* buf, size_t buf_len);
+    bool Parse(CTcgFeatureSet& features,  const BYTE* buf, size_t buf_len);
 //    void Print(void);
 
 protected:

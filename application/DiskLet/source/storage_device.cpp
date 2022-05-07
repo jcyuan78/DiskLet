@@ -49,8 +49,9 @@ HEALTH_INFO ^ Clone::StorageDevice::GetHealthInfo(void)
 {
 	JCASSERT(m_storage);
 	DEVICE_HEALTH_INFO info;
-	boost::property_tree::wptree prop;
-	m_storage->GetHealthInfo(info, &prop);
+	//boost::property_tree::wptree prop;
+	std::vector<STORAGE_HEALTH_INFO_ITEM> prop;
+	m_storage->GetHealthInfo(info, prop);
 
 	HEALTH_INFO ^ health = gcnew HEALTH_INFO;
 

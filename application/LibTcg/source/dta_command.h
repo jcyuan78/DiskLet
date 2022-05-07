@@ -2,6 +2,8 @@
 
 #include <vector>
 #include "../include/dta_lexicon.h"
+#include "../include/tcg_token.h"
+
 class DtaDevOpal;
 class DtaDevEnterprise;
 
@@ -60,6 +62,9 @@ public:
         addToken(OPAL_TOKEN::ENDNAME);
     }
 
+    void addOptionalParam(UINT param_id, CTcgTokenBase* param);
+    void makeOptionalParam(void);
+
 
 
     /** Set the commid to be used in the command. */
@@ -96,13 +101,13 @@ public:
      *   @param method The SSC method to be called  
      */
     //void reset(OPAL_UID InvokingUid, vector<uint8_t> method);
+
     /** Clears the command buffer and resets the the end of buffer pointer
      * also initializes the invoker and method fields.
      * Both the invoker and method are passed as a vector<uint8_t>
      * 
      *   @param InvokingUid  The UID used to call the SSC method 
-     *   @param method The SSC method to be called  
-     */
+     *   @param method The SSC method to be called   */
     //void reset(vector<uint8_t> InvokingUid, vector<uint8_t> method);
     void reset(const TCG_UID invoking_uid, const TCG_UID method);
     /** Changes the invoker field.
@@ -130,6 +135,8 @@ private:
 	uint8_t *cmdbuf;  /**< Pointer to the command buffer */
     //uint8_t *respbuf;  /**< pointer to the response buffer */
     uint32_t bufferpos = 0;  /**< position of the next byte in the command buffer */
+
+    ListToken * m_optional_param = nullptr;
 
     // cmdbuf“I™”—]—e—Ê
     //size_t cmdbuf_remain;

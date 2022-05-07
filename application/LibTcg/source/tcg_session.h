@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma once
 #include "../include/itcg.h"
 
 #include "dta_command.h"
@@ -6,8 +7,7 @@
 #include "../include/l0discovery.h"
 
 
-#define PROTOCOL_ID_TCG (0x01)
-#define PROTOCOL_ID_TPER (0x02)
+
 
 class CTcgSession : public tcg::ITcgSession
 {
@@ -18,12 +18,20 @@ public:
 public:
     bool ConnectDevice(IStorageDevice * dev);
 // essential methods
-    virtual BYTE L0Discovery(BYTE* buf);
-    virtual BYTE StartSession(const TCG_UID sp, const char* host_challenge, const TCG_UID sign_authority, bool write= true);
+	virtual bool GetFeatures(tcg::ISecurityObject*& feature, bool force);
+
+    virtual bool L0Discovery(BYTE* buf);
+	virtual BYTE Properties(boost::property_tree::wptree& res, const std::vector<std::wstring>& req);
+
+    virtual BYTE StartSession(const TCG_UID sp, const char* host_challenge, const TCG_UID sign_authority, 
+		bool write= true);
 	virtual BYTE EndSession(void);
 	virtual bool IsOpen(void) { return m_is_open; }
-    virtual BYTE GetTable(DtaResponse & response, const TCG_UID table, WORD start_col, WORD end_col);
-//	virtual BYTE SetTable(const TCG_UID table, OPAL_TOKEN name, vector<BYTE>& value);
+
+	virtual BYTE GetTable(tcg::ISecurityObject*& res, const TCG_UID table, WORD start_col, WORD end_col);
+    BYTE GetTable(DtaResponse & response, const TCG_UID table, WORD start_col, WORD end_col);
+
+	//	virtual BYTE SetTable(const TCG_UID table, OPAL_TOKEN name, vector<BYTE>& value);
 	virtual BYTE SetTable(const TCG_UID table, OPAL_TOKEN name, const char * value);
 	virtual BYTE Revert(const TCG_UID sp);
 	virtual void Reset(void);
@@ -34,9 +42,11 @@ public:
 
 
 protected:
-    BYTE InvokeMethod(DtaCommand& cmd, DtaResponse& response);
+	// 返回TCG receive的state code
+    int InvokeMethod(DtaCommand& cmd, DtaResponse& response);
     bool IsEnterprise(void) { return false; }
-    BYTE ExecSecureCommand(const DtaCommand& cmd, DtaResponse& response, BYTE protocol);
+	// 返回TCG receive 的state code，小于0，表示Scsi command执行的错误代码，>0表示TCG receive的state code
+    int ExecSecureCommand(const DtaCommand& cmd, DtaResponse& response, BYTE protocol);
 	virtual WORD GetComId(void) { return m_base_comid; }
 
     // 把passwoad打包成一个token
@@ -44,7 +54,7 @@ protected:
     BYTE Authenticate(vector<uint8_t> Authority, const char* Challenge);
 
 protected:
-	CTcgFeatureSet * m_feature_set;
+	CTcgFeatureSet * m_feature_set = nullptr;
 
     IStorageDevice * m_dev;
     bool m_hash_password;
@@ -71,16 +81,18 @@ class CTestDevice : public IStorageDevice
 {
 public:
 	virtual bool Inquiry(IDENTIFY_DEVICE& id) { return false; }
-	virtual bool GetHealthInfo(DEVICE_HEALTH_INFO& info, boost::property_tree::wptree* ext_info) { return false; }
+//	virtual bool GetHealthInfo(DEVICE_HEALTH_INFO& info, boost::property_tree::wptree* ext_info) { return false; }
+	virtual STORAGE_HEALTH_STATUS GetHealthInfo(DEVICE_HEALTH_INFO& info, std::vector<STORAGE_HEALTH_INFO_ITEM>& ext_info) { return STATUS_ERROR; }
+
 	// rd_wr: Read (true) or Write (false)
 	// Sector Read / Write通过Interface转用方法实现
 	virtual bool SectorRead(BYTE* buf, FILESIZE lba, size_t sectors, UINT timeout) { return false; }
 	virtual bool SectorWrite(BYTE* buf, FILESIZE lba, size_t sectors, UINT timeout) { return false; }
 
 	// Read/Write方法通过系统Read/Write函数实现，
-	virtual bool Read(BYTE* buf, FILESIZE lba, size_t secs) { return false; }
+	virtual bool Read(void* buf, FILESIZE lba, size_t secs) { return false; }
 
-	virtual bool Write(BYTE* buf, FILESIZE lba, size_t secs) { return false; }
+	virtual bool Write(const void* buf, FILESIZE lba, size_t secs) { return false; }
 
 	virtual void FlushCache() {}
 

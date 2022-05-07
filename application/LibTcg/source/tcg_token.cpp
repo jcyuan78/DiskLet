@@ -360,6 +360,69 @@ void MidAtomToken::ToString(std::wostream& out, UINT layer, int opt)
 	}
 }
 
+size_t MidAtomToken::Encode(BYTE* buf, size_t buf_len)
+{
+	if (m_len == 0)
+	{	// 自动化长度
+		//UINT64 val = (UINT64)(m_data);
+		//if (val < 0x40)
+		{	// for Tiny atom
+			if (buf_len < 1)	THROW_ERROR(ERR_APP, L"buffer is too small, len=%zd, request=1", buf_len);
+			buf[0] = (BYTE)(m_data_val[0] & 0x3F);
+			if (m_signe) buf[0] |= 0x40;
+			return 1;
+		}
+		//else if (val <= 0xFF) m_len = 1;
+		//else if (val <= 0xFFFF) m_len = 2;
+		//else if (val <= 0xFFFFFF) m_len = 3;
+		//else if (val <= 0xFFFFFFFF) m_len = 4;
+		//else m_len = 8;
+	}
+
+	BYTE* data = nullptr;
+	size_t data_len = 0;
+	if (m_len < 16)
+	{	// for Short atom
+		data_len = m_len + 1;
+		if (buf_len < data_len ) THROW_ERROR(ERR_APP, L"buffer is too small, len=%zd, request=%zd", buf_len, data_len);
+		buf[0] = 0x80 + (BYTE)(m_len & 0xF);
+		if (m_type == CTcgTokenBase::BinaryAtom) buf[0] |= 0x20;
+		if (m_signe) buf[0] |= 0x10;
+		data = (m_len <= 8) ? m_data_val : m_data;
+		memcpy_s(buf + 1, buf_len - 1, data, m_len);
+	}
+	else if (m_len < 2048)
+	{
+		data_len = m_len + 2;
+		if (buf_len <data_len) THROW_ERROR(ERR_APP, L"buffer is too small, len=%zd, request=%zd", buf_len, data_len);
+		buf[0] = 0xC0 + (BYTE)((m_len >> 8) & 0x7);
+		if (m_type == CTcgTokenBase::BinaryAtom) buf[0] |= 0x10;
+		if (m_signe) buf[0] |= 0x8;
+		buf[1] = (BYTE)(m_len & 0xFF);
+		data = m_data;
+		memcpy_s(buf + 2, buf_len - 1, data, m_len);
+	}
+	else if (m_len < 0x01000000)
+	{
+		data_len = m_len + 4;
+		if (buf_len <data_len) THROW_ERROR(ERR_APP, L"buffer is too small, len=%zd, request=%zd", buf_len, data_len);
+		buf[0] = 0xE0;
+		if (m_type == CTcgTokenBase::BinaryAtom) buf[0] |= 0x02;
+		if (m_signe) buf[0] |= 0x01;
+		buf[1] = (BYTE)((m_len >> 16) & 0xFF);
+		buf[2] = (BYTE)((m_len >> 8) & 0xFF);
+		buf[3] = (BYTE)(m_len & 0xFF);
+		data = m_data;
+		memcpy_s(buf + 4, buf_len - 1, data, m_len);
+	}
+	else
+	{
+		THROW_ERROR(ERR_APP, L"data size should be less than 0x1000000, size=%zd", m_len);
+	}
+	//memcpy_s(buf + 1, buf_len - 1, data, m_len);
+	return data_len;
+}
+
 UINT64 MidAtomToken::FormatToInt(void) const
 {
 	if (m_len > 8)	THROW_ERROR(ERR_APP, L"data length=%d is over UINT64, type=%d", m_len, m_type);
@@ -383,6 +446,49 @@ bool MidAtomToken::FormatToString(std::wstring& str) const
 	return true;
 }
 
+MidAtomToken* MidAtomToken::CreateToken(const std::string& str)
+{
+	MidAtomToken* token = jcvos::CDynamicInstance<MidAtomToken>::Create();
+	if (token == nullptr) THROW_ERROR(ERR_MEM, L"failed on creating MidAtomToken");
+	token->m_type = CTcgTokenBase::BinaryAtom;
+	token->m_signe = false;
+	size_t len = str.size();
+	token->m_len = len;
+	if (len > 8)
+	{
+		token->m_data = new BYTE[token->m_len];
+		memcpy_s(token->m_data, len, str.c_str(), len);
+	}
+	else memcpy_s(token->m_data_val, 8, str.c_str(), len);
+	return token;
+}
+
+MidAtomToken* MidAtomToken::CreateToken(UINT val)
+{
+	MidAtomToken* token = jcvos::CDynamicInstance<MidAtomToken>::Create();
+	if (token == nullptr) THROW_ERROR(ERR_MEM, L"failed on creating MidAtomToken");
+	token->m_type = CTcgTokenBase::IntegerAtom;
+	token->m_signe = false;
+	if (val < 0x40)
+	{
+		token->m_len = 0;
+		token->m_data_val[0] = (BYTE)(val);
+	}
+	else
+	{
+		BYTE* data = (BYTE*)(&val);
+		int ii = 3;
+		while (ii >= 0 && data[ii] == 0) ii--;
+		size_t len = 0;
+		for (; ii >= 0; ii--) token->m_data_val[len++] = data[ii];
+		//	memcpy_s(token->m_data_val, 8, &val, sizeof(val));
+		token->m_len = len;
+	}
+	return token;
+}
+
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // ==== List Tokens ======
@@ -393,7 +499,8 @@ ListToken::~ListToken(void)
 	for (auto it = m_tokens.begin(); it != end_it; ++it)
 	{
 		JCASSERT(*it);
-		delete (*it);
+//		delete (*it);
+		(*it)->Release();
 	}
 }
 
@@ -462,13 +569,37 @@ void ListToken::GetSubItem(ISecurityObject*& sub_item, const std::wstring& name)
 	}
 }
 
+size_t ListToken::Encode(BYTE* buf, size_t buf_len)
+{
+	size_t data_len=0;
+	buf[0] = START_LIST;
+	data_len++;
+	buf++;
+	buf_len--;
+	for (auto it = m_tokens.begin(); it != m_tokens.end(); ++it)
+	{
+		JCASSERT(*it);
+		size_t len = (*it)->Encode(buf, buf_len);
+		data_len += len;
+		buf += len;
+		buf_len -= len;
+	}
+	buf[0] = END_LIST;
+	data_len++;
+	buf_len--;
+	buf++;
+	return data_len;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // ==== Name Tokens ======
 
 NameToken::~NameToken(void)
 {
-	delete m_value;
+//	delete m_value;
+	RELEASE(m_name_id);
+	RELEASE(m_value);
 }
 
 bool NameToken::InternalParse(BYTE*& begin, BYTE* end)
@@ -529,12 +660,6 @@ void NameToken::ToString(std::wostream& out, UINT layer, int opt)
 		m_name_id->ToString(out, layer, opt);
 		out << L">";
 	}
-		//else
-		//{
-		//	out << L"<NAME> NAME=";
-		//	m_name_id->ToString(out, layer, opt);
-		//	out << std::endl;
-		//}
 	
 	if (layer > 0 && m_value)
 	{
@@ -545,6 +670,53 @@ void NameToken::ToString(std::wostream& out, UINT layer, int opt)
 		out << (INDENTATION - indentation);
 	}
 	out << L"</NAME>" << std::endl;
+}
+
+size_t NameToken::Encode(BYTE* buf, size_t buf_len)
+{
+	size_t data_len=0;
+	buf[0] = START_NAME;
+	data_len++;
+	buf++;
+	buf_len--;
+
+	size_t len = m_name_id->Encode(buf, buf_len);
+	data_len += len;
+	buf += len;
+	buf_len -= len;
+
+	len = m_value->Encode(buf, buf_len);
+	data_len += len;
+	buf += len;
+	buf_len -= len;
+
+	buf[0] = END_NAME;
+	data_len++;
+	buf_len--;
+	buf++;
+	return data_len;
+}
+
+NameToken * NameToken::CreateToken(const std::wstring& name, UINT val)
+{
+	NameToken* token = jcvos::CDynamicInstance<NameToken>::Create();
+	if (!token) THROW_ERROR(ERR_MEM, L"failed on creating NameToken");
+	std::string str;
+	jcvos::UnicodeToUtf8(str, name);
+	token->m_name_id = MidAtomToken::CreateToken(str);
+	token->m_value = MidAtomToken::CreateToken(val);
+	return token;
+}
+
+NameToken* NameToken::CreateToken(UINT id, CTcgTokenBase* val)
+{
+	JCASSERT(val);
+	NameToken* token = jcvos::CDynamicInstance<NameToken>::Create();
+	if (!token) THROW_ERROR(ERR_MEM, L"failed on creating NameToken");
+	token->m_name_id = MidAtomToken::CreateToken(id);
+	token->m_value = val;
+	token->m_value->AddRef();
+	return token;
 }
 
 
@@ -633,8 +805,8 @@ void CStatePhrase::ToString(std::wostream& out, UINT layer, int opt)
 	const wchar_t* str_state = GetStateString(m_state[0], m_empty[0]);
 	int indentation = HIBYTE(HIWORD(opt));
 	out << (INDENTATION - indentation);
-	out << L"<STATE state=" << str_state ;
-	for (int ii = 0; ii < 3; ++ii) out << L", " << m_empty[ii] ? 0xFFF : m_state[ii];
+	out << L"<STATE state=" << str_state << L"(" << (m_empty[0] ? 0xFFF : m_state[0]) << L"), ";
+	for (int ii = 1; ii < 3; ++ii) out << (m_empty[ii] ? 0xFFF : m_state[ii]) << L",";
 	out << L">" << std::endl;
 }
 

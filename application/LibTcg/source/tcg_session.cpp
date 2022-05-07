@@ -1,8 +1,11 @@
 ﻿#include "pch.h"
 #include "tcg_session.h"
+#include "../include/itcg.h"
+#include "../include/tcg_token.h"
 #include <boost/endian.hpp>
+#include <iostream>
 
-LOCAL_LOGGER_ENABLE(L"tcg.session", LOGGER_LEVEL_NOTICE);
+LOCAL_LOGGER_ENABLE(L"tcg.session", LOGGER_LEVEL_DEBUGINFO);
 
 using tcg::ITcgSession;
 
@@ -34,26 +37,21 @@ bool CTcgSession::ConnectDevice(IStorageDevice* dev)
 	m_dev->AddRef();
 
 	jcvos::auto_array<BYTE> buf(SECTOR_SIZE);
-	BYTE ir = L0Discovery(buf);
-	if (ir != SUCCESS)
+	bool br = L0Discovery(buf);
+	if (!br)
 	{
 		LOG_ERROR(L"[err] failed on getting L0 Discovery");
 		return false;
 	}
 
-	CL0DiscoveryDescription desc;
-	bool br = desc.LoadConfig(L"");
-	if (!br)
-	{
-		LOG_ERROR(L"[err] failed on loading l0 discovery config");
-		return false;
-	}
-	br = desc.Parse(*m_feature_set, buf, SECTOR_SIZE);
-	if (!br)
-	{
-		LOG_ERROR(L"[err] failed on parsing l0 discovery");
-		return false;
-	}
+	RELEASE(m_feature_set);
+	// 解析L0Discovery
+	jcvos::auto_interface<tcg::ISecurityParser> parser;
+	tcg::GetSecurityParser(parser);
+
+	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
+	parser->ParseSecurityCommand(sec_obj, buf, SECTOR_SIZE, tcg::PROTOCOL_ID_TCG, tcg::COMID_L0DISCOVERY, true);
+	sec_obj.detach<CTcgFeatureSet>(m_feature_set);
 
 	const CTcgFeature* feature_opal = m_feature_set->GetFeature(CTcgFeature::FEATURE_OPAL_SSC);
 	if (feature_opal == nullptr) THROW_ERROR(ERR_APP, L"the device does not support opal");
@@ -61,12 +59,78 @@ bool CTcgSession::ConnectDevice(IStorageDevice* dev)
 	return true;
 }
 
-BYTE CTcgSession::L0Discovery(BYTE* buf)
+bool CTcgSession::GetFeatures(tcg::ISecurityObject*& feature, bool force)
+{
+	bool br = true;
+	if (!m_feature_set || force)
+	{
+		jcvos::auto_array<BYTE> buf(SECTOR_SIZE);
+		br = L0Discovery(buf);
+		if (!br)
+		{
+			LOG_ERROR(L"[err] failed on getting L0 Discovery");
+			return false;
+		}
+		RELEASE(m_feature_set);
+		// 解析L0Discovery
+		jcvos::auto_interface<tcg::ISecurityParser> parser;
+		tcg::GetSecurityParser(parser);
+
+		jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
+		parser->ParseSecurityCommand(sec_obj, buf, SECTOR_SIZE, tcg::PROTOCOL_ID_TCG, tcg::COMID_L0DISCOVERY, true);
+		sec_obj.detach<CTcgFeatureSet>(m_feature_set);
+	}
+	feature = static_cast<tcg::ISecurityObject*>(m_feature_set);
+	if (feature) feature->AddRef();
+}
+
+bool CTcgSession::L0Discovery(BYTE* buf)
 {
 	JCASSERT(m_dev);
-	BYTE ir = m_dev->SecurityReceive(buf, 512, 0x01, 0x01);
+//	BYTE ir = m_dev->SecurityReceive(buf, 512, 0x01, 0x01);
+	BYTE ir = m_dev->SecurityReceive(buf, 512, tcg::PROTOCOL_ID_TCG, tcg::COMID_L0DISCOVERY);
 	if (ir != SUCCESS) { LOG_ERROR(L"[err] failed on calling security receive command"); }
 	return (ir==SUCCESS);
+}
+
+BYTE CTcgSession::Properties(boost::property_tree::wptree& props, const std::vector<std::wstring>& req)
+{
+	LOG_STACK_TRACE();
+	jcvos::auto_ptr<DtaCommand> _cmd(new DtaCommand);
+	DtaCommand* cmd = (DtaCommand*)_cmd;
+	if (NULL == cmd)	THROW_ERROR(ERR_MEM, L"failed on creating dta command");
+
+	jcvos::auto_interface<ListToken> parameters(ListToken::CreateToken());
+	if (parameters == nullptr) THROW_ERROR(ERR_MEM, L"failed on creating list token");
+
+	DtaResponse response;
+	cmd->reset(OPAL_SMUID_UID, METHOD_HOSTPROP);
+	if (!props.empty())
+	{
+		//组装参数
+		for (auto it = props.begin(); it != props.end(); ++it)
+		{
+			UINT val = it->second.get_value<UINT>();
+			jcvos::auto_interface<NameToken> param(NameToken::CreateToken(it->first, val));
+			//cmd->addOptionParam(param);
+			parameters->AddToken(param);
+		}
+		cmd->addOptionalParam(0, parameters);
+		cmd->makeOptionalParam();
+	}
+	cmd->complete();
+
+	BYTE last_rc = InvokeMethod(*cmd, response);
+// pass
+	//jcvos::auto_interface<tcg::ISecurityParser> parser;
+	//tcg::GetSecurityParser(parser);
+	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
+	//parser->ParseSecurityCommand(sec_obj, response.getPayload(), response.getPayloadLen(), response.getProtocol(), 
+	//	response.getComId(), true);
+	response.getResult(sec_obj);
+	sec_obj->ToString(std::wcout, -1, 0);
+
+	return 0;
 }
 
 BYTE CTcgSession::StartSession(const TCG_UID sp, const char* host_challenge, const TCG_UID sign_authority, bool write)
@@ -139,6 +203,7 @@ again:
 		return(Authenticate(auth, host_challenge));
 	}
 	m_is_open = true;
+	LOG_NOTICE(L"started session, host session id=0x%X, SP session id=0x%X", m_hsn, m_tsn);
 	return 0;
 }
 
@@ -161,6 +226,16 @@ BYTE CTcgSession::EndSession(void)
 	}
 	m_is_open = false;
 	return 0;
+}
+
+BYTE CTcgSession::GetTable(tcg::ISecurityObject*& res, const TCG_UID table, WORD start_col, WORD end_col)
+{
+	JCASSERT(res == nullptr);
+	DtaResponse rr;
+	BYTE err = GetTable(rr, table, start_col, end_col);
+	rr.GetResToken(res);
+//	if (err) return err;
+	return err;
 }
 
 BYTE CTcgSession::GetTable(DtaResponse& response, const TCG_UID table, WORD start_col, WORD end_col)
@@ -386,15 +461,16 @@ BYTE CTcgSession::SetSIDPassword(const char* old_pw, const char* new_pwd)
 	//return 0;
 }
 
-BYTE CTcgSession::InvokeMethod(DtaCommand& cmd, DtaResponse& response)
+int CTcgSession::InvokeMethod(DtaCommand& cmd, DtaResponse& response)
 {
 	LOG_STACK_TRACE();
+	LOG_DEBUG(L"invoke method: ");
 	cmd.setHSN(m_hsn);
 	cmd.setTSN(m_tsn);
 	cmd.setcomID(GetComId());
 
-	uint8_t exec_rc = ExecSecureCommand(cmd, response, PROTOCOL_ID_TCG);
-	if (0 != exec_rc)
+	int exec_rc = ExecSecureCommand(cmd, response, tcg::PROTOCOL_ID_TCG);
+	if (0 < exec_rc)
 	{
 		LOG_ERROR(L"[err] Command failed on exec = %d", exec_rc);
 		return exec_rc;
@@ -405,14 +481,18 @@ BYTE CTcgSession::InvokeMethod(DtaCommand& cmd, DtaResponse& response)
 		(0 == response.m_header.cp.minTransfer) &&
 		(0 == response.m_header.cp.length)) 
 	{
-		LOG_ERROR(L"[err] All Response(s) returned, no further data, request parsing error.")
+		LOG_ERROR(L"[err] All Response(s) returned, no further data, request parsing error.");
+		LOG_DEBUG(L"outstanding=%d, min-transfer=%d, length=%d", response.m_header.cp.outstandingData,
+			response.m_header.cp.minTransfer, response.m_header.cp.length);
 		return DTAERROR_COMMAND_ERROR;
 	}
 	if ((0 == response.m_header.cp.length) ||
 		(0 == response.m_header.pkt.length) ||
 		(0 == response.m_header.subpkt.length)) 
 	{
-		LOG_ERROR(L"[err] One or more header fields have 0 length")
+		LOG_ERROR(L"[err] One or more header fields have 0 length");
+		LOG_DEBUG(L"cp.length=%d, pkt.length=%d, subpkt.length=%d", response.m_header.cp.length,
+			response.m_header.pkt.length, response.m_header.subpkt.length);
 		return DTAERROR_COMMAND_ERROR;
 	}
 	// if we get an endsession response return 0
@@ -429,13 +509,14 @@ BYTE CTcgSession::InvokeMethod(DtaCommand& cmd, DtaResponse& response)
 	BYTE status_code = response.GetMethodStatus();
 	if (OPALSTATUSCODE::SUCCESS != status_code) 
 	{
-		LOG_ERROR(L"[err] Method status error (code=%d): %s", DtaResponse::MethodStatusCodeToString(status_code));
+		const wchar_t * msg = DtaResponse::MethodStatusCodeToString(status_code);
+		LOG_ERROR(L"[err] Method status error (code=%d): %s", status_code, msg);
 	}
 //	m_base_comid++;
 	return status_code;
 }
 
-BYTE CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYTE protocol)
+int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYTE protocol)
 {
 	uint8_t lastRC;
 	BYTE* send_buf = (BYTE*)cmd.getCmdBuffer();
@@ -450,6 +531,8 @@ BYTE CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BY
 	if (!file) THROW_ERROR(ERR_APP, L"cannot opne data file: %s", fn);
 	fwrite(send_buf, send_size, 1, file);
 	fclose(file);
+	file = NULL;
+	LOG_DEBUG(L"saved send security data in %s", fn);
 #endif
 
 	JCASSERT(m_dev);
@@ -459,16 +542,18 @@ BYTE CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BY
 		LOG_ERROR(L"[err] SecuritySend command failed, code=0x%X", lastRC);
 		return lastRC;
 	}
-
+//<TODO> 优化：可以直接在response中申请缓存。
 	jcvos::auto_array<BYTE> response_buf(MIN_BUFFER_LENGTH + IO_BUFFER_ALIGNMENT, 0);
 
 	hdr = (OPALHeader*)(response_buf.get_ptr());
+	DWORD comid = GetComId();
 	do 
 	{
+//<TODO> 这里没有考虑到多笔cmd时，指针位置问题。
 		Sleep(25);
 //		osmsSleep(25);
 //		memset(cmd.getRespBuffer(), 0, MIN_BUFFER_LENGTH);
-		lastRC = m_dev->SecurityReceive(response_buf, MIN_BUFFER_LENGTH, protocol, GetComId());
+		lastRC = m_dev->SecurityReceive(response_buf, MIN_BUFFER_LENGTH, protocol, comid);
 //		lastRC = sendCmd(IF_RECV, protocol, comID(), cmd->getRespBuffer(), MIN_BUFFER_LENGTH);
 	}     while ((0 != hdr->cp.outstandingData) && (0 == hdr->cp.minTransfer));
 
@@ -479,15 +564,25 @@ BYTE CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BY
 	if (!file) THROW_ERROR(ERR_APP, L"cannot opne data file: %s", fn);
 	fwrite(response_buf, MIN_BUFFER_LENGTH, 1, file);
 	fclose(file);
+	LOG_DEBUG(L"saved recieved security data in %s", fn);
 #endif
 
 	if (0 != lastRC) 
 	{
 		LOG_ERROR(L"[err] SecureityRecieve command failed, code=0x%X", lastRC);
-		return lastRC;
+		return -lastRC;
 	}
-	resp.init(response_buf);
+	resp.init(response_buf, MIN_BUFFER_LENGTH, protocol, comid);
+#ifdef _DEBUG
+	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
+	resp.getResult(sec_obj);
+	sec_obj->ToString(std::wcout, -1, 0);
+#endif
+	WORD status_code = resp.getStatusCode();
+	LOG_DEBUG(L"device returns status 0x%X", status_code);
 	return 0;
+
+//	return 0;
 }
 
 void CTcgSession::PackagePasswordToken(vector<BYTE>& hash, const char* password)

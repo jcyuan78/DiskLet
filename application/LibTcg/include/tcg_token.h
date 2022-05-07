@@ -75,8 +75,7 @@ public:
 	virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name) {};
 
-
-
+	virtual size_t Encode(BYTE* buf, size_t buf_len) { return 0; }
 
 public:
 	TokenType m_type;
@@ -99,7 +98,7 @@ public:
 	virtual void Print(FILE* ff, int indentation);
 	// interface for ISecurityObject
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
-	//virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
+	virtual size_t Encode(BYTE* buf, size_t buf_len);
 
 	UINT64 FormatToInt(void) const;
 	bool FormatToString(std::wstring& str)const ;
@@ -120,6 +119,10 @@ public:
 	}
 
 public:
+	static MidAtomToken * CreateToken(const std::string& str);
+	static MidAtomToken* CreateToken(UINT val);
+
+public:
 	size_t m_len;
 	union
 	{
@@ -134,7 +137,7 @@ class ListToken : public CTcgTokenBase
 {
 public:
 	ListToken(const CTcgTokenBase::TokenType &type) : CTcgTokenBase(type) {};
-	ListToken(void) { JCASSERT(0); }
+	ListToken(void) { }
 	virtual ~ListToken(void);
 public:
 	virtual bool InternalParse(BYTE*& begin, BYTE* end);
@@ -142,16 +145,29 @@ public:
 	// interface for ISecurityObject
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name);
+	virtual size_t Encode(BYTE* buf, size_t buf_len);
 
-	void AddToken(CTcgTokenBase* tt) { m_tokens.push_back(tt); }
+
+	// TcgToken虽然使用IJCInterface，但是不适用引用计数。
+	void AddToken(CTcgTokenBase* tt) { m_tokens.push_back(tt); tt->AddRef(); }
+	static ListToken* CreateToken(void) 
+	{
+		ListToken * list = jcvos::CDynamicInstance<ListToken>::Create(); 
+		list->m_type = CTcgTokenBase::List;
+		return list;
+	}
 public:
 	std::vector<CTcgTokenBase*> m_tokens;
 };
 
+//// ==== Name Token ==================================================================================================
+/// <summary>
+/// 
+/// </summary>
 class NameToken : public CTcgTokenBase
 {
 public:
-	NameToken(void) : CTcgTokenBase(CTcgTokenBase::Name), m_value(nullptr) {};
+	NameToken(void) : CTcgTokenBase(CTcgTokenBase::Name), m_name_id(nullptr), m_value(nullptr) {};
 	~NameToken(void);
 public:
 	virtual bool InternalParse(BYTE*& begin, BYTE* end);
@@ -162,11 +178,17 @@ public:
 	{
 		if (m_value) m_value->GetSubItem(sub_item, name);
 	};
+	virtual size_t Encode(BYTE* buf, size_t buf_len);
+
+public:
+	static NameToken * CreateToken(const std::wstring& name, UINT val);
+	static NameToken * CreateToken(UINT id, CTcgTokenBase * val);
 
 public:
 	//DWORD m_name_value;
-	CTcgTokenBase* m_name_id;
-	CTcgTokenBase* m_value;
+//	CTcgTokenBase* m_name_id;
+	MidAtomToken* m_name_id = nullptr;
+	CTcgTokenBase* m_value = nullptr;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -178,6 +200,7 @@ public:
 	{
 		memset(m_empty, 0, sizeof(UINT) * 3); 
 		memset(m_state, 0, sizeof(UINT) * 3); 
+		m_name = L"state";
 	};
 	~CStatePhrase(void) {};
 
@@ -187,7 +210,8 @@ public:
 	// interface for ISecurityObject
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
 	//virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
-
+public:
+	WORD getState(void) const { return (WORD)(m_empty[0]?0xFFF:m_state[0]); }
 
 protected:
 	UINT m_empty[3];
@@ -247,19 +271,6 @@ public:
 //// ==== Call Token ====
 class CallToken : public CTcgTokenBase
 {
-	//class CParameter
-	//{
-	//public:
-	//	PARAM_INFO::PARAM_TYPE m_type;
-	//	DWORD m_num;
-	//	std::wstring m_name;
-	//	UINT64 m_atom_val;
-	//	CTcgTokenBase* m_token_val;
-	//public:
-	//	void Print(FILE* ff, int indentation);
-	//	void ToString(std::wostream& out, UINT layer, int opt);
-	//};
-
 public:
 	CallToken(void) : CTcgTokenBase(CTcgTokenBase::Call), m_state(NULL){};
 	~CallToken(void);

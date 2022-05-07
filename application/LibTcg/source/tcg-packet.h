@@ -161,19 +161,6 @@ public:
 	}
 };
 
-//class CTcgSubPacket : public tcg::ISecurityObject
-//{
-//
-//};
-//
-//class CTcgPacket : public tcg::ISecurityObject
-//{
-//	
-//protected:
-//	jcvos::CStaticInstance<CTcgSubPacket> m_sub_packet;
-//
-//};
-
 class CTcgComPacket : public tcg::ISecurityObject
 {
 public:
@@ -185,7 +172,7 @@ public:
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name);
 
 public:
-	bool ParseData(BYTE* buf, size_t buf_len, bool receive);
+	bool ParseData(const BYTE* buf, size_t buf_len, bool receive);
 
 protected:
 	COM_PACKET_HEADER m_com_packet;

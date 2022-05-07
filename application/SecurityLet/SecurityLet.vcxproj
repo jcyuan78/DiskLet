@@ -266,6 +266,9 @@
     <ResourceCompile Include="app.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DiskLet\DiskLet.vcxproj">
+      <Project>{efd52315-ceef-4773-a0b4-248b6aec0a26}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\jccmdlet\jccmdlet.vcxproj">
       <Project>{103af91b-360e-49c1-b502-2a10c4f59b41}</Project>
     </ProjectReference>

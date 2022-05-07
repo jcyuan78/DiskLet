@@ -3,6 +3,7 @@
 #include "dta_command.h"
 #include "../include/dta_structures.h"
 #include <boost/endian.hpp>
+#include <boost/cast.hpp>
 
 LOCAL_LOGGER_ENABLE(L"tcg.command", LOGGER_LEVEL_NOTICE);
 
@@ -267,8 +268,24 @@ uint16_t DtaCommand::outputBufferSize() const
 	if(bufferpos % 512) 	return(((uint16_t)(bufferpos / 512) + 1) * 512);
 	else		            return((uint16_t)(bufferpos / 512) * 512);
 }
-void
-DtaCommand::setcomID(uint16_t comID)
+
+void DtaCommand::addOptionalParam(UINT param_id, CTcgTokenBase* param)
+{
+    if (m_optional_param == nullptr) m_optional_param = ListToken::CreateToken();
+    jcvos::auto_interface<NameToken> pp(NameToken::CreateToken(param_id, param));
+    m_optional_param->AddToken(pp);
+}
+
+void DtaCommand::makeOptionalParam(void)
+{
+    if (m_optional_param)
+    {
+        size_t len = m_optional_param->Encode(cmdbuf + bufferpos, MAX_BUFFER_LENGTH - bufferpos);
+        bufferpos += boost::numeric_cast<UINT32>(len);
+    }
+}
+
+void DtaCommand::setcomID(uint16_t comID)
 {
     LOG_STACK_TRACE();
     OPALHeader * hdr;
@@ -303,5 +320,6 @@ DtaCommand::setHSN(uint32_t HSN)
 DtaCommand::~DtaCommand()
 {
     LOG_STACK_TRACE();
+    RELEASE(m_optional_param);
     //LOG(D1) << "Destroying DtaCommand";
 }

@@ -51,6 +51,7 @@ void CProtocolList::ToString(std::wostream& out, UINT layer, int opt)
 	out << L"</Protocols>" << std::endl;
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // == Security Parser
 class CSecurityParser : public tcg::ISecurityParser
@@ -61,26 +62,30 @@ public:
 	virtual bool Initialize(const std::wstring& uid_config, const std::wstring& l0_config);
 	//virtual bool ParseSecurityCommand(std::vector<tcg::ISecurityObject*>& out, jcvos::IBinaryBuffer* payload, DWORD protocol, DWORD comid, bool receive);
 	virtual bool ParseSecurityCommand(tcg::ISecurityObject*& out, jcvos::IBinaryBuffer* payload, DWORD protocol, DWORD comid, bool receive);
+	virtual bool ParseSecurityCommand(tcg::ISecurityObject*& out, const BYTE* payload, size_t len, DWORD protocol, DWORD comid, bool receive);
 
 protected:
-	bool ParseProtocolInfo(tcg::ISecurityObject*& obj, DWORD comid, BYTE* buf, size_t data_len);
-	bool ParseL0Discovery(tcg::ISecurityObject*& obj, BYTE* buf, size_t data_len);
-	bool ParseTcgCommand(tcg::ISecurityObject*& obj, BYTE* buf, size_t data_len, bool receive);
+	bool ParseProtocolInfo(tcg::ISecurityObject*& obj, DWORD comid, const BYTE* buf, size_t data_len);
+	bool ParseL0Discovery(tcg::ISecurityObject*& obj, const BYTE* buf, size_t data_len);
+	bool ParseTcgCommand(tcg::ISecurityObject*& obj, const BYTE* buf, size_t data_len, bool receive);
 
 protected:
 	CL0DiscoveryDescription m_feature_description;
 	CUidMap m_uid_map;
 };
 
-void tcg::CreateSecurityParser(ISecurityParser*& parser)
+// Security Parser为Single tone
+jcvos::CStaticInstance<CSecurityParser>		g_parser;
+
+void tcg::GetSecurityParser(tcg::ISecurityParser*& parser)
 {
 	JCASSERT(parser == nullptr);
-	CSecurityParser* pp = jcvos::CDynamicInstance<CSecurityParser>::Create();
-	if (!pp) THROW_ERROR(ERR_APP, L"failed on creating CSecurityParser");
-	parser = static_cast<ISecurityParser*>(pp);
+	//CSecurityParser* pp = jcvos::CDynamicInstance<CSecurityParser>::Create();
+	//if (!pp) THROW_ERROR(ERR_APP, L"failed on creating CSecurityParser");
+	parser = static_cast<tcg::ISecurityParser*>(&g_parser);
 }
 
-bool CSecurityParser::ParseProtocolInfo(tcg::ISecurityObject * & obj, DWORD comid, BYTE * buf, size_t data_len)
+bool CSecurityParser::ParseProtocolInfo(tcg::ISecurityObject * & obj, DWORD comid, const BYTE * buf, size_t data_len)
 {
 	if (comid == 0)
 	{	// protocol list
@@ -106,7 +111,7 @@ bool CSecurityParser::ParseProtocolInfo(tcg::ISecurityObject * & obj, DWORD comi
 	return false;
 }
 
-bool CSecurityParser::ParseL0Discovery(tcg::ISecurityObject*& obj, BYTE* data, size_t data_len)
+bool CSecurityParser::ParseL0Discovery(tcg::ISecurityObject*& obj, const BYTE* data, size_t data_len)
 {
 	CTcgFeatureSet* _fset = jcvos::CDynamicInstance<CTcgFeatureSet>::Create();
 	if (_fset == nullptr) THROW_ERROR(ERR_APP, L"failed on createing feature set");
@@ -116,7 +121,7 @@ bool CSecurityParser::ParseL0Discovery(tcg::ISecurityObject*& obj, BYTE* data, s
 	return true;
 }
 
-bool CSecurityParser::ParseTcgCommand(tcg::ISecurityObject*& obj, BYTE* buf, size_t data_len, bool receive)
+bool CSecurityParser::ParseTcgCommand(tcg::ISecurityObject*& obj, const BYTE* buf, size_t data_len, bool receive)
 {
 	// ComPacket Parse
 	CTcgComPacket* packet = jcvos::CDynamicInstance<CTcgComPacket>::Create();
@@ -142,6 +147,14 @@ bool CSecurityParser::ParseSecurityCommand(tcg::ISecurityObject*& out, jcvos::IB
 {
 	size_t buf_len = payload->GetSize();
 	BYTE* buf = payload->Lock();
+	bool br = ParseSecurityCommand(out, buf, buf_len, protocol, comid, receive);
+	payload->Unlock(buf);
+	return br;
+}
+
+
+bool CSecurityParser::ParseSecurityCommand(tcg::ISecurityObject*& out, const BYTE* buf, size_t buf_len, DWORD protocol, DWORD comid, bool receive)
+{
 	bool br;
 	jcvos::auto_interface<tcg::ISecurityObject> object;
 	if (protocol == 0)
@@ -166,13 +179,10 @@ bool CSecurityParser::ParseSecurityCommand(tcg::ISecurityObject*& out, jcvos::IB
 	{	// ata passthrough
 
 	}
-	payload->Unlock(buf);
 	out = object;
 	if (out) out->AddRef();
 	return br;
 }
-
-
 
 
 void tcg::CreateTcgTestDevice(IStorageDevice*& dev, const std::wstring& path) 
