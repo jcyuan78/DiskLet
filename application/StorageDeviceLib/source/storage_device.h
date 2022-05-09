@@ -1,10 +1,20 @@
 ﻿#pragma once
 
 #include "../include/istorage_device.h"
+#include "../include/idiskinfo.h"
 
 #define CDB6GENERIC_LENGTH	(6)
 #define CDB10GENERIC_LENGTH	(16)
 
+enum HEALTH_ITEM_ID
+{
+	HEALTH_ITEM_UNKNOWN = 0,
+	POWER_CYCLE = 1, POWER_ON_HOURS = 2, UNSAFE_SHUTDOWN = 3,
+	HOST_READ_MB = 4, HOST_WRITE_MB = 5,  MEDIA_READ_MB = 6, MEDIA_WRITE_MB = 7,
+	ERROR_COUNT = 8, INITIAL_BAD_BLOCK = 9, RUNTIME_BAD_BLOCK = 10, VALID_SPARE_BLOCK = 11,
+	AVERAGE_ERASE_COUNT = 12, TOTAL_ERASE_COUNT = 13, MAX_ERASE_COUNT = 14, MIN_ERASE_COUNT = 15,
+	CURRENT_TEMPERATURE = 16, MAX_TEMPERATURE = 17, REMAIN_LIFE = 18,
+};
 
 #pragma pack(push, sensedata, 1)
 typedef struct _SENSE_DATA {
@@ -34,23 +44,18 @@ protected:
 	virtual ~CStorageDeviceComm(void);
 
 public:
-	bool Connect(HANDLE dev, bool own);
-//	virtual bool Inquiry(jcvos::IBinaryBuffer * & data) { return false; }
-
-//	virtual bool Identify(boost::property_tree::wptree & prop);
+	bool Connect(HANDLE dev, bool own, const std::wstring & dev_id, DISK_PROPERTY::BusType bus_type);
+	//virtual bool Detect(void) { return false; }
 	virtual bool Inquiry(IDENTIFY_DEVICE & id);
 //	virtual bool ReadSmart(jcvos::IBinaryBuffer * & data) { return false; }
 
-	virtual bool GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree * ext_info)
-	{
-		return false;
-	}
+	virtual STORAGE_HEALTH_STATUS GetHealthInfo(DEVICE_HEALTH_INFO& info, HEALTH_INFO_LIST& ext_info);
 
 	virtual bool SectorRead(BYTE * buf, FILESIZE lba, size_t sectors, UINT timeout) { return false; }
 	virtual bool SectorWrite(BYTE * buf, FILESIZE lba, size_t sectors, UINT timeout) { return false; }
 
-	virtual bool Read(BYTE * buf, FILESIZE lba, size_t secs) { return false; }
-	virtual bool Write(BYTE * buf, FILESIZE lba, size_t secs) { return false; }
+	virtual bool Read(void* buf, FILESIZE lba, size_t secs);
+	virtual bool Write(const void* buf, FILESIZE lba, size_t secs);
 	virtual void FlushCache() { return; }
 
 	//virtual bool StartStopUnit(bool stop) = 0;
@@ -75,13 +80,16 @@ public:
 
 	virtual BYTE SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
 	virtual BYTE SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
+protected:
+	// 用于派生类检测链接的device是否合适
+	virtual bool OnConnectDevice(void) { return true; };
 
 	//virtual bool L0Discovery(BYTE* buf);
 
 
 protected:
 	HANDLE		m_hdev;
-
-
+	std::wstring m_dev_id;
+	DISK_PROPERTY::BusType m_bus_type;
 };
 

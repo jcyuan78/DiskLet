@@ -257,6 +257,7 @@
     <ClInclude Include="source\global.h" />
     <ClInclude Include="source\pch.h" />
     <ClInclude Include="source\secure-let.h" />
+    <ClInclude Include="source\secure-types.h" />
     <ClInclude Include="source\security-parser.h" />
   </ItemGroup>
   <ItemGroup>

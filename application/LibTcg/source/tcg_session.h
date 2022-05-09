@@ -32,13 +32,19 @@ public:
     BYTE GetTable(DtaResponse & response, const TCG_UID table, WORD start_col, WORD end_col);
 
 	//	virtual BYTE SetTable(const TCG_UID table, OPAL_TOKEN name, vector<BYTE>& value);
-	virtual BYTE SetTable(const TCG_UID table, OPAL_TOKEN name, const char * value);
+	virtual BYTE SetTable(tcg::ISecurityObject*& res, const TCG_UID table, int name, const char* value);
+	virtual BYTE SetTable(tcg::ISecurityObject*& res, const TCG_UID table, int name, int val);
+//	BYTE SetTable(const TCG_UID table, int name, const char * value);
+
 	virtual BYTE Revert(const TCG_UID sp);
 	virtual void Reset(void);
+
+	virtual BYTE Activate(tcg::ISecurityObject*& res, const TCG_UID obj);
 
 // packed features
     virtual BYTE GetDefaultPassword(std::string& password);
 	virtual BYTE SetSIDPassword(const char* old_pw, const char* new_pw);
+//	virtual BYTE SetLockingRange()
 
 
 protected:

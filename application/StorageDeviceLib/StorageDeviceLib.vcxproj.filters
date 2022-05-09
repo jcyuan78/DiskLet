@@ -57,6 +57,9 @@
     <ClInclude Include="storage_device_lib.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="source\SlotSpeedGetter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\ata_device.cpp">
@@ -90,6 +93,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\wmi_object_base.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\SlotSpeedGetter.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

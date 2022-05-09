@@ -9,7 +9,8 @@ LOCAL_LOGGER_ENABLE(L"disk_info", LOGGER_LEVEL_NOTICE);
 namespace prop_tree = boost::property_tree;
 
 CDiskInfo::CDiskInfo(void) 
-	: m_header(NULL), m_pentry(NULL), m_hdisk(NULL), m_protocol(UNKNOWN)
+	: m_header(NULL), m_pentry(NULL), /*m_hdisk(NULL),*/ m_secondy_pentry(NULL), m_secondy_header(NULL), m_sdev(NULL)
+	, m_device_class(UNKNOWN)
 {
 	m_class_name = L"MSFT_Disk";
 	m_property.m_index = -1;
@@ -300,45 +301,59 @@ bool CDiskInfo::CreatePartition(IPartitionInfo *& part, UINT64 offset, UINT64 si
 
 bool CDiskInfo::CacheGptHeader(void)
 {
+	LOG_STACK_TRACE();
 	JCASSERT(sizeof(GptHeader) == 512);
-	if (m_header || m_hdisk || m_pentry) THROW_ERROR(ERR_APP, L"has already cached");
-//	if (m_header) m_header = new GptHeader;
-	m_hdisk = OpenDisk(GENERIC_READ | GENERIC_WRITE);
-	if (m_hdisk == INVALID_HANDLE_VALUE)
-	{
-		m_hdisk = nullptr;
-		THROW_WIN32_ERROR(L"failed on opening disk");
-	}
-	m_header = new GptHeader;
-	DWORD read = 0;
-	SetFilePointer(m_hdisk, SECTOR_SIZE, NULL, FILE_BEGIN);
-	BOOL br = ReadFile(m_hdisk, m_header, SECTOR_SIZE, &read, NULL);
-	if (!br) THROW_WIN32_ERROR(L"failed on reading GPT");
+	if (m_sdev != NULL) THROW_ERROR(ERR_APP, L"device has already cached");
+	if (m_header || m_pentry) THROW_ERROR(ERR_APP, L"has already cached");
 
-	JCASSERT(m_pentry == nullptr);
+	CreateStorageDevice<CStorageDeviceComm>(m_sdev);
+
+	m_header = new GptHeader;
+	LOG_DEBUG(L"disk size = %lld , %lld secs", m_property.m_size, m_property.m_size / SECTOR_SIZE);
+
+	LOG_DEBUG(L"read primaery header at 1");
+	bool br = m_sdev->Read((BYTE*)m_header, 1, 1);
+	if (!br) THROW_WIN32_ERROR(L"failed on reading primary GPT");
+
+	LOG_DEBUG(L"read secondary header LBA=%lld", m_header->backup_lba);
+	m_secondy_header = new GptHeader;
+	br = m_sdev->Read((BYTE*)m_secondy_header, m_header->backup_lba, 1);
+	if (!br) THROW_WIN32_ERROR(L"failed on reading secondary GPT");
+
+	JCASSERT(m_pentry == NULL);
 	m_pentry = new PartitionEntry[m_header->entry_num];
-	DWORD offset = (DWORD)(SECTOR_SIZE * m_header->starting_lba);
-	SetFilePointer(m_hdisk, offset, nullptr, FILE_BEGIN);
-	br = ReadFile(m_hdisk, (BYTE*)m_pentry, (DWORD)(m_header->entry_size * m_header->entry_num), &read, nullptr);
-	if (!br) THROW_WIN32_ERROR(L"failed on reading entries");
+
+	size_t entry_secs = (m_header->entry_size * m_header->entry_num) / SECTOR_SIZE;
+	LOG_DEBUG(L"read primary entry, LBA=%lld, secs=%lld", m_header->starting_lba, entry_secs);
+	br = m_sdev->Read((BYTE*)m_pentry, m_header->starting_lba, entry_secs);
+	if (!br) THROW_WIN32_ERROR(L"failed on reading primary entries");
+
+	m_secondy_pentry = new PartitionEntry[m_secondy_header->entry_num];
+	entry_secs = (m_secondy_header->entry_size * m_secondy_header->entry_num) / SECTOR_SIZE;
+	LOG_DEBUG(L"read secondary entry, LBA=%lld, secs=%lld", m_secondy_header->starting_lba, entry_secs);
+	br = m_sdev->Read((BYTE*)m_secondy_pentry, m_secondy_header->starting_lba, entry_secs);
+	if (!br) THROW_WIN32_ERROR(L"failed on reading secondary entries");
+
 	return true;
 }
 
 bool CDiskInfo::SetDiskId(const GUID & id)
 {
-	if (!m_header || !m_hdisk || !m_pentry) THROW_ERROR(ERR_APP, L"gpt header does not cached");
+	if (!m_header || !m_sdev || !m_pentry) THROW_ERROR(ERR_APP, L"gpt header does not cached");
 	m_header->disk_gid = id;
+	m_secondy_header->disk_gid = id;
 	m_property.m_guid = id;
 	return true;
 }
 
 bool CDiskInfo::SetPartitionId(const GUID & id, UINT index)
 {
-	if (!m_header || !m_hdisk || !m_pentry) THROW_ERROR(ERR_APP, L"gpt header does not cached");
+	if (!m_header || !m_sdev || !m_pentry || !m_secondy_pentry) THROW_ERROR(ERR_APP, L"gpt header does not cached");
 
 	JCASSERT(index > 0 && index <= m_header->entry_num);
 	UINT ii = index - 1;
 	m_pentry[ii].part_id = id;
+	m_secondy_pentry[ii].part_id = id;
 	CPartitionInfo * pp = m_partitions.at(index);	JCASSERT(pp);
 	pp->m_prop.m_guid = id;
 	return true;
@@ -346,10 +361,12 @@ bool CDiskInfo::SetPartitionId(const GUID & id, UINT index)
 
 bool CDiskInfo::SetPartitionType(const GUID & type, UINT index)
 {
-	if (!m_header || !m_hdisk || !m_pentry) THROW_ERROR(ERR_APP, L"gpt header does not cached");
+	LOG_STACK_TRACE();
+	if (!m_header || !m_sdev || !m_pentry) THROW_ERROR(ERR_APP, L"gpt header does not cached");
 	JCASSERT(index > 0 && index <= m_header->entry_num);
 	UINT ii = index - 1;
 	m_pentry[ii].type = type;
+	m_secondy_pentry[ii].type = type;
 	CPartitionInfo * pp = m_partitions.at(index);	JCASSERT(pp);
 	pp->m_prop.m_gpt_type = type;
 	return true;
@@ -357,7 +374,8 @@ bool CDiskInfo::SetPartitionType(const GUID & type, UINT index)
 
 bool CDiskInfo::UpdateGptHeader(void)
 {
-	if (!m_header || !m_hdisk || !m_pentry) THROW_ERROR(ERR_APP, L"gpt header does not cached");
+	LOG_STACK_TRACE();
+	if (!m_header || !m_sdev || !m_pentry) THROW_ERROR(ERR_APP, L"gpt header does not cached");
 
 	// 计算分区表CRC	  
 	size_t entry_size = m_header->entry_num * m_header->entry_size;
@@ -368,38 +386,56 @@ bool CDiskInfo::UpdateGptHeader(void)
 	m_header->header_crc = 0;
 	m_header->header_crc = CalculateCRC32((DWORD*)(m_header), 23);
 
+	// 计算secondary分区表CRC	  
+	size_t entry_size2 = m_secondy_header->entry_num * m_secondy_header->entry_size;
+	size_t dword_size2 = entry_size2 / 4;
+	crc_entry = CalculateCRC32((DWORD*)(m_secondy_pentry), dword_size2);
+	// 计算表头的CRC;
+	m_secondy_header->entry_crc = crc_entry;
+	m_secondy_header->header_crc = 0;
+	m_secondy_header->header_crc = CalculateCRC32((DWORD*)(m_secondy_header), 23);
+
 	// 回写header
-	DWORD written = 0;
-	SetFilePointer(m_hdisk, SECTOR_SIZE, NULL, FILE_BEGIN);
-	BOOL br = WriteFile(m_hdisk, m_header, SECTOR_SIZE, &written, NULL);
-	if (!br || written < SECTOR_SIZE) THROW_WIN32_ERROR(L"failed write back");
+	LOG_DEBUG(L"lba of partition header=%d", m_header->current_lba);
+	bool br = m_sdev->Write(m_header, m_header->current_lba, 1);
+	if (!br ) THROW_WIN32_ERROR(L"failed write back");
 
-	DWORD offset = (DWORD)(SECTOR_SIZE * m_header->starting_lba);
-	SetFilePointer(m_hdisk, offset, NULL, FILE_BEGIN);
-	br = WriteFile(m_hdisk, m_pentry, (DWORD)(entry_size), &written, NULL);
-	if (!br || written < entry_size) THROW_WIN32_ERROR(L"failed write back");
+	br = m_sdev->Write(m_pentry, m_header->starting_lba, entry_size / SECTOR_SIZE);
+	if (!br ) THROW_WIN32_ERROR(L"failed write back");
 
-	//CloseHandle(m_hdisk); m_hdisk = NULL;
-	//delete m_header; m_header = NULL;
-	//delete[] m_pentry; m_pentry = NULL;
-	//
+#ifdef WRITE_SECONDARY_PART_TAB
+	br = m_sdev->Write(m_secondy_pentry, m_secondy_header->starting_lba, entry_size2 / SECTOR_SIZE);
+	if (!br) THROW_WIN32_ERROR(L"failed write secondary entry");
+
+	br = m_sdev->Write(m_secondy_header, m_header->backup_lba, 1);
+	if (!br) THROW_WIN32_ERROR(L"failed on wrting secodary header");
+#endif
 	CloseCache();
 	return true;
 }
 
 void CDiskInfo::CloseCache(void)
 {
-	if (m_hdisk)		CloseHandle(m_hdisk); 
-	m_hdisk = nullptr;
+//	if (m_hdisk)		CloseHandle(m_hdisk); 
+	RELEASE(m_sdev);
+	//m_hdisk = NULL;
 	delete m_header; 
-	m_header = nullptr;
+	m_header = NULL;
 	delete[] m_pentry; 
-	m_pentry = nullptr;
+	m_pentry = NULL;
+	delete[] m_secondy_pentry;
+	m_secondy_pentry = NULL;
+	delete[] m_secondy_header;
+	m_secondy_header = NULL;
 }
 
 
-CDiskInfo::PROTOCOL CDiskInfo::DetectDevice(IStorageDevice *& dev, HANDLE handle)
+
+CDiskInfo::DEVICE_CLASS CDiskInfo::DetectDevice(IStorageDevice *& dev/*, HANDLE handle*/)
 {
+	LOG_STACK_TRACE();
+	LOG_NOTICE(L"Detecting device for disk[%d], bus=%d", m_property.m_index, m_property.m_bus_type);
+	bool br = false;
 	switch (m_property.m_bus_type)
 	{
 	case DISK_PROPERTY::BUS_SCSI: return SCSI_DEVICE;
@@ -407,59 +443,40 @@ CDiskInfo::PROTOCOL CDiskInfo::DetectDevice(IStorageDevice *& dev, HANDLE handle
 	case DISK_PROPERTY::BUS_SATA:
 		return ATA_DEVICE;
 	case DISK_PROPERTY::BUS_NVMe: {
-		jcvos::auto_interface<CNVMeDevice> sdev(jcvos::CDynamicInstance<CNVMeDevice>::Create());
-		if (!sdev ) THROW_ERROR(ERR_APP, L"failed on creating NVMe device");
-		if (sdev) sdev->Connect(handle, false);
-		jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
-		sdev->NVMeTest(buf);
-		//		sdev->Inquiry(buf);
-	//	dev = static_cast<IStorageDevice *>(sdev);
-		sdev.detach(dev);
+//		jcvos::auto_interface<CNVMeDevice> sdev(jcvos::CDynamicInstance<CNVMeDevice>::Create());
+//		if (sdev == NULL) THROW_ERROR(ERR_APP, L"failed on creating NVMe device");
+//		if (sdev) sdev->Connect(handle, false);
+//		jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
+//#ifdef RUN_DEVICE_TEST
+//		sdev->NVMeTest(buf);
+//#endif
+//		sdev.detach(dev);
+		CreateStorageDevice<CNVMeDevice>(dev);
 		return NVME_DEVICE; }
 	case DISK_PROPERTY::BUS_USB: {	// 尝试不同连接
 		// （1） ATA PASS THROW
-		jcvos::auto_interface<CAtaPassThroughDevice> sdev(jcvos::CDynamicInstance<CAtaPassThroughDevice>::Create());
-		if (!sdev ) THROW_ERROR(ERR_APP, L"failed on creating ATA pass through device");
-		bool br = sdev->Connect(handle, false);
-		br = sdev->Detect();
-		if (br)
-		{
-			sdev.detach(dev);
-			return ATA_PASSTHROUGH;
-		}
-		// (2) <TODO> NVME PASS THROW
-		jcvos::auto_interface<CNVMePassthroughDevice> ndev(jcvos::CDynamicInstance<CNVMePassthroughDevice>::Create());
-		ndev->Connect(handle, false);
-		jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
-		ndev->NVMETest(buf);
-		ndev.detach(dev);
-		return NVME_PASSTHROUGH;
-//		dev->Inquiry(buf);
+		br = CreateStorageDevice<CAtaPassThroughDevice>(dev);
+		if (br && dev) return ATA_PASSTHROUGH;
+		RELEASE(dev);
+		br = CreateStorageDevice<CNVMePassthroughDevice>(dev);
+		if (br && dev) 	return NVME_PASSTHROUGH;
+		RELEASE(dev);
+
 		break;		}
 	case DISK_PROPERTY::BUS_RAID: {
 		// （1） ATA PASS THROW
-		jcvos::auto_interface<CAtaPassThroughDevice> sdev(jcvos::CDynamicInstance<CAtaPassThroughDevice>::Create());
-		if (!sdev ) THROW_ERROR(ERR_APP, L"failed on creating ATA pass through device");
-		bool br = sdev->Connect(handle, false);
-		br = sdev->Detect();
-		if (br)
-		{
-			sdev.detach(dev);
-			LOG_NOTICE(L"detected device as ATA_PASSTHROUGH");
-			return ATA_PASSTHROUGH;
-		}
-		//		sdev.release();
-				//	(2) ATA DEVICE
-				//jcvos::auto_interface<CAtaDeviceComm> adev(jcvos::CDynamicInstance<CAtaDeviceComm>::Create());
-				//if (adev == NULL) THROW_ERROR(ERR_APP, L"failed on creating ATA device");
-				//br = adev->Connect(handle, false);
-				//br = adev->Detect();
-				//if (br)
-				//{
-				//	adev.detach(dev);
-				//	LOG_NOTICE(L"detected device as ATA_DEVICE");
-				//	return ATA_DEVICE;
-				//}
+		br = CreateStorageDevice<CAtaDeviceComm>(dev);
+		if (br && dev) return ATA_DEVICE;
+		RELEASE(dev);
+
+		br = CreateStorageDevice<CAtaPassThroughDevice>(dev);
+		if (br && dev) return ATA_PASSTHROUGH;
+		RELEASE(dev);
+
+		CreateStorageDevice<CStorageDeviceComm>(dev);
+//		if (dev->Detect()) return ATA_PASSTHROUGH;
+//		RELEASE(dev);
+		return SCSI_DEVICE;
 		break; }
 
 	}
@@ -469,59 +486,34 @@ CDiskInfo::PROTOCOL CDiskInfo::DetectDevice(IStorageDevice *& dev, HANDLE handle
 
 bool CDiskInfo::GetStorageDevice(IStorageDevice *& dev)
 {
-	HANDLE handle = OpenDisk(GENERIC_READ | GENERIC_WRITE);
-	if (handle == INVALID_HANDLE_VALUE) THROW_WIN32_ERROR(L"[err] failed on opening device %s", m_property.m_name.c_str());
-	if (m_protocol == UNKNOWN)
+	LOG_STACK_TRACE();
+	if (m_device_class == UNKNOWN)
 	{
-		m_protocol = DetectDevice(dev, handle);
-		if (dev)
-		{
-			CloseHandle(handle);
-			return true;
-		}
+		m_device_class = DetectDevice(dev/*, handle*/);
+		if (dev) return true;
 	}
 
 	bool br;
-	switch (m_protocol)
+	//HANDLE handle = OpenDisk(GENERIC_READ | GENERIC_WRITE);
+	//if (handle == INVALID_HANDLE_VALUE) THROW_WIN32_ERROR(L"[err] failed on opening device %s", m_property.m_name.c_str());
+	switch (m_device_class)
 	{
 	case SCSI_DEVICE: {
-		CStorageDeviceComm * sdev = jcvos::CDynamicInstance<CStorageDeviceComm>::Create();
-		if (sdev) br = sdev->Connect(handle, true);
-		dev = static_cast<IStorageDevice*>(sdev);
+		br = CreateStorageDevice<CStorageDeviceComm>(dev);
 		break; } //THROW_ERROR(ERR_APP, L"does not support SCSI_DEVICE"); break;
 	case ATA_DEVICE: {
-		CAtaDeviceComm * sdev = jcvos::CDynamicInstance<CAtaDeviceComm>::Create();
-		if (sdev) br = sdev->Connect(handle, true);
-		dev = static_cast<IStorageDevice *>(sdev);
+		br = CreateStorageDevice<CAtaDeviceComm>(dev);
 		break;		}
 	case ATA_PASSTHROUGH: {
-		CAtaPassThroughDevice * sdev = jcvos::CDynamicInstance<CAtaPassThroughDevice>::Create();
-		if (sdev) br = sdev->Connect(handle, true);
-		dev = static_cast<IStorageDevice *>(sdev);
+		br = CreateStorageDevice<CAtaPassThroughDevice>(dev);
 		break;		}
 	case NVME_DEVICE: {
-		CNVMeDevice * sdev = jcvos::CDynamicInstance<CNVMeDevice>::Create();
-		if (sdev) br = sdev->Connect(handle, true);
-		jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
-//		sdev->Inquiry(buf);
-		dev = static_cast<IStorageDevice *>(sdev);
+		br = CreateStorageDevice<CNVMeDevice>(dev);
 		break;	}
 	case NVME_PASSTHROUGH: {
-		CNVMePassthroughDevice * sdev = jcvos::CDynamicInstance<CNVMePassthroughDevice>::Create();
-		if (sdev) br = sdev->Connect(handle, true);
-		jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
-//		sdev->Inquiry(buf);
-		dev = static_cast<IStorageDevice *>(sdev);
+		br = CreateStorageDevice<CNVMePassthroughDevice>(dev);
 		break;	}
 	}
-
-//	CSataDevice * sdev = jcvos::CDynamicInstance<CSataDevice>::Create();
-	if (!br)
-	{
-		LOG_ERROR(L"[err] failed on connecting device to handle.");
-		RELEASE(dev);
-		return false;
-	}
-	return true;
+	return br;
 }
 

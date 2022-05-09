@@ -10,7 +10,9 @@ public:
 	~CNVMeDevice(void);
 
 public:
-	virtual bool GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree * ext_info);
+//	virtual bool GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree & ext_info);
+	virtual STORAGE_HEALTH_STATUS GetHealthInfo(DEVICE_HEALTH_INFO& info, std::vector<STORAGE_HEALTH_INFO_ITEM>& ext_info);
+	virtual bool Inquiry(IDENTIFY_DEVICE& id);
 
 	// Device容量，单位:sector
 	virtual size_t GetCapacity(void) { return 0; }
@@ -53,7 +55,14 @@ public:
 	virtual bool GetLogPage(BYTE lid, WORD numld, BYTE * data, size_t data_len);
 
 protected:
-	virtual bool NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length);
+	virtual bool NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length)
+	{
+		return false;
+	}
+
+	void GetDeviceIDFromPhysicalDriveID(std::wstring& dev_id);
+//	bool GetSlotMaxCurrSpeedFromDeviceID(const std::wstring& DeviceID);
+
 };
 
 
@@ -112,5 +121,9 @@ public:
 // NVMe Interface
 protected:
 	virtual bool NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length);
+
+	// 用于派生类检测链接的device是否合适
+	virtual bool OnConnectDevice(void);
+
 
 };

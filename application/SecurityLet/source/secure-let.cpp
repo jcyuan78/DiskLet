@@ -177,9 +177,18 @@ void SecureLet::GetDefaultPassword::InternalProcessRecord()
 void SecureLet::ConnectTcgDevice::InternalProcessRecord()
 {
 	jcvos::auto_interface<IStorageDevice> dd;
-	if (dev) dev->GetStorageDevice(dd);
-	//	else		global.GetDevice(dd);
+	if (dev_num >= 0)
+	{
+		IStorageDevice::CreateDeviceByIndex(dd, dev_num);
+	}
+	else if (dev)
+	{
+		if (dev) dev->GetStorageDevice(dd);
+		//	else		global.GetDevice(dd);
+	}
+
 	if (!dd) throw gcnew System::ApplicationException(L"device is not selected");
+
 
 	jcvos::auto_interface<tcg::ITcgSession> session;
 	CreateTcgSession(session, dd);

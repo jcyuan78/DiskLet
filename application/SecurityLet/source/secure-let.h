@@ -6,8 +6,9 @@
 
 #include "global.h"
 
-#define RELEASE_INTERFACE(ptr) {if (ptr) ptr->Release(); ptr=NULL; 	}
+//#define RELEASE_INTERFACE(ptr) {if (ptr) ptr->Release(); ptr=NULL; 	}
 
+#include "secure-types.h"
 
 using namespace System;
 using namespace System::Management::Automation;
@@ -75,53 +76,6 @@ namespace SecureLet
 	};
 
 
-	//=============================================================================
-
-	public enum class TCG_SP
-	{
-		/*SPs*/ THISSP, ADMINSP, LOCKINGSP,
-	};
-	public enum class TCG_AUTHORITY
-	{
-		TCG_NONE, SID, ANYBODY, ADMIN1, USER1,
-		TCG_C_PIN_MSID, TCG_C_PIN_SID,
-	};
-
-	public enum class TCG_TABLE
-	{
-		LOCKING, GLOBAL_RANGE,
-	};
-
-	const TCG_UID& SpToUid(TCG_SP sp);
-	const TCG_UID& AuthorityToUid(TCG_AUTHORITY au);
-	const TCG_UID& ToUid(TCG_TABLE obj);
-
-	public ref class TcgUid : Object
-	{
-	public:
-		static TcgUid^ TableId(TCG_TABLE tab, TCG_TABLE row)
-		{
-			TCG_UID uu;
-			CopyUid(uu, ToUid(tab));
-			AddUid(uu, ToUid(row));
-			TcgUid^ uid = gcnew TcgUid(uu);
-			return uid;
-		}
-
-	public:
-		TcgUid(TCG_UID& uid) { 
-			m_uid = new BYTE[8];
-			memcpy_s(m_uid, 8, uid, 8);
-		}
-		~TcgUid(void) { delete m_uid; }
-
-	public:
-		void GetUid(TCG_UID& uid) { memcpy_s(uid, 8, m_uid, 8); }
-		const BYTE* GetUid(void) { return m_uid; }
-
-	protected:
-		BYTE * m_uid;
-	};
 
 //#define TCG_SP			TCG_OBJ
 //#define TCG_AUTHORITY	TCG_OBJ
@@ -196,6 +150,33 @@ namespace SecureLet
 			jcvos::auto_interface<tcg::ISecurityObject> res;
 			
 			BYTE err = m_session->GetTable(res, uid->GetUid(), start_col, end_col);
+		}
+
+		void SetTable(TcgUid^ table, int col, String^ val)
+		{
+			JCASSERT(m_session);
+			jcvos::auto_interface<tcg::ISecurityObject> res;
+			std::wstring wstr_val;
+			ToStdString(wstr_val, val);
+			std::string str_val;
+			jcvos::UnicodeToUtf8(str_val, wstr_val);
+
+			BYTE err = m_session->SetTable(res, table->GetUid(), col, str_val.c_str());
+		}
+		void SetTable(TcgUid^ table, int col, int val)
+		{
+			JCASSERT(m_session);
+			jcvos::auto_interface<tcg::ISecurityObject> res;
+			BYTE err = m_session->SetTable(res, table->GetUid(), col,val);
+		}
+
+
+		void Activate(TcgUid^ uid)
+		{
+			JCASSERT(m_session);
+			jcvos::auto_interface<tcg::ISecurityObject> res;
+			BYTE err = m_session->Activate(res, uid->GetUid());
+
 		}
 	protected:
 		tcg::ITcgSession* m_session;
@@ -303,14 +284,22 @@ namespace SecureLet
 	public ref class ConnectTcgDevice : public JcCmdLet::JcCmdletBase
 	{
 	public:
-		ConnectTcgDevice(void) {};
+		ConnectTcgDevice(void) { dev = nullptr; dev_num = -1; };
 		~ConnectTcgDevice(void) {};
 
 	public:
 		[Parameter(Position = 0,
 			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			ParameterSetName = "ByDevice",
 			HelpMessage = "specify device object")]
 		property Clone::StorageDevice^ dev;
+
+		[Parameter(Position = 0,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			ParameterSetName = "ByIndex",
+			HelpMessage = "specify device object")]
+		property int dev_num;
+
 
 	public:
 		virtual void InternalProcessRecord() override;

@@ -4,6 +4,7 @@
 #include "ntddscsi.h"
 #include <boost/cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include "../include/utility.h"
 
 LOCAL_LOGGER_ENABLE(L"storage_device", LOGGER_LEVEL_NOTICE);
 
@@ -42,8 +43,9 @@ CStorageDeviceComm::~CStorageDeviceComm(void)
 	if (m_hdev != INVALID_HANDLE_VALUE) CloseHandle(m_hdev);
 }
 
-bool CStorageDeviceComm::Connect(HANDLE dev, bool own)
+bool CStorageDeviceComm::Connect(HANDLE dev, bool own, const std::wstring & dev_id, DISK_PROPERTY::BusType bus_type)
 {
+	m_dev_id = dev_id;
 	if (own) { m_hdev = dev; }
 	else
 	{
@@ -55,7 +57,10 @@ bool CStorageDeviceComm::Connect(HANDLE dev, bool own)
 			return false;
 		}
 	}
-	return true;
+	m_bus_type = bus_type;
+	bool br = OnConnectDevice();
+	if (!br) LOG_ERROR(L"[err] failed on connecting to device");
+	return br;
 }
 //
 //bool CStorageDeviceComm::Identify(boost::property_tree::wptree & prop)
@@ -84,13 +89,14 @@ bool CStorageDeviceComm::Inquiry(IDENTIFY_DEVICE & id)
 
 	DWORD read;
 	BOOL br = DeviceIoControl(m_hdev, IOCTL_STORAGE_QUERY_PROPERTY,
-		query, sizeof(STORAGE_PROPERTY_QUERY),
-		_query_out, 512, &read, NULL);
+		query, sizeof(STORAGE_PROPERTY_QUERY),	_query_out, 512, &read, NULL);
 	if (!br) THROW_WIN32_ERROR(L"failed on calling IOCTL_STORAGE_QUERY_PROPERTY");
 	STORAGE_DEVICE_DESCRIPTOR * desc = (STORAGE_DEVICE_DESCRIPTOR*)_query_out;
 
 	id.m_dev_type = desc->DeviceType;
 	id.m_bus_type = desc->BusType;
+	LOG_DEBUG(L"storage bus type = %d", id.m_bus_type);
+	if (m_bus_type == DISK_PROPERTY::BUS_USB)	id.m_interface = L"USB MEMORY";
 	char * str;
 	PROPERTY_TO_STRING(ProductIdOffset, id.m_model_name);
 
@@ -114,6 +120,32 @@ bool CStorageDeviceComm::Inquiry(IDENTIFY_DEVICE & id)
 	PROPERTY_TO_STRING(ProductRevisionOffset, id.m_firmware);
 
 	return true;
+}
+
+STORAGE_HEALTH_STATUS CStorageDeviceComm::GetHealthInfo(DEVICE_HEALTH_INFO& info, HEALTH_INFO_LIST& ext_info)
+{
+	CLONE_ERROR(DR_NOT_SUPPORT, L"device (%s) does not support health info", m_dev_id.c_str());
+	return STATUS_ERROR;
+}
+
+bool CStorageDeviceComm::Read(void* buf, FILESIZE lba, size_t secs)
+{
+	DWORD read = 0;
+	LARGE_INTEGER ptr;
+	ptr.QuadPart = lba * SECTOR_SIZE;
+	SetFilePointerEx(m_hdev, ptr, NULL, FILE_BEGIN);
+	BOOL br = ReadFile(m_hdev, buf, boost::numeric_cast<DWORD>(secs*SECTOR_SIZE), &read, NULL);
+	return (br != 0);
+}
+
+bool CStorageDeviceComm::Write(const void* buf, FILESIZE lba, size_t secs)
+{
+	DWORD written = 0;
+	LARGE_INTEGER ptr;
+	ptr.QuadPart = lba * SECTOR_SIZE;
+	SetFilePointerEx(m_hdev, ptr, NULL, FILE_BEGIN);
+	BOOL br = WriteFile(m_hdev, buf, boost::numeric_cast<DWORD>(secs*SECTOR_SIZE), &written, NULL);
+	return (br != 0);
 }
 
 
@@ -182,8 +214,7 @@ BYTE CStorageDeviceComm::ScsiCommand(READWRITE rd_wr, BYTE * buf, size_t length,
 
 	if (sense) memcpy_s(sense, sense_len, sptdwb.ucSenseBuf, min(SPT_SENSE_LENGT, sense_len));
 	if (!success)	THROW_WIN32_ERROR(L"failed on calling IOCTL_SCSI_PASS_THROUGH_DIRECT ");
-//	return sptdwb.ucSenseBuf[0xC];
-	return sptdwb.sptd.ScsiStatus;
+	return sptdwb.ucSenseBuf[0xC];
 }
 
 const wchar_t* ScsiStatusCodeToString(BYTE code)
@@ -221,7 +252,7 @@ BYTE CStorageDeviceComm::SecurityReceive(BYTE* buf, size_t buf_len, DWORD protoc
 	SENSE_DATA sense;
 
 	BYTE res = ScsiCommand(IStorageDevice::read, buf, buf_len, cdb, CDB12GENERIC_LENGTH, 
-		(BYTE*)&sense, sizeof(SENSE_DATA), 600);
+		(BYTE*)&sense, sizeof(SENSE_DATA), 1500);
 	if (res != SCSISTAT_GOOD) LOG_ERROR(L"[err] device returns error (0x%02X): %s", res, ScsiStatusCodeToString(res));
 	return res;
 }
@@ -242,7 +273,7 @@ BYTE CStorageDeviceComm::SecuritySend(BYTE* buf, size_t buf_len, DWORD protocoli
 	SENSE_DATA sense;
 
 	BYTE res = ScsiCommand(IStorageDevice::write, buf, buf_len, cdb, CDB12GENERIC_LENGTH,
-		(BYTE*)&sense, sizeof(SENSE_DATA), 600);
+		(BYTE*)&sense, sizeof(SENSE_DATA), 1500);
 	if (res != SCSISTAT_GOOD) LOG_ERROR(L"[err] device returns error (0x%02X): %s", res, ScsiStatusCodeToString(res));
 	return res;
 }
@@ -252,10 +283,22 @@ BYTE CStorageDeviceComm::SecuritySend(BYTE* buf, size_t buf_len, DWORD protocoli
 ///////////////////////////////////////////////////////////////////////////////
 // -- TCG features
 
-//bool CStorageDeviceComm::L0Discovery(BYTE* buf)
-//{
-//	bool br = SecurityReceive(buf, 512, 0x01, 0x01);
-//	if (!br) { LOG_ERROR(L"[err] failed on calling security receive command"); }
-//	return br;
-//}
-//
+
+
+void IStorageDevice::CreateDeviceByIndex(IStorageDevice*& dev, int index)
+{
+	wchar_t path[32];
+	swprintf_s(path, L"\\\\.\\PhysicalDrive%d", index);
+	HANDLE hdev = CreateFile(path, GENERIC_READ| GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
+		OPEN_EXISTING, 0, NULL);
+	if (hdev == INVALID_HANDLE_VALUE) THROW_WIN32_ERROR(L"failed on opening device: %s", path);
+	CStorageDeviceComm* _dev = jcvos::CDynamicInstance<CStorageDeviceComm>::Create();
+	if (!_dev) THROW_ERROR(ERR_APP, L"mem full, failed on creating storage device object");
+	bool br = _dev->Connect(hdev, true, path, DISK_PROPERTY::BUS_SCSI);
+	if (!br)
+	{
+		RELEASE(_dev);
+		THROW_ERROR(ERR_APP, L"[err] failed on connecting device to handle.");
+	}
+	dev = static_cast<IStorageDevice*>(_dev);
+}

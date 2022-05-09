@@ -24,6 +24,23 @@ public:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// -- 错误码定义
+enum DISKINFO_RESULT
+{
+	DR_OK = 0,
+	DR_NOT_SUPPORT = 1, 
+	DR_NO_SOURCE_PARTITION=2,
+	DR_NO_FLEXIBLE_PARTITION=3,
+	DR_DST_INSUFFICIENT = 4,
+	DR_DST_ASSIGN_FAIL = 5,
+	DR_DISK_CREATE_PARTITION = 6,
+	DR_DISK_RESIZE = 7,
+	DR_DISK_VOLUME = 8,
+	DR_WRONG_PARAMETER = 9,
+	DR_MEMORY = 10,
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // -- 
 class VOLUME_PROPERTY
 {

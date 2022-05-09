@@ -10,6 +10,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 // -- COM support functions ---------------------------------------------------
 
+class CCloneException : public jcvos::CJCException
+{
+public: 
+	CCloneException(UINT code, const wchar_t* msg) : jcvos::CJCException(msg, ERR_APP, code)
+	{}
+};
 #define WSTR_GUID_FMT L"{%.8x-%.4x-%.4x-%.2x%.2x-%.2x%.2x%.2x%.2x%.2x%.2x}"
 
 #define GUID_PRINTF_ARG( X )                                \
@@ -41,6 +47,12 @@ void GetWmiError(wchar_t * out_msg, size_t buf_size, HRESULT res, const wchar_t 
 
 
 #define _1MB (1024*1024)
+
+#define CLONE_ERROR(code, msg, ...) do {	\
+	jcvos::auto_array<wchar_t> buf(256);		\
+	swprintf_s(buf.get_ptr(), buf.len(), L"[err %04d] line=%d " msg, code, __LINE__, __VA_ARGS__); \
+	LOG_ERROR(buf.get_ptr()); /*return (code);*/ \
+	CCloneException err(code, buf); throw err; } while (0)
 
 
 template <typename TYPE>
@@ -121,6 +133,10 @@ bool EnumObjects(IEnumVdsObject * penum, std::vector<OBJ*> & objs)
 }
 
 void ReadWmiObject(boost::property_tree::wptree & obj_out, IWbemClassObject * obj_in);
+
+
+bool GetStringValueFromQuery(std::wstring & res, IWbemServices* pIWbemServices, const wchar_t* query, const wchar_t* valuename);
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // -- General support functions -----------------------------------------------

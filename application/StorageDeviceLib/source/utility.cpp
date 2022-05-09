@@ -277,3 +277,37 @@ void PrintDisk2(VDS_DISK_PROP2 & prop)
 }
 
 
+bool GetStringValueFromQuery(std::wstring & res, IWbemServices* pIWbemServices, const wchar_t* query, const wchar_t* valuename)
+{
+	auto_unknown<IEnumWbemClassObject> pEnumCOMDevs;
+	ULONG uReturned = 0;
+//	CString	result = L"";
+
+	HRESULT hres = pIWbemServices->ExecQuery(BSTR(L"WQL"),
+		BSTR(query), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumCOMDevs);
+	if (FAILED(hres) || pEnumCOMDevs == NULL)
+	{
+//		THROW_COM_ERROR(hres, L"failed on query wql=%s", query);
+		LOG_COM_ERROR(hres, L"failed on query wql=%s", query);
+		return false;
+	}
+
+//	while (pEnumCOMDevs && SUCCEEDED(pEnumCOMDevs->Next(10000, 1, &pCOMDev, &uReturned)) && uReturned == 1)
+	while (1)
+	{
+		auto_unknown<IWbemClassObject> pCOMDev;
+		hres = pEnumCOMDevs->Next(10000, 1, &pCOMDev, &uReturned);
+		if (!SUCCEEDED(hres) || uReturned != 1) break;
+
+		VARIANT pVal;
+		VariantInit(&pVal);
+		if (pCOMDev->Get(valuename, 0L, &pVal, NULL, NULL) == WBEM_S_NO_ERROR && pVal.vt > VT_NULL)
+		{
+			res = pVal.bstrVal;
+			VariantClear(&pVal);
+			return true;
+		}
+		VariantInit(&pVal);
+	}
+	return false;
+}

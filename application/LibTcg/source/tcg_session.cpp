@@ -82,6 +82,7 @@ bool CTcgSession::GetFeatures(tcg::ISecurityObject*& feature, bool force)
 	}
 	feature = static_cast<tcg::ISecurityObject*>(m_feature_set);
 	if (feature) feature->AddRef();
+	return true;
 }
 
 bool CTcgSession::L0Discovery(BYTE* buf)
@@ -138,6 +139,10 @@ BYTE CTcgSession::StartSession(const TCG_UID sp, const char* host_challenge, con
 	LOG_STACK_TRACE();
 	bool settimeout = IsEnterprise();
 	BYTE lastRC = 0;
+
+	if (m_is_open || m_hsn != 0 || m_tsn != 0) THROW_ERROR(ERR_APP, L"session has already opened");
+	//m_hsn = 0;
+	//m_tsn = 0;
 
 	jcvos::auto_ptr<DtaCommand> _cmd(new DtaCommand);
 	DtaCommand* cmd = (DtaCommand*)_cmd;
@@ -225,6 +230,9 @@ BYTE CTcgSession::EndSession(void)
 		return ir;
 	}
 	m_is_open = false;
+	// 清除 host和tper session id
+	m_hsn = 0;
+	m_tsn = 0;
 	return 0;
 }
 
@@ -281,16 +289,10 @@ BYTE CTcgSession::GetTable(DtaResponse& response, const TCG_UID table, WORD star
 }
 
 //BYTE CTcgSession::SetTable(const TCG_UID table, OPAL_TOKEN name, vector<BYTE>& value)
-BYTE CTcgSession::SetTable(const TCG_UID table, OPAL_TOKEN name, const char * value)
+BYTE CTcgSession::SetTable(tcg::ISecurityObject*& res, const TCG_UID table, int name, const char * value)
 {
-//	LOG(D1) << "Entering DtaDevOpal::setTable";
 	LOG_STACK_TRACE();
 	uint8_t lastRC;
-	//DtaCommand* set = new DtaCommand();
-	//if (NULL == set) {
-	//	LOG(E) << "Unable to create command object ";
-	//	return DTAERROR_OBJECT_CREATE_FAILED;
-	//}
 	jcvos::auto_ptr<DtaCommand> _cmd(new DtaCommand);
 	DtaCommand* set = (DtaCommand*)_cmd;
 	if (NULL == set)	THROW_ERROR(ERR_APP, L"failed on creating dta command");
@@ -303,10 +305,6 @@ BYTE CTcgSession::SetTable(const TCG_UID table, OPAL_TOKEN name, const char * va
 	set->addToken(OPAL_TOKEN::VALUES); // "values"
 	set->addToken(OPAL_TOKEN::STARTLIST);
 
-	//set->addToken(OPAL_TOKEN::STARTNAME);
-	//set->addToken(name);
-	//set->addToken(value);
-	//set->addToken(OPAL_TOKEN::ENDNAME);
 	set->addNameToken(name, value);
 	set->addToken(OPAL_TOKEN::ENDLIST);
 	set->addToken(OPAL_TOKEN::ENDNAME);
@@ -315,17 +313,38 @@ BYTE CTcgSession::SetTable(const TCG_UID table, OPAL_TOKEN name, const char * va
 
 	DtaResponse response;
 	lastRC = InvokeMethod(*set, response);
+	response.GetResToken(res);
 	if (lastRC != 0)	LOG_ERROR(L"[err] set table failed, code=%d", lastRC);
 	return lastRC;
+}
 
-	//if ((lastRC = session->sendCommand(set, response)) != 0) {
-	//	LOG(E) << "Set Failed ";
-	//	delete set;
-	//	return lastRC;
-	//}
-	//delete set;
-	//LOG(D1) << "Leaving DtaDevOpal::setTable";
-	//return 0;
+BYTE CTcgSession::SetTable(tcg::ISecurityObject*& res, const TCG_UID table, int name, int val)
+{
+	LOG_STACK_TRACE();
+	uint8_t lastRC;
+	jcvos::auto_ptr<DtaCommand> _cmd(new DtaCommand);
+	DtaCommand* set = (DtaCommand*)_cmd;
+	if (NULL == set)	THROW_ERROR(ERR_APP, L"failed on creating dta command");
+
+	set->reset(table, METHOD_SET);
+	//	set->changeInvokingUid(table);
+	set->addToken(OPAL_TOKEN::STARTLIST);
+
+	set->addToken(OPAL_TOKEN::STARTNAME);
+	set->addToken(OPAL_TOKEN::VALUES); // "values"
+	set->addToken(OPAL_TOKEN::STARTLIST);
+
+	set->addNameToken(name, val);
+	set->addToken(OPAL_TOKEN::ENDLIST);
+	set->addToken(OPAL_TOKEN::ENDNAME);
+	set->addToken(OPAL_TOKEN::ENDLIST);
+	set->complete();
+
+	DtaResponse response;
+	lastRC = InvokeMethod(*set, response);
+	response.GetResToken(res);
+	if (lastRC != 0)	LOG_ERROR(L"[err] set table failed, code=%d", lastRC);
+	return lastRC;
 }
 
 BYTE CTcgSession::Revert(const TCG_UID sp)
@@ -381,6 +400,63 @@ void CTcgSession::Reset(void)
 	m_hsn = 0;
 	m_tsn = 0;
 	m_will_abort = false;
+}
+
+BYTE CTcgSession::Activate(tcg::ISecurityObject*& response, const TCG_UID obj)
+{
+	LOG_STACK_TRACE();
+
+	uint8_t lastRC;
+	//vector<uint8_t> table;
+	//table.push_back(OPAL_SHORT_ATOM::BYTESTRING8);
+	//for (int i = 0; i < 8; i++)
+	//{
+	//	table.push_back(OPALUID[OPAL_UID::OPAL_LOCKINGSP_UID][i]);
+	//}
+
+	jcvos::auto_ptr<DtaCommand> _cmd(new DtaCommand);
+	DtaCommand* cmd = (DtaCommand*)_cmd;
+	if (NULL == cmd)	THROW_ERROR(ERR_APP, L"failed on creating dta command");
+
+	jcvos::auto_ptr<DtaResponse> _res(new DtaResponse);
+	DtaResponse* res = (DtaResponse*)_res;
+	if (NULL == res)	THROW_ERROR(ERR_APP, L"failed on creating dta response");
+
+
+	//if ((lastRC = session->start(OPAL_UID::OPAL_ADMINSP_UID, password, OPAL_UID::OPAL_SID_UID)) != 0)
+	//{
+	//	delete cmd;
+	//	delete session;
+	//	return lastRC;
+	//}
+	//if ((lastRC = getTable(table, 0x06, 0x06)) != 0)
+	//{
+	//	LOG(E) << "Unable to determine LockingSP Lifecycle state";
+	//	delete cmd;
+	//	delete session;
+	//	return lastRC;
+	//}
+	//if ((0x06 != response.getUint8(3)) || // getlifecycle
+	//	(0x08 != response.getUint8(4))) // Manufactured-Inactive
+	//{
+	//	LOG(E) << "Locking SP lifecycle is not Manufactured-Inactive";
+	//	delete cmd;
+	//	delete session;
+	//	return DTAERROR_INVALID_LIFECYCLE;
+	//}
+	cmd->reset(obj, METHOD_ACTIVATE);
+	cmd->addToken(OPAL_TOKEN::STARTLIST);
+	cmd->addToken(OPAL_TOKEN::ENDLIST);
+	cmd->complete();
+
+	lastRC = InvokeMethod(*cmd, *res);
+	res->GetResToken(response);
+	if (lastRC != SUCCESS)
+	{
+		LOG_ERROR(L"[err] failed on activate, rc=0x%X", lastRC);
+		return lastRC;
+	}
+	return 0;
 }
 
 BYTE CTcgSession::GetDefaultPassword(std::string& password)
@@ -445,20 +521,11 @@ BYTE CTcgSession::SetSIDPassword(const char* old_pw, const char* new_pwd)
 	//	hash.push_back((uint8_t)strnlen(new_pwd, 255));
 	//	for (uint16_t i = 0; i < strnlen(new_pwd, 255); i++) hash.push_back(new_pwd[i]);
 	//}
-	lastRC = SetTable(OPAL_C_PIN_SID, OPAL_TOKEN::PIN, new_pwd);
+	jcvos::auto_interface<tcg::ISecurityObject> res;
+	lastRC = SetTable(res, OPAL_C_PIN_SID, OPAL_TOKEN::PIN, new_pwd);
 	if (lastRC != 0) LOG_ERROR(L"[err] unable to set new SID password, code=%d", lastRC);
 	EndSession();
 	return lastRC;
-	//if ((lastRC = setTable(table, OPAL_TOKEN::PIN, hash)) != 0) 
-	//{
-	//	LOG(E) << "Unable to set new SID password ";
-	//	delete session;
-	//	return lastRC;
-	//}
-	//LOG(I) << "SID password changed";
-	//delete session;
-	//LOG(D1) << "Exiting DtaDevOpal::setSIDPassword()";
-	//return 0;
 }
 
 int CTcgSession::InvokeMethod(DtaCommand& cmd, DtaResponse& response)

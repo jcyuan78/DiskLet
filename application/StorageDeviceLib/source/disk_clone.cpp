@@ -898,17 +898,18 @@ bool CDiskClone::CopySectorsByMapOverlap(CCopyProgress * progress, HANDLE hsrc, 
 		if (cur_ts > check_pt)
 		{	// 读取温度
 			DEVICE_HEALTH_INFO hh;
+			HEALTH_INFO_LIST ext;
 			UINT64 src_read, dst_write;
 			if (m_src_dev)
 			{
-				m_src_dev->GetHealthInfo(hh, NULL);
+				m_src_dev->GetHealthInfo(hh, ext);
 				src_temp = hh.m_temperature_cur;
 				src_read = hh.m_host_read;
 			}
 			if (m_dst_dev)
 			{
 //				DEVICE_HEALTH_INFO hh;
-				m_dst_dev->GetHealthInfo(hh, NULL);
+				m_dst_dev->GetHealthInfo(hh, ext);
 				dst_temp = hh.m_temperature_cur;
 				dst_write = hh.m_host_write;
 			}

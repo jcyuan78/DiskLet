@@ -44,6 +44,10 @@ namespace tcg
 
 		//
 		virtual BYTE GetTable(ISecurityObject * & res, const TCG_UID table, WORD start_col, WORD end_col)=0;
+		virtual BYTE SetTable(ISecurityObject * & res, const TCG_UID table, int name, const char* value) = 0;
+		virtual BYTE SetTable(ISecurityObject*& res, const TCG_UID table, int name, int val)=0;
+
+		virtual BYTE Activate(ISecurityObject*& res, const TCG_UID obj) = 0;
 
 	};
 
