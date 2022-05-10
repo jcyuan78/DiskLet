@@ -30,6 +30,17 @@ inline void ToStdString(std::wstring & dst, System::String ^ src)
 	}
 }
 
+inline void ToStdString(std::string& dst, System::String^ src)
+{
+	if (!System::String::IsNullOrEmpty(src))
+	{
+		size_t len = src->Length;
+		const wchar_t* wstr = (const wchar_t*)(System::Runtime::InteropServices::Marshal::StringToHGlobalUni(src)).ToPointer();
+		jcvos::UnicodeToUtf8(dst, wstr, len);
+		System::Runtime::InteropServices::Marshal::FreeHGlobal(IntPtr((void*)wstr));
+	}
+}
+
 inline void SystemGuidToGUID(GUID & out_id, System::Guid ^ in_id)
 {
 	String ^ str_in = in_id->ToString(L"B");

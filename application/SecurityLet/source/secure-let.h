@@ -75,21 +75,6 @@ namespace SecureLet
 #endif
 	};
 
-
-
-//#define TCG_SP			TCG_OBJ
-//#define TCG_AUTHORITY	TCG_OBJ
-
-	//public enum class TCG_SP
-	//{
-	//	TCG_SP_THISSP, TCG_SP_ADMINSP, TCG_SP_LOCKINGSP,
-	//};
-
-	//public enum class TCG_AUTHORITY
-	//{
-	//	TCG_NONE, TCG_SID, 
-	//};
-
 	public ref class TcgSession : public Object
 	{
 	public:
@@ -117,23 +102,23 @@ namespace SecureLet
 			return gcnew TcgFeatureSet(feature);
 		}
 
-		void StartSession(TCG_SP sp, TCG_AUTHORITY auth, String^ challenge, bool write)
+		void StartSession(TcgUid ^sp, TcgUid ^ auth, String^ challenge, bool write)
 		{
 			JCASSERT(m_session);
 			const char* pw = nullptr;
-			std::string str_pw;
-			if (challenge != nullptr)
-			{
-				std::wstring wstr_pwd;
-				ToStdString(wstr_pwd, challenge);
-				if (!wstr_pwd.empty())
-				{
-					jcvos::UnicodeToUtf8(str_pw, wstr_pwd);
-					pw = str_pw.c_str();
-				}
-			}
-
-			BYTE br = m_session->StartSession(SpToUid(sp), pw, AuthorityToUid(auth), write);
+			std::string str_pwd;
+//			if (challenge != nullptr)
+//			{
+//				std::wstring wstr_pwd;
+				ToStdString(str_pwd, challenge);
+				if (!str_pwd.empty())	pw = str_pwd.c_str();
+				//{
+//					jcvos::UnicodeToUtf8(str_pwd, wstr_pwd);
+					
+				//}
+			//}
+			BYTE br = m_session->StartSession(sp->GetUid(), pw, auth->GetUid(), write);
+			if (!br) throw gcnew System::ApplicationException(L"failed on starting session");
 //			return br;
 		}
 
@@ -170,14 +155,36 @@ namespace SecureLet
 			BYTE err = m_session->SetTable(res, table->GetUid(), col,val);
 		}
 
-
 		void Activate(TcgUid^ uid)
 		{
 			JCASSERT(m_session);
 			jcvos::auto_interface<tcg::ISecurityObject> res;
 			BYTE err = m_session->Activate(res, uid->GetUid());
-
+			if (!err) throw gcnew System::ApplicationException(L"failed on Activit");
 		}
+
+		void Revert(TcgUid^ uid)
+		{
+			JCASSERT(m_session);
+			jcvos::auto_interface<tcg::ISecurityObject> res;
+			BYTE err = m_session->Revert(res, uid->GetUid());
+			if (!err) throw gcnew System::ApplicationException(L"failed on Reverting");
+		}
+
+	// == high level funcsions == 
+
+		void PSIDRevert(String^ pwd)
+		{
+			JCASSERT(m_session);
+			std::string str_pw;
+			ToStdString(str_pw, pwd);
+
+			BYTE err = m_session->RevertTPer(str_pw.c_str(), OPAL_PSID_UID, OPAL_ADMINSP_UID);
+			if (!err) throw gcnew System::ApplicationException(L"failed on PSID reverting");
+		}
+
+
+
 	protected:
 		tcg::ITcgSession* m_session;
 	};

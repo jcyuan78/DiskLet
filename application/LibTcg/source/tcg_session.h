@@ -6,9 +6,6 @@
 #include "dta_response.h"
 #include "../include/l0discovery.h"
 
-
-
-
 class CTcgSession : public tcg::ITcgSession
 {
 public:
@@ -36,14 +33,15 @@ public:
 	virtual BYTE SetTable(tcg::ISecurityObject*& res, const TCG_UID table, int name, int val);
 //	BYTE SetTable(const TCG_UID table, int name, const char * value);
 
-	virtual BYTE Revert(const TCG_UID sp);
+	virtual BYTE Revert(tcg::ISecurityObject*& res, const TCG_UID sp);
 	virtual void Reset(void);
 
 	virtual BYTE Activate(tcg::ISecurityObject*& res, const TCG_UID obj);
 
-// packed features
+// hi-level features (with session open)
     virtual BYTE GetDefaultPassword(std::string& password);
 	virtual BYTE SetSIDPassword(const char* old_pw, const char* new_pw);
+	virtual BYTE RevertTPer(const char* password, const TCG_UID authority, const TCG_UID sp);
 //	virtual BYTE SetLockingRange()
 
 
@@ -58,6 +56,8 @@ protected:
     // 把passwoad打包成一个token
     void PackagePasswordToken(vector<BYTE>& hash, const char* password);
     BYTE Authenticate(vector<uint8_t> Authority, const char* Challenge);
+	void Abort(void);
+
 
 protected:
 	CTcgFeatureSet * m_feature_set = nullptr;

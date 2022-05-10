@@ -347,7 +347,7 @@ BYTE CTcgSession::SetTable(tcg::ISecurityObject*& res, const TCG_UID table, int 
 	return lastRC;
 }
 
-BYTE CTcgSession::Revert(const TCG_UID sp)
+BYTE CTcgSession::Revert(tcg::ISecurityObject*& res, const TCG_UID sp)
 {
 	LOG_STACK_TRACE();
 	uint8_t lastRC;
@@ -355,22 +355,6 @@ BYTE CTcgSession::Revert(const TCG_UID sp)
 	DtaCommand* cmd = (DtaCommand*)_cmd;
 	if (NULL == cmd)	THROW_ERROR(ERR_APP, L"failed on creating dta command");
 
-	//session = new DtaSession(this);
-	//if (NULL == session) {
-	//	LOG(E) << "Unable to create session object ";
-	//	delete cmd;
-	//	return DTAERROR_OBJECT_CREATE_FAILED;
-	//}
-	//OPAL_UID uid = OPAL_UID::OPAL_SID_UID;
-	//if (PSID) {
-	//	session->dontHashPwd(); // PSID pwd should be passed as entered
-	//	uid = OPAL_UID::OPAL_PSID_UID;
-	//}
-	//if ((lastRC = session->start(OPAL_UID::OPAL_ADMINSP_UID, password, uid)) != 0) {
-	//	delete cmd;
-	//	delete session;
-	//	return lastRC;
-	//}
 	cmd->reset(sp, METHOD_REVERT);
 	cmd->addToken(OPAL_TOKEN::STARTLIST);
 	cmd->addToken(OPAL_TOKEN::ENDLIST);
@@ -381,17 +365,6 @@ BYTE CTcgSession::Revert(const TCG_UID sp)
 	if (lastRC != 0) LOG_ERROR(L"[err] RevertTPer failed, code=%d", lastRC);
 	m_will_abort = true;
 	return lastRC;
-	//if ((lastRC = session->sendCommand(cmd, response)) != 0) {
-	//	delete cmd;
-	//	delete session;
-	//	return lastRC;
-	//}
-	//LOG(I) << "revertTper completed successfully";
-	//session->expectAbort();
-	//delete cmd;
-	//delete session;
-	//LOG(D1) << "Exiting DtaDevOpal::revertTPer()";
-	//return 0;
 }
 
 void CTcgSession::Reset(void)
@@ -526,6 +499,27 @@ BYTE CTcgSession::SetSIDPassword(const char* old_pw, const char* new_pwd)
 	if (lastRC != 0) LOG_ERROR(L"[err] unable to set new SID password, code=%d", lastRC);
 	EndSession();
 	return lastRC;
+}
+
+BYTE CTcgSession::RevertTPer(const char* password, const TCG_UID authority, const TCG_UID sp)
+{
+	jcvos::auto_interface<tcg::ISecurityObject> res;
+	BYTE err = StartSession(OPAL_ADMINSP_UID, password, authority, true);
+	if (err)
+	{
+		LOG_ERROR(L"[err] failed on start AdminSP session, code=%d", err);
+		return err;
+	}
+
+	err = Revert(res, sp);
+	if (err)
+	{
+		LOG_ERROR(L"[err] failed on reverting, code=%d", err);
+		return err;
+	}
+
+	Abort();
+	return 0;
 }
 
 int CTcgSession::InvokeMethod(DtaCommand& cmd, DtaResponse& response)
@@ -720,6 +714,14 @@ BYTE CTcgSession::Authenticate(vector<uint8_t> Authority, const char* Challenge)
 //	LOG(D1) << "Exiting DtaSession::authenticate ";
 //	delete cmd;
 	return 0;
+}
+
+void CTcgSession::Abort(void)
+{
+	m_is_open = false;
+	m_tsn = 0;
+	m_hsn = 0;
+	m_will_abort = true;
 }
 
 

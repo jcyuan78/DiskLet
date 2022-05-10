@@ -13,24 +13,27 @@ namespace SecureLet
 {
 	//=============================================================================
 
-	public enum class TCG_SP
+	public enum class TCG_UID_INDEX
 	{
 		/*SPs*/ THISSP, ADMINSP, LOCKINGSP,
-	};
-	public enum class TCG_AUTHORITY
-	{
 		TCG_NONE, SID, ANYBODY, ADMIN1, USER1,
 		TCG_C_PIN_MSID, TCG_C_PIN_SID,
+		LOCKING, GLOBAL_RANGE, PSID, 
 	};
+	//public enum class TCG_AUTHORITY
+	//{
+	//	TCG_NONE, SID, ANYBODY, ADMIN1, USER1,
+	//	TCG_C_PIN_MSID, TCG_C_PIN_SID,
+	//};
 
-	public enum class TCG_TABLE
-	{
-		LOCKING, GLOBAL_RANGE,
-	};
+	//public enum class TCG_TABLE
+	//{
+	//	LOCKING, GLOBAL_RANGE,
+	//};
 
-	const TCG_UID& SpToUid(TCG_SP sp);
-	const TCG_UID& AuthorityToUid(TCG_AUTHORITY au);
-	const TCG_UID& ToUid(TCG_TABLE obj);
+	//const TCG_UID& SpToUid(TCG_SP sp);
+	//const TCG_UID& AuthorityToUid(TCG_AUTHORITY au);
+	const TCG_UID& ToUid(TCG_UID_INDEX obj);
 
 	public ref class TcgUid : Object
 	{
@@ -46,7 +49,7 @@ namespace SecureLet
 			return id;
 		}
 
-		static TcgUid^ TableId(TCG_TABLE tab, TCG_TABLE row)
+		static TcgUid^ TableId(TCG_UID_INDEX tab, TCG_UID_INDEX row)
 		{
 			TCG_UID uu;
 			CopyUid(uu, ToUid(tab));
@@ -55,8 +58,13 @@ namespace SecureLet
 			return uid;
 		}
 
+		static TcgUid^ MakeUid(TCG_UID_INDEX index)
+		{
+			return gcnew TcgUid(ToUid(index));
+		}
+
 	public:
-		TcgUid(TCG_UID& uid)
+		TcgUid(const TCG_UID& uid)
 		{
 			m_uid = new BYTE[8];
 			memcpy_s(m_uid, 8, uid, 8);

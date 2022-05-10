@@ -38,9 +38,6 @@ namespace tcg
 
 		virtual bool IsOpen(void) = 0;
 
-		virtual BYTE GetDefaultPassword(std::string& password) = 0;
-		virtual BYTE SetSIDPassword(const char* old_pw, const char* new_pw) = 0;
-		virtual void Reset(void) = 0;
 
 		//
 		virtual BYTE GetTable(ISecurityObject * & res, const TCG_UID table, WORD start_col, WORD end_col)=0;
@@ -48,7 +45,13 @@ namespace tcg
 		virtual BYTE SetTable(ISecurityObject*& res, const TCG_UID table, int name, int val)=0;
 
 		virtual BYTE Activate(ISecurityObject*& res, const TCG_UID obj) = 0;
+		virtual BYTE Revert(ISecurityObject*& res, const TCG_UID sp) = 0;
 
+		// == hi-level features (with session open) ==
+		virtual BYTE RevertTPer(const char* password, const TCG_UID authority, const TCG_UID sp) = 0;
+		virtual BYTE GetDefaultPassword(std::string& password) = 0;
+		virtual BYTE SetSIDPassword(const char* old_pw, const char* new_pw) = 0;
+		virtual void Reset(void) = 0;
 	};
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

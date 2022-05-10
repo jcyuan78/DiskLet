@@ -199,43 +199,65 @@ void SecureLet::ConnectTcgDevice::InternalProcessRecord()
 }
 
 
-const TCG_UID& SecureLet::SpToUid(SecureLet::TCG_SP sp)
+//const TCG_UID& SecureLet::SpToUid(SecureLet::TCG_SP sp)
+//{
+//	switch (sp)
+//	{
+//	case SecureLet::TCG_SP::THISSP: return OPAL_THISSP_UID;
+//	case SecureLet::TCG_SP::ADMINSP: return OPAL_ADMINSP_UID;
+//	case SecureLet::TCG_SP::LOCKINGSP: return OPAL_LOCKINGSP_UID;
+//
+//	}
+//	return OPAL_UID_HEXFF;
+//}
+//
+//
+//const TCG_UID& SecureLet::AuthorityToUid(SecureLet::TCG_AUTHORITY au)
+//{
+//	switch (au)
+//	{
+//	case SecureLet::TCG_AUTHORITY::SID:			return	OPAL_SID_UID;
+//	case SecureLet::TCG_AUTHORITY::ANYBODY:		return	OPAL_ANYBODY;
+//	case SecureLet::TCG_AUTHORITY::ADMIN1:		return  OPAL_ADMIN1;
+//	case SecureLet::TCG_AUTHORITY::USER1:		return  OPAL_USER1;
+//	//case SecureLet::TCG_AUTHORITY::			return  OPAL_
+//	//case SecureLet::TCG_AUTHORITY::			return  OPAL_
+//	case SecureLet::TCG_AUTHORITY::TCG_NONE: return OPAL_UID_HEXFF;
+//	}
+//	return OPAL_UID_HEXFF;
+//}
+//
+//const TCG_UID& SecureLet::ToUid(TCG_TABLE obj)
+//{
+//	switch (obj)
+//	{
+//	case SecureLet::TCG_TABLE::LOCKING:			return OPAL_TABLE_LOCKING;
+//	case SecureLet::TCG_TABLE::GLOBAL_RANGE:	return LOCKING_GLOBAL_RANGE;
+//	}
+//	return OPAL_UID_HEXFF;
+//	// TODO: 在此处插入 return 语句
+//}
+
+const TCG_UID& SecureLet::ToUid(SecureLet::TCG_UID_INDEX index)
 {
-	switch (sp)
+	TCG_UID uu;
+	switch (index)
 	{
-	case SecureLet::TCG_SP::THISSP: return OPAL_THISSP_UID;
-	case SecureLet::TCG_SP::ADMINSP: return OPAL_ADMINSP_UID;
-	case SecureLet::TCG_SP::LOCKINGSP: return OPAL_LOCKINGSP_UID;
-
+	case SecureLet::TCG_UID_INDEX::THISSP:			return OPAL_THISSP_UID;		
+	case SecureLet::TCG_UID_INDEX::ADMINSP:			return OPAL_ADMINSP_UID;  	
+	case SecureLet::TCG_UID_INDEX::LOCKINGSP:		return OPAL_LOCKINGSP_UID;	
+	case SecureLet::TCG_UID_INDEX::SID:				return OPAL_SID_UID;		
+	case SecureLet::TCG_UID_INDEX::PSID:			return OPAL_PSID_UID;
+	case SecureLet::TCG_UID_INDEX::ANYBODY:			return OPAL_ANYBODY;		
+	case SecureLet::TCG_UID_INDEX::ADMIN1:			return OPAL_ADMIN1;			
+	case SecureLet::TCG_UID_INDEX::USER1:			return OPAL_USER1;			
+	//case SecureLet::TCG_UID_INDEX::				return OPAL_				
+	//case SecureLet::TCG_UID_INDEX::				return OPAL_				
+	case SecureLet::TCG_UID_INDEX::TCG_NONE:		return OPAL_UID_HEXFF;		
+	case SecureLet::TCG_UID_INDEX::LOCKING:			return OPAL_TABLE_LOCKING;	
+	case SecureLet::TCG_UID_INDEX::GLOBAL_RANGE:	return LOCKING_GLOBAL_RANGE;
+	default: 										return OPAL_UID_HEXFF;
 	}
-	return OPAL_UID_HEXFF;
-}
-
-
-const TCG_UID& SecureLet::AuthorityToUid(SecureLet::TCG_AUTHORITY au)
-{
-	switch (au)
-	{
-	case SecureLet::TCG_AUTHORITY::SID:			return	OPAL_SID_UID;
-	case SecureLet::TCG_AUTHORITY::ANYBODY:		return	OPAL_ANYBODY;
-	case SecureLet::TCG_AUTHORITY::ADMIN1:		return  OPAL_ADMIN1;
-	case SecureLet::TCG_AUTHORITY::USER1:		return  OPAL_USER1;
-	//case SecureLet::TCG_AUTHORITY::			return  OPAL_
-	//case SecureLet::TCG_AUTHORITY::			return  OPAL_
-	case SecureLet::TCG_AUTHORITY::TCG_NONE: return OPAL_UID_HEXFF;
-	}
-	return OPAL_UID_HEXFF;
-}
-
-const TCG_UID& SecureLet::ToUid(TCG_TABLE obj)
-{
-	switch (obj)
-	{
-	case SecureLet::TCG_TABLE::LOCKING:			return OPAL_TABLE_LOCKING;
-	case SecureLet::TCG_TABLE::GLOBAL_RANGE:	return LOCKING_GLOBAL_RANGE;
-	}
-	return OPAL_UID_HEXFF;
-	// TODO: 在此处插入 return 语句
 }
 
 //const TCG_UID& SecureLet::ObjToUid(TCG_OBJ obj)
