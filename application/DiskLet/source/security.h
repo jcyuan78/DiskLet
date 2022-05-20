@@ -20,43 +20,43 @@ namespace SecureLet
 {
 	//Move to Secure Let
 
-	[CmdletAttribute(VerbsCommon::Get, "Protocol")]
-	public ref class GetProtocol : public JcCmdLet::JcCmdletBase
-	{
-	public:
-		GetProtocol(void) {};
-		~GetProtocol(void) {};
+	//[CmdletAttribute(VerbsCommon::Get, "Protocol")]
+	//public ref class GetProtocol : public JcCmdLet::JcCmdletBase
+	//{
+	//public:
+	//	GetProtocol(void) {};
+	//	~GetProtocol(void) {};
 
-	public:
-		[Parameter(Position = 0,
-			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
-			HelpMessage = "specify device object")]
-		property Clone::StorageDevice^ dev;
+	//public:
+	//	[Parameter(Position = 0,
+	//		ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+	//		HelpMessage = "specify device object")]
+	//	property Clone::StorageDevice^ dev;
 
-	public:
-		virtual void InternalProcessRecord() override
-		{
-			//jcvos::auto_interface<IStorageDevice> dd;
-			//if (dev) dev->GetStorageDevice(dd);
-			//else		global.GetDevice(dd);
+	//public:
+	//	virtual void InternalProcessRecord() override
+	//	{
+	//		//jcvos::auto_interface<IStorageDevice> dd;
+	//		//if (dev) dev->GetStorageDevice(dd);
+	//		//else		global.GetDevice(dd);
 
-			//if (!dd) throw gcnew System::ApplicationException(L"device is not selected");
-			//ITcgDevice* tcg = dd.d_cast<ITcgDevice*>();
-			//if (!tcg) throw gcnew System::ApplicationException(L"device does not support TCG");
+	//		//if (!dd) throw gcnew System::ApplicationException(L"device is not selected");
+	//		//ITcgDevice* tcg = dd.d_cast<ITcgDevice*>();
+	//		//if (!tcg) throw gcnew System::ApplicationException(L"device does not support TCG");
 
-			//jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
-			//jcvos::CreateBinaryBuffer(buf, SECTOR_TO_BYTE(1));
-			//BYTE* _buf = buf->Lock();
-			//bool br = tcg->L0Discovery(_buf);
-			//buf->Unlock(_buf);
-			//if (!br) wprintf_s(L"[err] failed on calling L0Discovery");
+	//		//jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
+	//		//jcvos::CreateBinaryBuffer(buf, SECTOR_TO_BYTE(1));
+	//		//BYTE* _buf = buf->Lock();
+	//		//bool br = tcg->L0Discovery(_buf);
+	//		//buf->Unlock(_buf);
+	//		//if (!br) wprintf_s(L"[err] failed on calling L0Discovery");
 
-			//JcCmdLet::BinaryType^ data = gcnew JcCmdLet::BinaryType(buf);
-			//WriteObject(data);
-		}
+	//		//JcCmdLet::BinaryType^ data = gcnew JcCmdLet::BinaryType(buf);
+	//		//WriteObject(data);
+	//	}
 
-	protected:
-	};
+	//protected:
+	//};
 
 	// 导入L0Discovery的配置文件(json)
 	[CmdletAttribute(VerbsData::Import, "L0Discovery")]

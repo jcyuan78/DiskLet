@@ -4,6 +4,7 @@
 #include "secure-let.h"
 #include "global.h"
 #include <LibTcg.h>
+#include <boost/property_tree/xml_parser.hpp>
 
 LOCAL_LOGGER_ENABLE(L"security_let", LOGGER_LEVEL_NOTICE);
 
@@ -240,7 +241,7 @@ void SecureLet::ConnectTcgDevice::InternalProcessRecord()
 
 const TCG_UID& SecureLet::ToUid(SecureLet::TCG_UID_INDEX index)
 {
-	TCG_UID uu;
+//	TCG_UID uu;
 	switch (index)
 	{
 	case SecureLet::TCG_UID_INDEX::THISSP:			return OPAL_THISSP_UID;		
@@ -278,14 +279,20 @@ const TCG_UID& SecureLet::ToUid(SecureLet::TCG_UID_INDEX index)
 //	return OPAL_UID_HEXFF;
 //}
 
-void SecureLet::CParseL0Discovery::InternalProcessRecord()
+void SecureLet::CParseSecurityCmd::InternalProcessRecord()
 {
 	if (!data) throw gcnew System::ApplicationException(L"data cannot be null");
 	BYTE* _data = data->LockData();
 	jcvos::auto_interface<tcg::ISecurityParser> parser;
 	tcg::GetSecurityParser(parser);
 	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
-	parser->ParseSecurityCommand(sec_obj, _data, data->Length, tcg::PROTOCOL_ID_TCG, tcg::COMID_L0DISCOVERY, true);
+	parser->ParseSecurityCommand(sec_obj, _data, data->Length, protocol, comid, true);
+
+#ifdef _DEBUG
+	boost::property_tree::wptree prop;
+	sec_obj->ToProperty(prop);
+	boost::property_tree::write_xml(std::wcout, prop);
+#endif
 
 	//CTcgFeatureSet* _fset = jcvos::CDynamicInstance<CTcgFeatureSet>::Create();
 	//if (_fset == nullptr) THROW_ERROR(ERR_APP, L"failed on creating feature set");
@@ -294,4 +301,39 @@ void SecureLet::CParseL0Discovery::InternalProcessRecord()
 	// convert to .net object
 	TcgFeatureSet^ feature_set = gcnew TcgFeatureSet(sec_obj);
 	WriteObject(feature_set);
+}
+
+void SecureLet::GetProtocol::InternalProcessRecord()
+{
+	jcvos::auto_interface<IStorageDevice> dd;
+	if (dev) dev->GetStorageDevice(dd);
+	//else		global.GetDevice(dd);
+	if (!dd) throw gcnew System::ApplicationException(L"device is not selected");
+
+	jcvos::auto_interface<tcg::ITcgSession> tcg;
+	CreateTcgSession(tcg, dd);
+	if (!tcg) throw gcnew System::ApplicationException(L"failed on creating tcg session");
+
+	//ITcgDevice* tcg = dd.d_cast<ITcgDevice*>();
+	//if (!tcg) throw gcnew System::ApplicationException(L"device does not support TCG");
+
+	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
+	jcvos::CreateBinaryBuffer(buf, SECTOR_TO_BYTE(1));
+	BYTE* _buf = buf->Lock();
+	bool br = tcg->GetProtocol(_buf, SECTOR_TO_BYTE(1) );
+	buf->Unlock(_buf);
+	if (!br) wprintf_s(L"[err] failed on calling L0Discovery");
+
+
+	_buf = buf->Lock();
+	jcvos::auto_interface<tcg::ISecurityParser> parser;
+	tcg::GetSecurityParser(parser);
+	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
+	parser->ParseSecurityCommand(sec_obj, _buf, buf->GetSize(), tcg::PROTOCOL_INFO, 0, true);
+	buf->Unlock(_buf);
+
+	sec_obj->ToString(std::wcout, -1, 0);
+
+	JcCmdLet::BinaryType^ data = gcnew JcCmdLet::BinaryType(buf);
+	WriteObject(data);
 }

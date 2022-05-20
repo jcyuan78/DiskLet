@@ -107,19 +107,10 @@ namespace SecureLet
 			JCASSERT(m_session);
 			const char* pw = nullptr;
 			std::string str_pwd;
-//			if (challenge != nullptr)
-//			{
-//				std::wstring wstr_pwd;
-				ToStdString(str_pwd, challenge);
-				if (!str_pwd.empty())	pw = str_pwd.c_str();
-				//{
-//					jcvos::UnicodeToUtf8(str_pwd, wstr_pwd);
-					
-				//}
-			//}
-			BYTE br = m_session->StartSession(sp->GetUid(), pw, auth->GetUid(), write);
-			if (!br) throw gcnew System::ApplicationException(L"failed on starting session");
-//			return br;
+			ToStdString(str_pwd, challenge);
+			if (!str_pwd.empty())	pw = str_pwd.c_str();
+			BYTE err = m_session->StartSession(sp->GetUid(), pw, auth->GetUid(), write);
+			if (err) throw gcnew System::ApplicationException(L"failed on starting session");
 		}
 
 		void EndSession(void)
@@ -160,7 +151,7 @@ namespace SecureLet
 			JCASSERT(m_session);
 			jcvos::auto_interface<tcg::ISecurityObject> res;
 			BYTE err = m_session->Activate(res, uid->GetUid());
-			if (!err) throw gcnew System::ApplicationException(L"failed on Activit");
+			if (err) throw gcnew System::ApplicationException(L"failed on Activit");
 		}
 
 		void Revert(TcgUid^ uid)
@@ -168,7 +159,7 @@ namespace SecureLet
 			JCASSERT(m_session);
 			jcvos::auto_interface<tcg::ISecurityObject> res;
 			BYTE err = m_session->Revert(res, uid->GetUid());
-			if (!err) throw gcnew System::ApplicationException(L"failed on Reverting");
+			if (err) throw gcnew System::ApplicationException(L"failed on Reverting");
 		}
 
 	// == high level funcsions == 
@@ -180,10 +171,8 @@ namespace SecureLet
 			ToStdString(str_pw, pwd);
 
 			BYTE err = m_session->RevertTPer(str_pw.c_str(), OPAL_PSID_UID, OPAL_ADMINSP_UID);
-			if (!err) throw gcnew System::ApplicationException(L"failed on PSID reverting");
+			if (err) throw gcnew System::ApplicationException(L"failed on PSID reverting");
 		}
-
-
 
 	protected:
 		tcg::ITcgSession* m_session;
@@ -207,6 +196,30 @@ namespace SecureLet
 	public:
 		virtual void InternalProcessRecord() override;
 	};
+
+	[CmdletAttribute(VerbsCommon::Get, "Protocol")]
+	public ref class GetProtocol : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		GetProtocol(void) {};
+		~GetProtocol(void) {};
+
+	public:
+		[Parameter(Position = 0,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			HelpMessage = "specify device object")]
+		property Clone::StorageDevice^ dev;
+		[Parameter(Position = 1,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true,
+			HelpMessage = "output binary data")]
+		property SwitchParameter OutBinary;
+
+	public:
+		virtual void InternalProcessRecord() override;
+
+	protected:
+	};
+
 
 
 	[CmdletAttribute(VerbsCommon::Get, "TPerProperties")]
@@ -268,18 +281,27 @@ namespace SecureLet
 	};
 
 	// 解析L0Discovery
-	[CmdletAttribute(VerbsData::ConvertFrom, "L0Discovery")]
-	public ref class CParseL0Discovery : public JcCmdLet::JcCmdletBase
+	[CmdletAttribute(VerbsData::ConvertFrom, "SecurityCmd")]
+	public ref class CParseSecurityCmd : public JcCmdLet::JcCmdletBase
 	{
 	public:
-		CParseL0Discovery(void) {};
-		~CParseL0Discovery(void) {};
+		CParseSecurityCmd(void) {};
+		~CParseSecurityCmd(void) {};
 
 	public:
 		[Parameter(Position = 0,
 			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
-			HelpMessage = "payload data of L0Discovery")]
+			HelpMessage = "payload data of security command")]
 		property JcCmdLet::BinaryType^ data;
+		[Parameter(Position = 1,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			HelpMessage = "protocol id")]
+		property UINT protocol;
+		[Parameter(Position = 2,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			HelpMessage = "comid")]
+		property UINT comid;
+
 
 	public:
 		virtual void InternalProcessRecord() override;
