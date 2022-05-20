@@ -71,6 +71,7 @@ class CTcgFeatureSet: public tcg::ISecurityObject
 public:
     virtual ~CTcgFeatureSet(void) {};
     virtual void ToString(std::wostream& out, UINT layer, int opt);
+    virtual void ToProperty(boost::property_tree::wptree& prop);
     virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index) {};
     virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name) {};
 

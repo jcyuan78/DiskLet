@@ -15,6 +15,8 @@ public:
 public:
     bool ConnectDevice(IStorageDevice * dev);
 // essential methods
+	virtual bool GetProtocol(BYTE* buf, size_t buf_len);
+
 	virtual bool GetFeatures(tcg::ISecurityObject*& feature, bool force);
 
     virtual bool L0Discovery(BYTE* buf);
@@ -42,7 +44,8 @@ public:
     virtual BYTE GetDefaultPassword(std::string& password);
 	virtual BYTE SetSIDPassword(const char* old_pw, const char* new_pw);
 	virtual BYTE RevertTPer(const char* password, const TCG_UID authority, const TCG_UID sp);
-//	virtual BYTE SetLockingRange()
+	virtual BYTE SetLockingRange(UINT64 start, UINT64 length);
+	virtual BYTE WriteShadowMBR(jcvos::IBinaryBuffer * buf);
 
 
 protected:

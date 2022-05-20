@@ -1,4 +1,4 @@
-/* C:B**************************************************************************
+﻿/* C:B**************************************************************************
 This software is Copyright 2014-2017 Bright Plaza Inc. <drivetrust@drivetrust.com>
 
 This file is part of sedutil.
@@ -85,11 +85,15 @@ public:
     size_t getPayloadLen(void) const { return m_data_len; }
     DWORD getProtocol(void) const { return m_protocol; }
     DWORD getComId(void) const { return m_comid; }
-    void getResult(tcg::ISecurityObject*& res) 
+    void getResult(tcg::ISecurityObject*& res, bool token = false) 
     {
         JCASSERT(res == nullptr);
-        res = m_result; 
-        if (res) res->AddRef(); 
+        if (token)      {      m_result->GetSubItem(res, L"token");        }
+        else
+        {
+            res = m_result;
+            if (res) res->AddRef();
+        }
     }
 
     WORD getStatusCode(void);
@@ -97,7 +101,7 @@ public:
 
 private:
     std::vector<std::vector<uint8_t>> response;   /**< tokenized resonse  */
-    // �����׶Σ�ͬʱ����DtaResponse�Ľ����TcgToken�Ľ��롣
+    // ｿｪｷ｢ｽﾗｶﾎ｣ｬﾍｬﾊｱｼ貶ﾝDtaResponseｵﾄｽ篦・ﾍTcgTokenｵﾄｽ篦・｣
     BYTE* m_payload = nullptr;
     size_t m_data_len = 0;
     DWORD m_protocol, m_comid;

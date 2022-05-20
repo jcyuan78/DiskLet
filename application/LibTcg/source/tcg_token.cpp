@@ -360,6 +360,35 @@ void MidAtomToken::ToString(std::wostream& out, UINT layer, int opt)
 	}
 }
 
+void MidAtomToken::ToProperty(boost::property_tree::wptree& prop)
+{
+	BYTE* buf = (m_len > 8) ? m_data : m_data_val;
+
+	if (m_type == CTcgTokenBase::IntegerAtom)
+	{	// 情况(1)
+		if (m_signe)
+		{
+			INT64 val;
+			GetValue(val);
+			prop.put_value(val);
+		}
+		else
+		{
+			UINT64 val;
+			GetValue(val);
+			prop.put_value(val);
+		}
+	}
+	else
+	{
+		std::wstringstream out;
+		out << std::hex << std::noshowbase; // std::setw(3);
+		for (size_t ii = 0; ii < m_len; ++ii) out << std::setfill(L'0') << std::setw(2) << buf[ii] << L" ";
+//			out << std::dec << std::showbase << std::setfill(L' ');
+		prop.put_value(out.str());
+	}
+}
+
 size_t MidAtomToken::Encode(BYTE* buf, size_t buf_len)
 {
 	if (m_len == 0)
@@ -463,6 +492,24 @@ MidAtomToken* MidAtomToken::CreateToken(const std::string& str)
 	return token;
 }
 
+
+MidAtomToken* MidAtomToken::CreateToken(const BYTE* data, size_t data_len)
+{
+	MidAtomToken* token = jcvos::CDynamicInstance<MidAtomToken>::Create();
+	if (token == nullptr) THROW_ERROR(ERR_MEM, L"failed on creating MidAtomToken");
+	token->m_type = CTcgTokenBase::BinaryAtom;
+	token->m_signe = false;
+	size_t len = data_len;
+	token->m_len = len;
+	if (len > 8)
+	{
+		token->m_data = new BYTE[token->m_len];
+		memcpy_s(token->m_data, len, data, len);
+	}
+	else memcpy_s(token->m_data_val, 8, data, len);
+	return token;
+}
+
 MidAtomToken* MidAtomToken::CreateToken(UINT val)
 {
 	MidAtomToken* token = jcvos::CDynamicInstance<MidAtomToken>::Create();
@@ -486,6 +533,7 @@ MidAtomToken* MidAtomToken::CreateToken(UINT val)
 	}
 	return token;
 }
+
 
 
 
@@ -555,6 +603,16 @@ void ListToken::ToString(std::wostream& out, UINT layer, int opt)
 	if (m_type == CTcgTokenBase::TopToken) 	out << L"</TOKENS>";
 	else									out << L"</LIST>";
 	out << std::endl;
+}
+
+void ListToken::ToProperty(boost::property_tree::wptree& prop)
+{
+	auto end_it = m_tokens.end();
+	for (auto it = m_tokens.begin(); it != end_it; ++it)
+	{
+		JCASSERT(*it);
+		(*it)->ToProperty(prop);
+	}
 }
 
 void ListToken::GetSubItem(ISecurityObject*& sub_item, const std::wstring& name)
@@ -642,15 +700,15 @@ void NameToken::ToString(std::wostream& out, UINT layer, int opt)
 	int indentation = HIBYTE(HIWORD(opt));
 	out << (INDENTATION - indentation);
 	size_t sub_len = m_value ? m_value->GetPayloadLen() : 0;
-	MidAtomToken* nn = dynamic_cast<MidAtomToken*>(m_name_id);
+//	MidAtomToken* nn = dynamic_cast<MidAtomToken*>(m_name_id);
 	DWORD val;
-	if (nn && nn->m_type == CTcgTokenBase::BinaryAtom)
+	if (m_name_id && m_name_id->m_type == CTcgTokenBase::BinaryAtom)
 	{
 		std::wstring str;
-		nn->FormatToString(str);
+		m_name_id->FormatToString(str);
 		out << L"<NAME name=" << str << L">";
 	}
-	else if (nn && nn->GetValue(val))	
+	else if (m_name_id && m_name_id->GetValue(val))	
 	{
 		out << L"<NAME name=" << val << L">";	
 	}
@@ -670,6 +728,27 @@ void NameToken::ToString(std::wostream& out, UINT layer, int opt)
 		out << (INDENTATION - indentation);
 	}
 	out << L"</NAME>" << std::endl;
+}
+
+void NameToken::ToProperty(boost::property_tree::wptree& prop)
+{
+	JCASSERT(m_name_id);
+	std::wstring str_name;
+	DWORD name_val;
+	if (m_name_id->m_type == CTcgTokenBase::BinaryAtom)
+	{
+		m_name_id->FormatToString(str_name);
+	}
+	else if (m_name_id->GetValue(name_val))
+	{
+		wchar_t str[24];
+		swprintf_s(str, L"name_%X", name_val);
+		str_name = str;
+	}
+	else { str_name = L"not_show"; }
+	boost::property_tree::wptree val_pt;
+	m_value->ToProperty(val_pt);
+	prop.add_child(str_name, val_pt);
 }
 
 size_t NameToken::Encode(BYTE* buf, size_t buf_len)
@@ -716,6 +795,17 @@ NameToken* NameToken::CreateToken(UINT id, CTcgTokenBase* val)
 	token->m_name_id = MidAtomToken::CreateToken(id);
 	token->m_value = val;
 	token->m_value->AddRef();
+	return token;
+}
+
+NameToken* NameToken::CreateToken(UINT id, const BYTE* data, size_t data_len)
+{
+//	JCASSERT(data && data_len>0);
+	NameToken* token = jcvos::CDynamicInstance<NameToken>::Create();
+	if (!token) THROW_ERROR(ERR_MEM, L"failed on creating NameToken");
+	token->m_name_id = MidAtomToken::CreateToken(id);
+	token->m_value = MidAtomToken::CreateToken(data, data_len);
+//	token->m_value->AddRef();
 	return token;
 }
 
@@ -808,6 +898,12 @@ void CStatePhrase::ToString(std::wostream& out, UINT layer, int opt)
 	out << L"<STATE state=" << str_state << L"(" << (m_empty[0] ? 0xFFF : m_state[0]) << L"), ";
 	for (int ii = 1; ii < 3; ++ii) out << (m_empty[ii] ? 0xFFF : m_state[ii]) << L",";
 	out << L">" << std::endl;
+}
+
+void CStatePhrase::ToProperty(boost::property_tree::wptree& prop)
+{
+	const wchar_t* str_state = GetStateString(m_state[0], m_empty[0]);
+	prop.add(L"state", std::wstring(str_state));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1061,6 +1157,27 @@ void CallToken::ToString(std::wostream& out, UINT layer, int opt)
 	out << L"</CALL>" << std::endl;
 }
 
+void CallToken::ToProperty(boost::property_tree::wptree& prop)
+{
+	boost::property_tree::wptree call_pt;
+	call_pt.add(L"invoking", m_invoking_name);
+	call_pt.add(L"method", m_method_name);
+	boost::property_tree::wptree param_set;
+	
+	auto end_it = m_parameters.end();
+	for (auto it = m_parameters.begin(); it != end_it; ++it)
+	{
+//		boost::property_tree::wptree param_pt;
+		if (*it)	(*it)->ToProperty(param_set);
+//		param_set.push_back(std::make_pair( L"param", param_pt) );
+	}
+	call_pt.add_child(L"parameters", param_set);
+//	boost::property_tree::wptree state_pt;
+	if (m_state) m_state->ToProperty(call_pt);
+//	call_pt.add_child(L"state", state_pt);
+	prop.add_child(L"call", call_pt);
+}
+
 void CallToken::GetSubItem(ISecurityObject*& sub_item, const std::wstring& name)
 {
 	if (name == L"state")
@@ -1155,6 +1272,44 @@ void CParameterToken::ToString(std::wostream& out, UINT layer, int opt)
 		}
 	}
 	out << L"</Param>" << std::endl;
+
+}
+
+void CParameterToken::ToProperty(boost::property_tree::wptree& prop)
+{
+
+	switch (m_type)
+	{
+	case PARAM_INFO::UidRef: {
+		MidAtomToken* mt = dynamic_cast<MidAtomToken*>(m_token_val);
+		if (!mt)
+		{
+			prop.add(m_name, L"[err] expected atom of uid");
+			break;
+		}
+		UINT64 uid; //= mt->GetValue();
+		mt->GetValue(uid);
+		const UID_INFO* uid_info = g_uid_map->GetUidInfo(uid);
+		boost::property_tree::wptree pp;
+		
+		if (uid_info)	pp.add(L"obj", uid_info->m_name.c_str());
+		pp.add(L"uid", uid);
+		prop.add_child(m_name, pp);
+		break; }
+
+	case PARAM_INFO::Err_MissingRequest: {
+		prop.add(m_name, L"[err] missing reuqested parameter");
+		break;
+	}
+
+	default:
+		if (m_token_val)
+		{
+			boost::property_tree::wptree pp;
+			m_token_val->ToProperty(pp);
+			prop.add_child(m_name, pp);
+		}
+	}
 
 }
 

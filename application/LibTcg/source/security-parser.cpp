@@ -13,6 +13,8 @@ class CProtocolList : public tcg::ISecurityObject
 {
 public:
 	virtual void ToString(std::wostream & out, UINT layer, int opt);
+	virtual void ToProperty(boost::property_tree::wptree& prop);
+
 	virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index) {};
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name) {}
 
@@ -49,6 +51,18 @@ void CProtocolList::ToString(std::wostream& out, UINT layer, int opt)
 		out << L"    " << str_prot << std::endl;
 	}
 	out << L"</Protocols>" << std::endl;
+}
+
+void CProtocolList::ToProperty(boost::property_tree::wptree& prop)
+{
+	for (auto it = m_protocol_list.begin(); it != m_protocol_list.end(); ++it)
+	{
+		std::wstring str_prot;
+		ProtocolToString(str_prot, *it);
+		boost::property_tree::wptree pp;
+		pp.put_value(str_prot);
+		prop.push_back(std::make_pair(L"protocol", pp));
+	}
 }
 
 

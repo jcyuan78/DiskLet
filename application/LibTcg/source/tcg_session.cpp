@@ -3,6 +3,7 @@
 #include "../include/itcg.h"
 #include "../include/tcg_token.h"
 #include <boost/endian.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 #include <iostream>
 
 LOCAL_LOGGER_ENABLE(L"tcg.session", LOGGER_LEVEL_DEBUGINFO);
@@ -59,6 +60,16 @@ bool CTcgSession::ConnectDevice(IStorageDevice* dev)
 	return true;
 }
 
+bool CTcgSession::GetProtocol(BYTE* buf, size_t buf_len)
+{
+	JCASSERT(m_dev);
+	if (buf_len < SECTOR_SIZE) THROW_ERROR(ERR_APP, L"buf needs 512 bytes, buf_len=%d", buf_len);
+//	BYTE ir = m_dev->SecurityReceive(buf, 512, 0x01, 0x01);
+	BYTE ir = m_dev->SecurityReceive(buf, 512, tcg::PROTOCOL_INFO, 0);
+	if (ir != SUCCESS) { LOG_ERROR(L"[err] failed on calling security receive command"); }
+	return (ir==SUCCESS);
+}
+
 bool CTcgSession::GetFeatures(tcg::ISecurityObject*& feature, bool force)
 {
 	bool br = true;
@@ -113,7 +124,6 @@ BYTE CTcgSession::Properties(boost::property_tree::wptree& props, const std::vec
 		{
 			UINT val = it->second.get_value<UINT>();
 			jcvos::auto_interface<NameToken> param(NameToken::CreateToken(it->first, val));
-			//cmd->addOptionParam(param);
 			parameters->AddToken(param);
 		}
 		cmd->addOptionalParam(0, parameters);
@@ -121,16 +131,17 @@ BYTE CTcgSession::Properties(boost::property_tree::wptree& props, const std::vec
 	}
 	cmd->complete();
 
-	BYTE last_rc = InvokeMethod(*cmd, response);
-// pass
-	//jcvos::auto_interface<tcg::ISecurityParser> parser;
-	//tcg::GetSecurityParser(parser);
+	BYTE err = InvokeMethod(*cmd, response);
+	if (err)
+	{
+		THROW_ERROR(ERR_APP, L"failed on invoking property call, error code=0x%X", err);
+	}
+// parse
 	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
-	//parser->ParseSecurityCommand(sec_obj, response.getPayload(), response.getPayloadLen(), response.getProtocol(), 
-	//	response.getComId(), true);
-	response.getResult(sec_obj);
+	response.getResult(sec_obj, true);
 	sec_obj->ToString(std::wcout, -1, 0);
-
+	props.clear();
+	sec_obj->ToProperty(props);
 	return 0;
 }
 
@@ -522,6 +533,60 @@ BYTE CTcgSession::RevertTPer(const char* password, const TCG_UID authority, cons
 	return 0;
 }
 
+BYTE CTcgSession::SetLockingRange(UINT64 start, UINT64 length)
+{
+	return 0;
+}
+
+BYTE CTcgSession::WriteShadowMBR(jcvos::IBinaryBuffer* buf)
+{
+	LOG_STACK_TRACE();
+	//jcvos::auto_ptr<DtaCommand> _cmd(new DtaCommand);
+	//DtaCommand* cmd = (DtaCommand*)_cmd;
+	//if (NULL == cmd)	THROW_ERROR(ERR_MEM, L"failed on creating dta command");
+
+	//jcvos::auto_ptr<DtaResponse> _res(new DtaResponse);
+	//DtaResponse* res = (DtaResponse*)_res;
+	//if (NULL == res)	THROW_ERROR(ERR_MEM, L"failed on creating dta response");
+
+	//cmd->reset(OPAL_SHADOW_MBR, METHOD_SET);
+
+	// check perty : 优化：移到连接时
+	boost::property_tree::wptree prop;
+	std::vector<std::wstring> req;
+	prop.add<UINT>(L"MaxComPacketSize", 0x10000);
+	prop.add<UINT>(L"MaxPacketSize", 0xFFEC);
+	prop.add<UINT>(L"MaxIndTokenSize", 0xFFC8);
+	Properties(prop, req);
+
+	UINT32 tperMaxPacket = 0;
+	UINT32 tperMaxToken = 0;
+
+	// 获取block size
+	UINT32 block_size = (MAX_BUFFER_LENGTH > tperMaxPacket) ? tperMaxPacket : MAX_BUFFER_LENGTH;
+	if (block_size > (tperMaxToken - 4)) block_size = tperMaxToken - 4;
+
+	BYTE * _data = buf->Lock();
+	BYTE* data = _data;
+	size_t data_len = buf->GetSize();
+	size_t offset = 0;
+
+	while (data_len)
+	{
+		size_t write_size = min(data_len, block_size);
+		jcvos::auto_interface<NameToken> value(NameToken::CreateToken(OPAL_TOKEN::VALUES, data, write_size));
+		jcvos::auto_interface<tcg::ISecurityObject> res;
+		SetTable(res, OPAL_SHADOW_MBR, offset, value);
+
+		data += write_size;
+		data_len -= write_size;
+		offset += write_size;
+	}
+	buf->Unlock(_data);
+
+	return 0;
+}
+
 int CTcgSession::InvokeMethod(DtaCommand& cmd, DtaResponse& response)
 {
 	LOG_STACK_TRACE();
@@ -638,6 +703,9 @@ int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYT
 	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
 	resp.getResult(sec_obj);
 	sec_obj->ToString(std::wcout, -1, 0);
+	boost::property_tree::wptree res_pt;
+	sec_obj->ToProperty(res_pt);
+	boost::property_tree::write_xml("result_out.xml", res_pt);
 #endif
 	WORD status_code = resp.getStatusCode();
 	LOG_DEBUG(L"device returns status 0x%X", status_code);

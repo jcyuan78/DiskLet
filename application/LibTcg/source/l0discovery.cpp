@@ -170,6 +170,20 @@ void CTcgFeatureSet::ToString(std::wostream& out, UINT layer, int opt)
 	out << std::right <<std::endl;
 }
 
+void CTcgFeatureSet::ToProperty(boost::property_tree::wptree& prop)
+{
+	boost::property_tree::wptree pp;
+	for (auto it = m_features.begin(); it != m_features.end(); ++it)
+	{
+		boost::property_tree::wptree ff;
+		ff.add(L"version", it->m_version);
+		ff.add(L"code", it->m_code);
+		ff.add_child(L"fileds", it->m_features);
+		pp.add_child(it->m_name, ff);
+	}
+	prop.add_child(L"feature_set", pp);
+}
+
 const CTcgFeature * CTcgFeatureSet::GetFeature(CTcgFeature::TCG_FEATURE_CODE code)
 {
 	for (auto it = m_features.begin(); it != m_features.end(); ++it)

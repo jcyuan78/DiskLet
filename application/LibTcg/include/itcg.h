@@ -14,6 +14,7 @@ namespace tcg
 {
 	class ISecurityObject;
 
+	static const DWORD PROTOCOL_INFO = (0x00);
 	static const DWORD PROTOCOL_ID_TCG = (0x01);
 	static const DWORD PROTOCOL_ID_TPER = (0x02);
 	static const DWORD COMID_L0DISCOVERY = (0x01);
@@ -21,6 +22,7 @@ namespace tcg
 	class ITcgSession : virtual public IJCInterface
 	{
 	public:
+		virtual bool GetProtocol(BYTE* buf, size_t buf_len) = 0;
 		/// <summary>
 		/// 获取TCG支持的features (L0Discovery). 通常从Session的缓存获取，如果force为true，则重新执行L0Discovery。
 		/// </summary>
@@ -67,13 +69,15 @@ namespace tcg
 	class ISecurityObject : public IJCInterface
 	{
 	public:
-		/// <summary>
-		/// 
-		/// </summary>
+		/// <summary> 将token转换成string </summary>
 		/// <param name="out">  </param>
 		/// <param name="layer"></param>
 		/// <param name="opt">  </param>
 		virtual void ToString(std::wostream & out, UINT layer, int opt) =0;
+
+		/// <summary> 将token装换成boost的property tree结构 </summary>
+		/// <param name="prop"></param>
+		virtual void ToProperty(boost::property_tree::wptree& prop) = 0;
 		
 		/// <summary>获取command或者packet的payload。</summary>
 		/// <param name="index">子节点的索引。0为自身，>0为子结构的[index-1]</param>

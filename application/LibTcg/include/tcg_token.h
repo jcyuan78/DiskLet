@@ -72,6 +72,7 @@ public:
 	// interface for ISecurityObject
 	///<param name="opt"> 最高字节为indenttation</param>
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	virtual void ToProperty(boost::property_tree::wptree& prop)	{	}
 	virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name) {};
 
@@ -98,6 +99,8 @@ public:
 	virtual void Print(FILE* ff, int indentation);
 	// interface for ISecurityObject
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	virtual void ToProperty(boost::property_tree::wptree& prop);
+
 	virtual size_t Encode(BYTE* buf, size_t buf_len);
 
 	UINT64 FormatToInt(void) const;
@@ -121,6 +124,7 @@ public:
 public:
 	static MidAtomToken * CreateToken(const std::string& str);
 	static MidAtomToken* CreateToken(UINT val);
+	static MidAtomToken* CreateToken(const BYTE* data, size_t data_len);
 
 public:
 	size_t m_len;
@@ -144,6 +148,8 @@ public:
 	virtual void Print(FILE* ff, int indentation);
 	// interface for ISecurityObject
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	virtual void ToProperty(boost::property_tree::wptree& prop);
+
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name);
 	virtual size_t Encode(BYTE* buf, size_t buf_len);
 
@@ -174,6 +180,8 @@ public:
 	virtual void Print(FILE* ff, int indentation);
 	// interface for ISecurityObject
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	virtual void ToProperty(boost::property_tree::wptree& prop);
+
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name) 
 	{
 		if (m_value) m_value->GetSubItem(sub_item, name);
@@ -183,6 +191,7 @@ public:
 public:
 	static NameToken * CreateToken(const std::wstring& name, UINT val);
 	static NameToken * CreateToken(UINT id, CTcgTokenBase * val);
+	static NameToken* CreateToken(UINT id, const BYTE* data, size_t data_len);
 
 public:
 	//DWORD m_name_value;
@@ -209,7 +218,8 @@ public:
 	virtual void Print(FILE* ff, int indentation);
 	// interface for ISecurityObject
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
-	//virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
+	virtual void ToProperty(boost::property_tree::wptree& prop);
+
 public:
 	WORD getState(void) const { return (WORD)(m_empty[0]?0xFFF:m_state[0]); }
 
@@ -247,6 +257,8 @@ public:
 	}
 	virtual void Print(FILE* ff, int indentation);
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	virtual void ToProperty(boost::property_tree::wptree& prop);
+
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name)
 	{
 		if (name == L"")
@@ -260,14 +272,12 @@ public:
 public:
 	PARAM_INFO::PARAM_TYPE m_type;
 	DWORD m_num;
-	//std::wstring m_name;
 	UINT64 m_atom_val;
 	CTcgTokenBase* m_token_val;
-
 };
 
 
-///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// ==== Call Token ====
 class CallToken : public CTcgTokenBase
 {
@@ -278,9 +288,10 @@ public:
 public:
 	virtual bool InternalParse(BYTE*& begin, BYTE* end);
 	virtual void Print(FILE* ff, int indentation);
-	// interface for ISecurityObject
+
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
-	//virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
+	virtual void ToProperty(boost::property_tree::wptree& prop);
+
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name);
 
 

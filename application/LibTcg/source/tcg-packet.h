@@ -168,6 +168,7 @@ public:
 	virtual ~CTcgComPacket(void) { RELEASE(m_token); }
 public:
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
+	virtual void ToProperty(boost::property_tree::wptree& prop) { m_token->ToProperty(prop); };
 	virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name);
 
