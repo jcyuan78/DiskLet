@@ -36,9 +36,6 @@
     <ClCompile Include="source\storage_device.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="source\security.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="source\partition_parser.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -63,9 +60,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="source\pch.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="source\security.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="source\partition_parser.h">

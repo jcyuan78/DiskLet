@@ -386,17 +386,31 @@ namespace DiskLet
 		}
 	};
 
+	[CmdletAttribute(VerbsCommunications::Connect, "Storage")]
+	public ref class ConnectToStorageDevice : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		ConnectToStorageDevice(void) { dev_num = -1; };
+		~ConnectToStorageDevice(void) {};
+
+	public:
+		//[Parameter(Position = 0,
+		//	ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+		//	ParameterSetName = "ByDevice",
+		//	HelpMessage = "specify device object")]
+		//property Clone::StorageDevice^ dev;
+
+		[Parameter(Position = 0,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			ParameterSetName = "ByIndex",
+			HelpMessage = "specify device object")]
+		property int dev_num;
+
+
+	public:
+		virtual void InternalProcessRecord() override;
+	};
 
 	
 };	
 
-//
-//void SystemGuidToGUID(GUID & out_id, System::Guid ^ in_id);
-//System::Guid ^ GUIDToSystemGuid(const GUID & in_id);
-//
-//
-//Clone::PartitionType GuidToPartitionType(System::Guid ^ type_id);
-//System::Guid ^ GptTypeToGuid(const Clone::PartitionType & type);
-//
-//
-//void ToStdString(std::wstring & dst, System::String ^ src);

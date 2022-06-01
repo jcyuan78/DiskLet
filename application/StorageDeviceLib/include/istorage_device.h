@@ -181,11 +181,27 @@ public:
 //	virtual bool GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree & ext_info) = 0;
 	virtual STORAGE_HEALTH_STATUS GetHealthInfo(DEVICE_HEALTH_INFO & info, std::vector<STORAGE_HEALTH_INFO_ITEM> & ext_info) = 0;
 	// rd_wr: Read (true) or Write (false)
-	// Sector Read / Write通过Interface转用方法实现
+	// 
+	// 
+	// 
+
+
+	/// <summary> Sector Read / Write通过Device的Interface专用方法读写磁盘 </summary>
+	/// <param name="buf">[OUT] 读取到的data</param>
+	/// <param name="lba">[IN] 起始LBA地址</param>
+	/// <param name="sectors">[IN] 数据长度，以Sector为单位</param>
+	/// <param name="timeout"></param>
+	/// <returns></returns>
 	virtual bool SectorRead(BYTE * buf, FILESIZE lba, size_t sectors, UINT timeout) = 0;
 	virtual bool SectorWrite(BYTE * buf, FILESIZE lba, size_t sectors, UINT timeout) = 0;
 
-	// Read/Write方法通过系统Read/Write函数实现，
+	// 
+
+	/// <summary> Read/Write方法通过系统调用Read/Write读写磁盘 </summary>
+	/// <param name="buf">[OUT] 读取到的data</param>
+	/// <param name="lba">[IN] 起始LBA地址</param>
+	/// <param name="secs">[IN] 数据长度，以Sector为单位</param>
+	/// <returns></returns>
 	virtual bool Read(void * buf, FILESIZE lba, size_t secs) = 0;
 	virtual bool Write(const void * buf, FILESIZE lba, size_t secs) = 0;
 	virtual void FlushCache() = 0;

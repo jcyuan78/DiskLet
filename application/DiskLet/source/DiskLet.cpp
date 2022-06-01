@@ -71,7 +71,7 @@ void DiskLet::DiskCmdBase::GetDisk(IDiskInfo *& disk)
 	else if (DiskNumber >= 0)
 	{
 		UINT disk_num = global.m_manager->GetPhysicalDiskNum();
-		if (DiskNumber < 0 || DiskNumber >= disk_num) throw gcnew System::ApplicationException(
+		if (DiskNumber < 0 || (UINT)DiskNumber >= disk_num) throw gcnew System::ApplicationException(
 			String::Format(L"Invald index {0}. Index should be in 0 ~ {1}", DiskNumber, disk_num - 1));
 		global.m_manager->GetPhysicalDisk(disk, DiskNumber);
 	}
@@ -306,7 +306,7 @@ void DiskLet::ClearDisk::InternalProcessRecord()
 	if (Disk == nullptr)
 	{
 		UINT disk_num = global.m_manager->GetPhysicalDiskNum();
-		if (Number < 0 || Number >= disk_num) throw gcnew System::ApplicationException(
+		if (Number < 0 || (UINT)Number >= disk_num) throw gcnew System::ApplicationException(
 			String::Format(L"Invald index {0}. Index should be in 0 ~ {1}", Number, disk_num-1) );
 		jcvos::auto_interface<IDiskInfo> disk;
 		global.m_manager->GetPhysicalDisk(disk, Number);
@@ -362,12 +362,12 @@ void DiskLet::SetPartitionSize::InternalProcessRecord()
 	{
 		jcvos::auto_interface<IDiskInfo> disk;
 		UINT disk_num = global.m_manager->GetPhysicalDiskNum();
-		if (DiskNumber < 0 || DiskNumber >= disk_num) throw gcnew System::ApplicationException(
+		if (DiskNumber < 0 || (UINT)DiskNumber >= disk_num) throw gcnew System::ApplicationException(
 			String::Format(L"Invald disk index {0}. Index should be in 0 ~ {1}", DiskNumber, disk_num - 1));
 		global.m_manager->GetPhysicalDisk(disk, DiskNumber);
 
 		UINT part_num = disk->GetParttionNum();
-		if (Index <= 0 || Index >= part_num) throw gcnew System::ApplicationException(
+		if (Index <= 0 || (UINT)Index >= part_num) throw gcnew System::ApplicationException(
 			String::Format(L"Invalid partition index {0}, Index should be in 1~{1}", Index, part_num) );
 
 		disk->GetPartition(part, Index);
@@ -476,4 +476,13 @@ void DiskLet::SelectDisk::InternalProcessRecord()
 	WriteObject(info);
 
 	global.SelectDisk(disk);
+}
+
+void DiskLet::ConnectToStorageDevice::InternalProcessRecord()
+{
+	jcvos::auto_interface<IStorageDevice> dd;
+	IStorageDevice::CreateDeviceByIndex(dd, dev_num);
+	if (!dd) throw gcnew System::ApplicationException(L"device is not selected");
+	Clone::StorageDevice^ dev = gcnew Clone::StorageDevice(dd);
+	WriteObject(dev);
 }
