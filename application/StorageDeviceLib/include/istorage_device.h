@@ -218,6 +218,8 @@ public:
 	virtual BYTE SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid) = 0;
 	virtual BYTE SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid) = 0;
 
+	virtual BYTE DownloadFirmware(BYTE* buf, size_t buf_len, size_t block_size, DWORD slot, bool activate) = 0;
+
 #ifdef _DEBUG
 	//virtual HANDLE GetHandle() = 0;
 #endif
