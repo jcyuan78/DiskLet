@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 using namespace System;
 using namespace System::Management::Automation;
@@ -27,8 +27,8 @@ namespace Clone
 		DiskSize media_write;		// in MB unit
 		UINT64 error_count;
 		UINT   bad_block_num;
-		short  temperature_cur;	// µ¥Î»£ºÉãÊÏ¶È
-		short  temperature_max;	// µ¥Î»£ºÉãÊÏ¶È
+		short  temperature_cur;	// å•ä½ï¼šæ‘„æ°åº¦
+		short  temperature_max;	// å•ä½ï¼šæ‘„æ°åº¦
 		BYTE   percentage_used;
 	};
 
@@ -54,10 +54,19 @@ namespace Clone
 		HEALTH_INFO ^ GetHealthInfo(void);
 		INQUIRY ^ Inquiry(void);
 
+		/// <summary> è°ƒç”¨StorageDeviceçš„Read()æ–¹æ³•ï¼Œé€šè¿‡Windows File Readå‡½æ•°å®ç° </summary>
+		/// <param name="lba"></param>
+		/// <param name="secs"></param>
+		/// <returns></returns>
 		JcCmdLet::BinaryType^ ReadSectors(UINT64 lba, size_t secs)
 		{
-			return nullptr;
-
+			jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
+			bool br = jcvos::CreateBinaryBuffer(buf, secs * SECTOR_SIZE);
+			if (!br || !buf) THROW_ERROR(ERR_MEM, L"failed on creating buffer, size=%d", secs * SECTOR_SIZE);
+			BYTE* _buf = buf->Lock();
+			m_storage->Read(_buf, lba, secs);
+			buf->Unlock(_buf);
+			return gcnew JcCmdLet::BinaryType(buf);
 		}
 
 		void WriteSectors(UINT64 lba, size_t secs, JcCmdLet::BinaryType^ data)
@@ -110,5 +119,7 @@ namespace Clone
 	protected:
 		IStorageDevice *m_storage;
 	};
+
+
 
 };

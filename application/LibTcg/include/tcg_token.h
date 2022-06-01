@@ -1,34 +1,14 @@
-﻿#pragma once
+﻿///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma once
 
 #include <vector>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/cast.hpp>
+
 #include "itcg.h"
-
-///////////////////////////////////////////////////////////////////////////////
+#include "table_info.h"
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// ==== data structus ====
-class PARAM_INFO
-{
-public:
-	typedef std::vector<PARAM_INFO> PARAM_LIST;
-	enum PARAM_TYPE {
-		OtherType, 
-		Err_MissingRequest,	// dummy type: 表示错误，遗漏了相应的requested parameter
-		UidRef, 
-	};
-public:
-	DWORD m_num;
-	PARAM_TYPE m_type_id;
-	std::wstring m_name;
-	std::wstring m_type;
-};
-
-class METHOD_INFO
-{
-public:
-	UINT64 m_id;
-	std::vector<PARAM_INFO> m_required_param;
-	std::vector<PARAM_INFO> m_option_param;
-};
 
 class CUidMap;
 
@@ -105,6 +85,7 @@ public:
 
 	UINT64 FormatToInt(void) const;
 	bool FormatToString(std::wstring& str)const ;
+	bool FormatToByteString(std::wstring& str) const;
 	template <typename T>
 	bool GetValue(T& out) const
 	{
@@ -122,9 +103,11 @@ public:
 	}
 
 public:
-	static MidAtomToken * CreateToken(const std::string& str);
-	static MidAtomToken* CreateToken(UINT val);
+	static MidAtomToken * CreateToken(const std::wstring& str);
+	static MidAtomToken* CreateToken(UINT64 val);
 	static MidAtomToken* CreateToken(const BYTE* data, size_t data_len);
+	static MidAtomToken* CreateToken(const HUID data);
+	static MidAtomToken* CreateToken(const TCG_UID* data);
 
 public:
 	size_t m_len;
@@ -154,13 +137,26 @@ public:
 	virtual size_t Encode(BYTE* buf, size_t buf_len);
 
 
+// == local usage ==
 	// TcgToken虽然使用IJCInterface，但是不适用引用计数。
-	void AddToken(CTcgTokenBase* tt) { m_tokens.push_back(tt); tt->AddRef(); }
 	static ListToken* CreateToken(void) 
 	{
 		ListToken * list = jcvos::CDynamicInstance<ListToken>::Create(); 
 		list->m_type = CTcgTokenBase::List;
 		return list;
+	}
+	void AddToken(CTcgTokenBase* tt) { m_tokens.push_back(tt); tt->AddRef(); }
+	friend class CSecurityParser;
+protected:
+	CTcgTokenBase* GetSubToken(int index)
+	{
+		CTcgTokenBase* sub = nullptr;
+		if (index < m_tokens.size())
+		{
+			sub = m_tokens[index];
+			//if (sub) sub->AddRef();
+		}
+		return sub;
 	}
 public:
 	std::vector<CTcgTokenBase*> m_tokens;
@@ -188,14 +184,30 @@ public:
 	};
 	virtual size_t Encode(BYTE* buf, size_t buf_len);
 
-public:
-	static NameToken * CreateToken(const std::wstring& name, UINT val);
-	static NameToken * CreateToken(UINT id, CTcgTokenBase * val);
-	static NameToken* CreateToken(UINT id, const BYTE* data, size_t data_len);
+	template <typename T> T GetName(void)
+	{
+		JCASSERT(m_name_id);
+		T name;
+		m_name_id->GetValue<T>(name);
+		return name;
+	}
 
 public:
-	//DWORD m_name_value;
-//	CTcgTokenBase* m_name_id;
+//	static NameToken * CreateToken(const std::wstring& name, UINT val);
+	static NameToken * CreateToken(UINT id, CTcgTokenBase * val);
+	static NameToken* CreateToken(UINT id, const BYTE* data, size_t data_len);
+//	static NameToken* CreateToken(UINT id, UINT64 val);
+	template <typename T1, typename T2>
+	static NameToken* CreateToken(const T1& name, const T2& val)
+	{
+		NameToken* token = jcvos::CDynamicInstance<NameToken>::Create();
+		if (!token) THROW_ERROR(ERR_MEM, L"failed on creating NameToken");
+		token->m_name_id = MidAtomToken::CreateToken(name);
+		token->m_value = MidAtomToken::CreateToken(val);
+		return token;
+	}
+
+public:
 	MidAtomToken* m_name_id = nullptr;
 	CTcgTokenBase* m_value = nullptr;
 };
@@ -316,46 +328,6 @@ protected:
 };
 
 
-class UID_INFO
-{
-public:
-//	UID_INFO(void) {};
-	//~UID_INFO(void);
 
-public:
-	enum UIDCLASS {Unkonw = 0, Involing=0x01, Method=0x02, Object=0x04, Table=0x08};
-public:
-	UINT64 m_uid;
-	std::wstring m_name;
-	UIDCLASS m_class;
-
-	METHOD_INFO* m_method;
-};
-
-class CUidMap
-{
-public:
-	typedef std::map<UINT64, UID_INFO> UID_MAP;
-	~CUidMap(void);
-
-public:
-	/// <summary> Load Uid Infors from json file </summary>
-	/// <param name="fn"></param>
-	/// <returns></returns>
-	bool Load(const std::wstring& fn);
-	void Clear(void);
-	const UID_INFO* GetUidInfo(UINT64 uid) const;
-	UID_INFO* GetUidInfo(UINT64 uid);
-
-protected:
-	UINT64 StringToUid(const std::wstring& str);
-	UID_INFO::UIDCLASS StringToClass(const std::wstring& str);
-
-	void LoadParameter(boost::property_tree::wptree& pt, std::vector<PARAM_INFO>& param);
-
-protected:
-	UID_MAP m_map;
-	//std::map<UINT64, METHOD_INFO> m_method_map;
-};
 
 //extern CUidMap * g_uid_map;

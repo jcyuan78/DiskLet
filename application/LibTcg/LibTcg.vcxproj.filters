@@ -51,6 +51,12 @@
     <ClInclude Include="source\tcg-packet.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="include\tcg_parser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\table_info.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\l0discovery.cpp">
@@ -75,6 +81,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\tcg-packet.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\table-parser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\tcg_parser.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -5,6 +5,7 @@
 		{ "UID":"00 00 00 00 00 00 FF 02", "Name":"StartSession", 	"class":"method" },
 		{ "UID":"00 00 00 00 00 00 FF 03", "Name":"SyncSession", 	"class":"method" },
 		{ "UID":"00 00 00 01 00 00 10 01", "Name":"Table.DataStorage",	"class":"object;invoking" },
+		{ "UID":"00 00 00 08 00 00 00 00", "Name":"Table.ACE",			"class":"object;invoking;table" },
 		{ "UID":"00 00 00 09 00 00 00 06", "Name":"SID",			"class":"object;authority" },
 		{ "UID":"00 00 00 09 00 00 00 01", "Name":"Anybody",		"class":"object;authority;invoking" },
 		{ "UID":"00 00 00 09 00 01 00 01", "Name":"Admin1",			"class":"object;authority;invoking" },
@@ -18,6 +19,96 @@
 		{ "UID":"00 00 08 02 00 00 00 01", "Name":"Locking.Global",	"class":"object;invoking" },
 		{ "UID":"00 00 08 02 00 03 00 01", "Name":"Locking.Range01","class":"object;invoking" },
 		{ "UID":"00 00 08 03 00 00 00 01", "Name":"MBRControl",		"class":"object;invoking" }
+	],
+	
+	"Types": [
+	{
+		"ID": "00 00 02 09",	"Name": "uid",			"BaseType": "UidRef"
+	},
+	{
+		"ID": "00 00 02 0B",	"Name": "name",			"BaseType": "Simple", 
+		"MaxBytes":32
+	},
+	{
+		"ID": "00 00 04 0E",	"Name": "boolean_ACE",	"BaseType": "Enumeration",
+		"Enumeration": ["And", "Or", "Not"]
+	},
+	
+	{
+		"ID": "00 00 0C 05",	"Name": "Authority_object_ref",		"BaseType": "UidRef"
+	},
+	
+	{
+		"ID": "00 00 06 01",	"Name": "ACE_expression",			"BaseType": "Alternative",
+		"ElementTypes": ["Authority_object_ref", "boolean_ACE"]
+	},
+	
+	{
+		"ID": "00 00 08 01",	"Name": "AC_element",		"BaseType": "List",
+		"ElementType": "ACE_expression"
+	},
+	
+	{
+		"ID": "00 00 1A 03",	"Name": "ACE_columns",		"BaseType": "Set"
+	}
+	
+	],
+	
+	"Tables": [
+	{
+		"ID": "00 00 00 08",
+		"Name": "ACE",
+		"Columns": [
+			{"Number": 0, "Name": "UID", 			"Unique": 0, "Type": "uid"},
+			{"Number": 1, "Name": "Name", 			"Unique": 1, "Type": "name"},
+			{"Number": 2, "Name": "CommonName", 	"Unique": 1, "Type": "uid"},
+			{"Number": 3, "Name": "BooleanExpr", 	"Unique": 0, "Type": "AC_element"},
+			{"Number": 4, "Name": "Columns", 		"Unique": 0, "Type": "ACE_columns"}	
+		],
+		"Rows": [
+			{"ID": "00 00 00 01", "Name": "ACE_Anybody"},
+			{"ID": "00 00 8C 02", "Name": "ACE_C_PIN_SID_Get_NOPIN"},
+			{"ID": "00 03 D0 00", "Name": "ACE_Locking_GlobalRange_Get_RangeStartToActiveKey"}
+		]
+	},
+	{
+		"ID": "00 00 00 09",
+		"Name": "Authority",
+		"Columns": [
+			{"Number": 0,  "Name": "UID", 			"Unique": 0, "Type": "uid" },
+			{"Number": 1,  "Name": "Name", 			"Unique": 1, "Type": "name"},
+			{"Number": 2,  "Name": "CommonName", 	"Unique": 1, "Type": "uid"},
+			{"Number": 3,  "Name": "IsClass", 		"Unique": 0, "Type": "boolean"},
+			{"Number": 4,  "Name": "Class", 		"Unique": 0, "Type": "Authority_object_ref"}	
+			{"Number": 5,  "Name": "Enabled",		"Unique": 0, "Type": "boolean" },
+			{"Number": 6,  "Name": "Secure",		"Unique": 0, "Type": "messaging_type"},
+			{"Number": 7,  "Name": "HashAndSign", 	"Unique": 0, "Type": "hash_protocol"},
+			{"Number": 8,  "Name": "PresentCertificate", 		"Unique": 0, "Type": "boolean"},
+			{"Number": 9,  "Name": "Operation", 	"Unique": 0, "Type": "auth_method"}	
+			{"Number": 10, "Name": "Credential", 	"Unique": 0, "Type": "cred_object_uidref" },
+			{"Number": 11, "Name": "ResponseSing",	"Unique": 0, "Type": "Authority_object_ref"},
+			{"Number": 12, "Name": "ResponseExch", 	"Unique": 0, "Type": "Authority_object_ref"},
+			{"Number": 13, "Name": "ClockStart",	"Unique": 0, "Type": "date"},
+			{"Number": 14, "Name": "ClockEnd", 		"Unique": 0, "Type": "date"}	
+			{"Number": 15, "Name": "Limit",			"Unique": 0, "Type": "uinteger_4" },
+			{"Number": 16, "Name": "Users",			"Unique": 0, "Type": "uinteger_4"},
+			{"Number": 17, "Name": "Log",		 	"Unique": 0, "Type": "log_select"},
+			{"Number": 18, "Name": "LogTo", 		"Unique": 0, "Type": "LogList_object_ref"}
+		],
+		"Rows": [
+			{"ID": "00 00 00 01", "Name": "Anybody"},
+			{"ID": "00 00 00 02", "Name": "Admins"},
+			{"ID": "00 00 00 03", "Name": "Makers"},
+			{"ID": "00 00 00 06", "Name": "SID"},
+			{"ID": "00 00 02 01", "Name": "AdminSP.Admin1"},
+			{"ID": "00 01 00 01", "Name": "LockingSP.Admin1"},
+			{"ID": "00 01 00 02", "Name": "LockingSP.Admin2"},
+			{"ID": "00 03 00 00", "Name": "Users"},
+			{"ID": "00 03 00 01", "Name": "User1"},
+			{"ID": "00 03 00 02", "Name": "User2"}
+		]
+	},
+	
 	],
 	
 	"Methods": [ 
@@ -37,14 +128,14 @@
 		"Name":"StartSession",
 		"Requested": [ 
 			{ "Number":0,"Name":"HostSessionID", 	"Type":"uinteger"},
-			{ "Number":1,"Name":"SPID", 			"Type":"uidref"},
+			{ "Number":1,"Name":"SPID", 			"Type":"UidRef"},
 			{ "Number":2,"Name":"Write", 			"Type":"boolean"}
 		],
 		"Optional":[
 			{ "Number":0, "Name":"HostChallenge", 	"Type":"bytes"},
-			{ "Number":1, "Name":"HostExchangeAuthority", "Type":"uidref"},
+			{ "Number":1, "Name":"HostExchangeAuthority", "Type":"UidRef"},
 			{ "Number":2, "Name":"HostExchangeCert", "Type":"bytes"},
-			{ "Number":3, "Name":"HostSigningAuthority", "Type":"uidref"},
+			{ "Number":3, "Name":"HostSigningAuthority", "Type":"UidRef"},
 			{ "Number":4, "Name":"HostSigningCert", "Type":"bytes"},
 			{ "Number":5, "Name":"SesstionTimeOut", "Type":"uinteger"},
 			{ "Number":6, "Name":"TransTimeOut", 	"Type":"uinteger"},
@@ -74,7 +165,7 @@
 		"UID":"00 00 00 06 00 00 00 08", 
 		"Name":"Next",			
 		"Optional": [
-			{ "Number":0, "Name":"Where", "Type":"uidref"},
+			{ "Number":0, "Name":"Where", "Type":"UidRef"},
 			{ "Number":1, "Name":"Count", "Type":"uinteger"}
 		]
 	},

@@ -45,7 +45,7 @@ void CTcgComPacket::ToString(std::wostream& out, UINT layer, int opt)
 		out << L"</ComPacket>" << std::endl;
 		out << std::right;
 	}
-	if (m_token) m_token->ToString(out, layer, opt);
+	if (m_stream) m_stream->ToString(out, layer, opt);
 }
 
 void CTcgComPacket::GetPayload(jcvos::IBinaryBuffer*& data, int index)
@@ -76,24 +76,25 @@ void CTcgComPacket::GetSubItem(ISecurityObject*& sub_item, const std::wstring& n
 {
 	if (name == L"token")
 	{
-		sub_item = m_token;
+		sub_item = m_stream;
 		if (sub_item) sub_item->AddRef();
 	}
 }
 
 #define MAX_TOKEN_SIZE	(1024*4)
 
-bool CTcgComPacket::ParseData(const BYTE* buf, size_t buf_len, bool receive)
+bool CTcgComPacket::ParseData(const BYTE* buf, size_t buf_len, DWORD comid, bool receive)
 {
 	// copy data
 	m_data.reset(new BYTE[buf_len]);
 	memcpy_s(m_data.get(), buf_len, buf, buf_len);
 	m_com_packet.SetByRawData(m_data.get(), buf_len);
+	LOG_DEBUG(L"outer comid=%X, inner comid=%X", comid, m_com_packet.com_id);
 
 	// parse tcg token
-	m_token_data.reset(new BYTE[buf_len]);		// 4KB
-	BYTE* data = m_token_data.get();
-	m_token_len = 0;
+	m_stream_data.reset(new BYTE[buf_len]);		// 4KB
+	BYTE* data = m_stream_data.get();
+	m_stream_len = 0;
 
 	for (auto pit = m_com_packet.packets.begin(); pit != m_com_packet.packets.end(); ++pit)
 	{
@@ -102,12 +103,12 @@ bool CTcgComPacket::ParseData(const BYTE* buf, size_t buf_len, bool receive)
 		{
 			if (sit->kind == SUBPACKET_KIND_DATA)
 			{
-				if (m_token_len + sit->length >= buf_len) THROW_ERROR(ERR_APP, L"token data too long");
-				memcpy_s(data + m_token_len, (buf_len - m_token_len), sit->payload, sit->length);
-				m_token_len += sit->length;
+				if (m_stream_len + sit->length >= buf_len) THROW_ERROR(ERR_APP, L"token data too long");
+				memcpy_s(data + m_stream_len, (buf_len - m_stream_len), sit->payload, sit->length);
+				m_stream_len += sit->length;
 			}
 		}
 	}
-	m_token = CTcgTokenBase::SyntaxParse(data, data + m_token_len, data, receive);
+	m_stream = CTcgTokenBase::SyntaxParse(data, data + m_stream_len, data, receive);
 	return true;
 }
