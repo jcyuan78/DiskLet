@@ -40,7 +40,7 @@ namespace SecureLet
 	public:
 
 		//static TcgUid^ MakeUid(System::Collections::ArrayList^ uid)
-		static TcgUid^ MakeUid(array<int>^ uid)
+		static TcgUid^ FromRaw(array<int>^ uid)
 		{
 			if (uid->Length != 8) throw gcnew System::ApplicationException(L"size of uid shoud be 8");
 			TCG_UID uu;
@@ -58,7 +58,7 @@ namespace SecureLet
 			return uid;
 		}
 
-		static TcgUid^ MakeUid(TCG_UID_INDEX index)
+		static TcgUid^ FromIndex(TCG_UID_INDEX index)
 		{
 			return gcnew TcgUid(ToUid(index));
 		}

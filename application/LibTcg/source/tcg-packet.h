@@ -164,27 +164,26 @@ public:
 class CTcgComPacket : public tcg::ISecurityObject
 {
 public:
-	CTcgComPacket(void) : m_token(NULL) {}
-	virtual ~CTcgComPacket(void) { RELEASE(m_token); }
+	CTcgComPacket(void) : m_stream(NULL) {}
+	virtual ~CTcgComPacket(void) { RELEASE(m_stream); }
 public:
 	virtual void ToString(std::wostream& out, UINT layer, int opt);
-	virtual void ToProperty(boost::property_tree::wptree& prop) { m_token->ToProperty(prop); };
+	virtual void ToProperty(boost::property_tree::wptree& prop) { if (m_stream) m_stream->ToProperty(prop); };
 	virtual void GetPayload(jcvos::IBinaryBuffer*& data, int index);
 	virtual void GetSubItem(ISecurityObject*& sub_item, const std::wstring& name);
 
 public:
-	bool ParseData(const BYTE* buf, size_t buf_len, bool receive);
+	bool ParseData(const BYTE* buf, size_t buf_len, DWORD comid, bool receive);
 
 protected:
 	COM_PACKET_HEADER m_com_packet;
-	CTcgTokenBase* m_token;
+	CTcgTokenBase* m_stream;
 	bool m_receive;
-	//jcvos::CStaticInstance<CTcgPacket> m_packet;
 
 	std::shared_ptr<BYTE> m_data;
 	BYTE*	m_offset;
 	size_t	m_data_len;
 
-	std::shared_ptr<BYTE> m_token_data;
-	size_t	m_token_len;
+	std::shared_ptr<BYTE> m_stream_data;
+	size_t	m_stream_len;
 };

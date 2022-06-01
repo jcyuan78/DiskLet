@@ -32,20 +32,40 @@ public:
 
 	//	virtual BYTE SetTable(const TCG_UID table, OPAL_TOKEN name, vector<BYTE>& value);
 	virtual BYTE SetTable(tcg::ISecurityObject*& res, const TCG_UID table, int name, const char* value);
+	/// <summary> 用于设置Table，忽略where参数，以column </summary>
+	/// <param name="res"></param>
+	/// <param name="table"></param>
+	/// <param name="name">column id</param>
+	/// <param name="val"></param>
+	/// <returns></returns>
 	virtual BYTE SetTable(tcg::ISecurityObject*& res, const TCG_UID table, int name, int val);
+	/// <summary> SetTable的一般形式 </summary>
+	/// <param name="res">[OUT]返回结果</param>
+	/// <param name="table">[IN]需要设置的table id</param>
+	/// <param name="_where">[IN, OPT]根据TCG定义的Where参数</param>
+	/// <param name="val">[IN, OPT]根据TCG定义的val参数</param>
+	/// <returns></returns>
+	virtual BYTE SetTableBase(tcg::ISecurityObject*& res, const TCG_UID table, CTcgTokenBase* _where, 
+		CTcgTokenBase* value);
 //	BYTE SetTable(const TCG_UID table, int name, const char * value);
 
+	virtual BYTE Activate(tcg::ISecurityObject*& res, const TCG_UID obj);
 	virtual BYTE Revert(tcg::ISecurityObject*& res, const TCG_UID sp);
+	virtual BYTE GenKey(tcg::ISecurityObject*& res, const TCG_UID obj, UINT public_exp, UINT pin_length);
+
+	virtual BYTE TperReset(void);
+
 	virtual void Reset(void);
 
-	virtual BYTE Activate(tcg::ISecurityObject*& res, const TCG_UID obj);
 
 // hi-level features (with session open)
     virtual BYTE GetDefaultPassword(std::string& password);
 	virtual BYTE SetSIDPassword(const char* old_pw, const char* new_pw);
 	virtual BYTE RevertTPer(const char* password, const TCG_UID authority, const TCG_UID sp);
-	virtual BYTE SetLockingRange(UINT64 start, UINT64 length);
+	virtual BYTE SetLockingRange(UINT range_id, UINT64 start, UINT64 length);
 	virtual BYTE WriteShadowMBR(jcvos::IBinaryBuffer * buf);
+	virtual void SetPassword(UINT user_id, bool admin, const char* new_pw);
+	virtual void AssignRangeToUser(UINT range_id, UINT user_id, bool keep_admin);
 
 
 protected:
@@ -60,8 +80,11 @@ protected:
     void PackagePasswordToken(vector<BYTE>& hash, const char* password);
     BYTE Authenticate(vector<uint8_t> Authority, const char* Challenge);
 	void Abort(void);
-
-
+	/// <summary> 生成LockingSP的Admin或者User的UID </summary>
+	/// <param name="uid">[OUT]生成的UID</param>
+	/// <param name="admin_user">[IN]true: admin, false: user</param>
+	/// <param name="id"></param>
+	void GetAuthorityUid(TCG_UID & uid, UINT tab,  bool admin_user, UINT id);
 protected:
 	CTcgFeatureSet * m_feature_set = nullptr;
 
@@ -75,6 +98,9 @@ protected:
 
 	// session 是否打开
 	bool m_is_open;
+
+	boost::property_tree::wptree m_tper_property;
+	UINT32 m_tperMaxPacket=0, m_tperMaxToken=0;
 
 #ifdef _DEBUG
 	//命令计数，用于保存调试数据

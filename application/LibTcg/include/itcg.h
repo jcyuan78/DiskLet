@@ -18,10 +18,12 @@ namespace tcg
 	static const DWORD PROTOCOL_ID_TCG = (0x01);
 	static const DWORD PROTOCOL_ID_TPER = (0x02);
 	static const DWORD COMID_L0DISCOVERY = (0x01);
+	static const DWORD COMID_TPER_RESET = (0x04);
 
 	class ITcgSession : virtual public IJCInterface
 	{
 	public:
+	// ==== 基本API：直接对应TCG的command或者call ====
 		virtual bool GetProtocol(BYTE* buf, size_t buf_len) = 0;
 		/// <summary>
 		/// 获取TCG支持的features (L0Discovery). 通常从Session的缓存获取，如果force为true，则重新执行L0Discovery。
@@ -48,8 +50,14 @@ namespace tcg
 
 		virtual BYTE Activate(ISecurityObject*& res, const TCG_UID obj) = 0;
 		virtual BYTE Revert(ISecurityObject*& res, const TCG_UID sp) = 0;
+		virtual BYTE TperReset(void) = 0;
 
-		// == hi-level features (with session open) ==
+	// ==== 中级功能：一些TCG call的组合，或者特定调用，需要start session ====
+		virtual BYTE WriteShadowMBR(jcvos::IBinaryBuffer* buf) = 0;
+		virtual BYTE SetLockingRange(UINT range_id, UINT64 start, UINT64 length) = 0;
+		virtual void SetPassword(UINT user_id, bool admin, const char* new_pw) = 0;
+
+	// ==== 高级功能：完成一些特定的功能，实现中已经包括了start session ====
 		virtual BYTE RevertTPer(const char* password, const TCG_UID authority, const TCG_UID sp) = 0;
 		virtual BYTE GetDefaultPassword(std::string& password) = 0;
 		virtual BYTE SetSIDPassword(const char* old_pw, const char* new_pw) = 0;
@@ -97,8 +105,12 @@ namespace tcg
 	public:
 		virtual bool Initialize(const std::wstring& uid_config, const std::wstring& l0_config) = 0;
 		//virtual bool ParseSecurityCommand(std::vector<ISecurityObject*>& out, jcvos::IBinaryBuffer* payload, DWORD protocol, DWORD comid, bool receive) = 0;
-		virtual bool ParseSecurityCommand(ISecurityObject* & out, jcvos::IBinaryBuffer* payload, DWORD protocol, DWORD comid, bool receive) = 0;
-		virtual bool ParseSecurityCommand(ISecurityObject* & out, const BYTE* payload, size_t len, DWORD protocol, DWORD comid, bool receive) = 0;
+		virtual bool ParseSecurityCommand(ISecurityObject* & out, jcvos::IBinaryBuffer* payload, DWORD protocol, 
+			DWORD comid, bool receive) = 0;
+		virtual bool ParseSecurityCommand(ISecurityObject* & out, const BYTE* payload, size_t len, DWORD protocol, 
+			DWORD comid, bool receive) = 0;
+		virtual bool TableParse(boost::property_tree::wptree& table, const TCG_UID table_id, ISecurityObject* stream)=0;
+
 	};
 	
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

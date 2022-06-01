@@ -107,8 +107,12 @@ namespace SecureLet
 			JCASSERT(m_session);
 			const char* pw = nullptr;
 			std::string str_pwd;
-			ToStdString(str_pwd, challenge);
-			if (!str_pwd.empty())	pw = str_pwd.c_str();
+			if (challenge != nullptr)
+			{
+				ToStdString(str_pwd, challenge);
+				//			if (!str_pwd.empty())	pw = str_pwd.c_str();
+				pw = str_pwd.c_str();
+			}
 			BYTE err = m_session->StartSession(sp->GetUid(), pw, auth->GetUid(), write);
 			if (err) throw gcnew System::ApplicationException(L"failed on starting session");
 		}
@@ -162,6 +166,13 @@ namespace SecureLet
 			if (err) throw gcnew System::ApplicationException(L"failed on Reverting");
 		}
 
+		void TperReset(void)
+		{
+			JCASSERT(m_session);
+			BYTE err = m_session->TperReset();
+			if (err) throw gcnew System::ApplicationException(L"failed on TperReset");
+		}
+
 	// == high level funcsions == 
 
 		void PSIDRevert(String^ pwd)
@@ -173,6 +184,35 @@ namespace SecureLet
 			BYTE err = m_session->RevertTPer(str_pw.c_str(), OPAL_PSID_UID, OPAL_ADMINSP_UID);
 			if (err) throw gcnew System::ApplicationException(L"failed on PSID reverting");
 		}
+
+		void SetLockingRange(UINT range, UINT64 start_lba, UINT64 sectors)
+		{
+			JCASSERT(m_session);
+			BYTE err = m_session->SetLockingRange(range, start_lba, sectors);
+			if (err) throw gcnew System::ApplicationException(L"failed on setting locking range");
+		}
+
+		void SetUserPassword(bool admin, UINT user_id, String^ password)
+		{
+			JCASSERT(m_session);
+			const char* pw = nullptr;
+			std::string str_pwd;
+			ToStdString(str_pwd, password);
+			if (str_pwd.empty())	throw gcnew System::ApplicationException(L"password cannot be empty");
+			m_session->SetPassword(user_id, admin, str_pwd.c_str());
+//			if (err) throw gcnew System::ApplicationException(L"failed on starting session");
+		}
+
+		void WriteShadowMBR(JcCmdLet::BinaryType^ data)
+		{
+			JCASSERT(m_session);
+			jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
+			data->GetData(buf);
+			BYTE err = m_session->WriteShadowMBR(buf);
+			if (err) throw gcnew System::ApplicationException(L"failed on setting MBR");
+		}
+
+
 
 	protected:
 		tcg::ITcgSession* m_session;
