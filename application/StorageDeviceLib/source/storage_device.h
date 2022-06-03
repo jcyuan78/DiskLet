@@ -80,6 +80,10 @@ public:
 
 	virtual BYTE SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
 	virtual BYTE SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
+
+	virtual BYTE DownloadFirmware(BYTE* buf, size_t buf_len, size_t block_size, DWORD slot, bool activate);
+
+
 protected:
 	// 用于派生类检测链接的device是否合适
 	virtual bool OnConnectDevice(void) { return true; };

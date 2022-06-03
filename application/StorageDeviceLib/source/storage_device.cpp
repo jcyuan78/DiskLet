@@ -10,10 +10,12 @@ LOCAL_LOGGER_ENABLE(L"storage_device", LOGGER_LEVEL_NOTICE);
 
 #define SCSIOP_SECURITY_IN		0xA2
 #define SCSIOP_SECURITY_OUT		0xB5
+#define SCSIOP_WRITE_BUFFER		0x3B
 
 #define CDB12GENERIC_LENGTH                  12
 
 #define Lo
+
 
 //
 // SCSI bus status codes.
@@ -276,6 +278,43 @@ BYTE CStorageDeviceComm::SecuritySend(BYTE* buf, size_t buf_len, DWORD protocoli
 		(BYTE*)&sense, sizeof(SENSE_DATA), 1500);
 	if (res != SCSISTAT_GOOD) LOG_ERROR(L"[err] device returns error (0x%02X): %s", res, ScsiStatusCodeToString(res));
 	return res;
+}
+
+struct CB_WRITE_BUFFER
+{
+	BYTE op = SCSIOP_WRITE_BUFFER;
+	UINT mode_specific : 3;
+	UINT mode : 5;
+	BYTE buffer_id;
+	UINT buffer_offset : 24;
+	UINT length : 24;
+	BYTE control;
+};
+
+
+BYTE CStorageDeviceComm::DownloadFirmware(BYTE* buf, size_t buf_len, size_t block_size, DWORD slot, bool activate)
+{
+	size_t remain = buf_len;
+	DWORD buf_offset = 0;	// device端的buffer offset
+	BYTE* offset = buf;
+	JCASSERT(sizeof(CB_WRITE_BUFFER) == 10);
+	CB_WRITE_BUFFER cb;
+	cb.mode = 0x0E; // download and save only
+//	memset(&cb, 0, 10);
+
+
+//	cb[0] = SCSIOP_WRITE_BUFFER;
+
+
+	//while (1)
+	//{
+	//	size_t download_size = min(remain, block_size);
+	//	cb.mode = ;
+	//	cb.buffer_offset = 
+	//	ScsiCommand()
+
+	//}
+	return 0;
 }
 
 
