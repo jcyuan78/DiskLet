@@ -79,17 +79,17 @@
 			{"Number": 1,  "Name": "Name", 			"Unique": 1, "Type": "name"},
 			{"Number": 2,  "Name": "CommonName", 	"Unique": 1, "Type": "uid"},
 			{"Number": 3,  "Name": "IsClass", 		"Unique": 0, "Type": "boolean"},
-			{"Number": 4,  "Name": "Class", 		"Unique": 0, "Type": "Authority_object_ref"}	
+			{"Number": 4,  "Name": "Class", 		"Unique": 0, "Type": "Authority_object_ref"},	
 			{"Number": 5,  "Name": "Enabled",		"Unique": 0, "Type": "boolean" },
 			{"Number": 6,  "Name": "Secure",		"Unique": 0, "Type": "messaging_type"},
 			{"Number": 7,  "Name": "HashAndSign", 	"Unique": 0, "Type": "hash_protocol"},
 			{"Number": 8,  "Name": "PresentCertificate", 		"Unique": 0, "Type": "boolean"},
-			{"Number": 9,  "Name": "Operation", 	"Unique": 0, "Type": "auth_method"}	
+			{"Number": 9,  "Name": "Operation", 	"Unique": 0, "Type": "auth_method"},	
 			{"Number": 10, "Name": "Credential", 	"Unique": 0, "Type": "cred_object_uidref" },
 			{"Number": 11, "Name": "ResponseSing",	"Unique": 0, "Type": "Authority_object_ref"},
 			{"Number": 12, "Name": "ResponseExch", 	"Unique": 0, "Type": "Authority_object_ref"},
 			{"Number": 13, "Name": "ClockStart",	"Unique": 0, "Type": "date"},
-			{"Number": 14, "Name": "ClockEnd", 		"Unique": 0, "Type": "date"}	
+			{"Number": 14, "Name": "ClockEnd", 		"Unique": 0, "Type": "date"},	
 			{"Number": 15, "Name": "Limit",			"Unique": 0, "Type": "uinteger_4" },
 			{"Number": 16, "Name": "Users",			"Unique": 0, "Type": "uinteger_4"},
 			{"Number": 17, "Name": "Log",		 	"Unique": 0, "Type": "log_select"},
@@ -107,7 +107,7 @@
 			{"ID": "00 03 00 01", "Name": "User1"},
 			{"ID": "00 03 00 02", "Name": "User2"}
 		]
-	},
+	}
 	
 	],
 	

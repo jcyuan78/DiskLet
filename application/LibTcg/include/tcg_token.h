@@ -106,8 +106,8 @@ public:
 	static MidAtomToken * CreateToken(const std::wstring& str);
 	static MidAtomToken* CreateToken(UINT64 val);
 	static MidAtomToken* CreateToken(const BYTE* data, size_t data_len);
-	static MidAtomToken* CreateToken(const HUID data);
-	static MidAtomToken* CreateToken(const TCG_UID* data);
+	static MidAtomToken* CreateToken(const HUID& data);
+	static MidAtomToken* CreateToken(const TCG_UID & data);
 
 public:
 	size_t m_len;

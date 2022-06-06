@@ -212,6 +212,11 @@ namespace SecureLet
 			if (err) throw gcnew System::ApplicationException(L"failed on setting MBR");
 		}
 
+		void AssignRangeToUser(UINT range_id, UINT user_id)
+		{
+			JCASSERT(m_session);
+			m_session->AssignRangeToUser(range_id, user_id, false);
+		}
 
 
 	protected:

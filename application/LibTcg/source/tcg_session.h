@@ -149,6 +149,9 @@ public:
 	virtual BYTE SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
 	virtual BYTE SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
 
+	virtual BYTE DownloadFirmware(BYTE* buf, size_t buf_len, size_t block_size, DWORD slot, bool activate) { return 0; }
+
+
 public:
 	std::wstring m_path;
 };

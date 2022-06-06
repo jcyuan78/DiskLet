@@ -525,6 +525,28 @@ MidAtomToken* MidAtomToken::CreateToken(const BYTE* data, size_t data_len)
 	return token;
 }
 
+MidAtomToken* MidAtomToken::CreateToken(const HUID& data)
+{
+	MidAtomToken* token = jcvos::CDynamicInstance<MidAtomToken>::Create();
+	if (token == nullptr) THROW_ERROR(ERR_MEM, L"failed on creating MidAtomToken");
+	token->m_type = CTcgTokenBase::BinaryAtom;
+	token->m_signe = false;
+	token->m_len = 4;
+	memcpy_s(token->m_data_val, 8, data, 8);
+	return token;
+}
+
+MidAtomToken* MidAtomToken::CreateToken(const TCG_UID& data)
+{
+	MidAtomToken* token = jcvos::CDynamicInstance<MidAtomToken>::Create();
+	if (token == nullptr) THROW_ERROR(ERR_MEM, L"failed on creating MidAtomToken");
+	token->m_type = CTcgTokenBase::BinaryAtom;
+	token->m_signe = false;
+	token->m_len = 8;
+	memcpy_s(token->m_data_val, 8, data, 8);
+	return token;
+}
+
 MidAtomToken* MidAtomToken::CreateToken(UINT64 val)
 {
 	MidAtomToken* token = jcvos::CDynamicInstance<MidAtomToken>::Create();
@@ -712,36 +734,52 @@ void NameToken::Print(FILE* ff, int indentation)
 void NameToken::ToString(std::wostream& out, UINT layer, int opt)
 {
 	int indentation = HIBYTE(HIWORD(opt));
-	out << (INDENTATION - indentation);
+//	out << (INDENTATION - indentation);
 	size_t sub_len = m_value ? m_value->GetPayloadLen() : 0;
 //	MidAtomToken* nn = dynamic_cast<MidAtomToken*>(m_name_id);
-	DWORD val;
-	if (m_name_id && m_name_id->m_type == CTcgTokenBase::BinaryAtom)
-	{
-		std::wstring str;
-		m_name_id->FormatToString(str);
-		out << L"<NAME name=" << str << L">";
-	}
-	else if (m_name_id && m_name_id->GetValue(val))	
-	{
-		out << L"<NAME name=" << val << L">";	
-	}
-	else
-	{
-		out << L"<NAME name=";
-		m_name_id->ToString(out, layer, opt);
-		out << L">";
-	}
+//	DWORD val;
+	out << (INDENTATION - indentation) << L"<NAME_TOKEN>" << std::endl;
 	
+	//if (m_name_id && m_name_id->m_type == CTcgTokenBase::BinaryAtom)
+	//{
+	//	std::wstring str;
+	//	m_name_id->FormatToString(str);
+	//	out << L"<NAME name=" << str << L">";
+	//}
+	//else if (m_name_id && m_name_id->GetValue(val))	
+	//{
+	//	out << L"<NAME name=" << val << L">";	
+	//}
+	//else
+	//{
+	//	out << L"<NAME name=";
+	//	m_name_id->ToString(out, layer, opt);
+	//	out << L">";
+	//}
+	indentation += 2;
+	if (layer > 0)
+	{
+		out << (INDENTATION - indentation) << L"<name>";
+//		if (sub_len > NEW_LINE_SUB)		out << std::endl;
+//		opt += 0x02000000;
+		m_name_id->ToString(out, layer - 1, opt);
+//		if (sub_len > NEW_LINE_SUB)		out << std::endl;
+//		out << (INDENTATION - indentation);
+		out << L"</name>" << std::endl;
+	}
+
 	if (layer > 0 && m_value)
 	{
 		if (sub_len > NEW_LINE_SUB)		out << std::endl;
+		out << L"<value>";
 		opt += 0x02000000;
 		m_value->ToString(out, layer - 1, opt);
 		if (sub_len > NEW_LINE_SUB)		out << std::endl;
-		out << (INDENTATION - indentation);
+//		out << (INDENTATION - indentation);
+		out << L"</value>";
 	}
-	out << L"</NAME>" << std::endl;
+	indentation -= 2;
+	out << (INDENTATION - indentation)<< L"</NAME_TOKEN>" << std::endl;
 }
 
 void NameToken::ToProperty(boost::property_tree::wptree& prop)

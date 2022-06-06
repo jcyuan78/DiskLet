@@ -56,6 +56,7 @@ namespace tcg
 		virtual BYTE WriteShadowMBR(jcvos::IBinaryBuffer* buf) = 0;
 		virtual BYTE SetLockingRange(UINT range_id, UINT64 start, UINT64 length) = 0;
 		virtual void SetPassword(UINT user_id, bool admin, const char* new_pw) = 0;
+		virtual void AssignRangeToUser(UINT range_id, UINT user_id, bool keep_admin) = 0;
 
 	// ==== 高级功能：完成一些特定的功能，实现中已经包括了start session ====
 		virtual BYTE RevertTPer(const char* password, const TCG_UID authority, const TCG_UID sp) = 0;

@@ -744,14 +744,24 @@ void CTcgSession::AssignRangeToUser(UINT range_id, UINT user_id, bool keep_admin
 	TCG_UID user_uid;
 	GetAuthorityUid(user_uid, 0x09, false, user_id);
 
-	jcvos::auto_interface<NameToken> ace_exp(NameToken::CreateToken(HTYPE_AUTHORITY_OBJ, user_id));	// ace_exp for user1
+	jcvos::auto_interface<NameToken> ace_exp(NameToken::CreateToken(HTYPE_AUTHORITY_OBJ, user_uid));	// ace_exp for user1
 	jcvos::auto_interface<ListToken> ace(ListToken::CreateToken());		// ac_element;
 	ace->AddToken(ace_exp);
-	jcvos::auto_interface<NameToken> col(NameToken::CreateToken(3, ace));		// column
+	jcvos::auto_interface<NameToken> col(NameToken::CreateToken((UINT)3, (CTcgTokenBase *)ace));		// column
 	jcvos::auto_interface<ListToken> col_list(ListToken::CreateToken());	// column list
 	col_list->AddToken(col);
 
-
+	TCG_UID range_uid;
+	memcpy_s(range_uid, 8, ACE_LOCKING_RANGE_SET_RD, 8);
+	range_uid[7] = range_id;
+	jcvos::auto_interface<tcg::ISecurityObject> res;
+	BYTE err = SetTableBase(res, range_uid, nullptr, col_list);
+	if (err) THROW_ERROR(ERR_APP, L"Failed on setting ACE locking range RD");
+	res.release();
+	memcpy_s(range_uid, 8, ACE_LOCKING_RANGE_SET_WR, 8);
+	range_uid[7] = range_id;
+	err = SetTableBase(res, range_uid, nullptr, col_list);
+	if (err) THROW_ERROR(ERR_APP, L"Failed on setting ACE locking range WR");
 }
 
 int CTcgSession::InvokeMethod(DtaCommand& cmd, DtaResponse& response)
@@ -837,9 +847,9 @@ int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYT
 	std::wcout << L"invoking param:" << std::endl;
 	param_obj->ToString(std::wcout, -1, 0);
 	std::wcout << std::endl;
-	boost::property_tree::wptree param_pt;
-	param_obj->ToProperty(param_pt);
-	boost::property_tree::write_xml(std::wcout, param_pt, setting);
+	//boost::property_tree::wptree param_pt;
+	//param_obj->ToProperty(param_pt);
+	//boost::property_tree::write_xml(std::wcout, param_pt, setting);
 #endif
 
 	JCASSERT(m_dev);

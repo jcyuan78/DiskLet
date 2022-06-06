@@ -186,32 +186,19 @@ bool CSecurityParser::ParseSecurityCommand(tcg::ISecurityObject*& out, const BYT
 
 
 
-bool CSecurityParser::TableParse(boost::property_tree::wptree& table, const TCG_UID table_id, tcg::ISecurityObject* stream)
+bool CSecurityParser::TableParse(boost::property_tree::wptree& res, const TCG_UID table_id, tcg::ISecurityObject* stream)
 {
 	ListToken* ls_stream =	dynamic_cast<ListToken*>(stream);
 	if (ls_stream == nullptr)
 	{
 		LOG_ERROR(L"[err] wrong format: stream should be list token");
-		table.add(L"[err]", "wrong format: stream should be list token");
+		res.add(L"[err]", "wrong format: stream should be list token");
 		return false;
 	}
-	ListToken* cols = ConvertTokenType<ListToken>(table, ls_stream->GetSubToken(0));
-	//jcvos::auto_interface<ListToken> cols(dynamic_cast<ListToken*>(ls_stream->GetSubToken(0)));
-	//if (cols == nullptr)
-	//{
-	//	LOG_ERROR(L"[err] wrong format: the first items should be list token");
-	//	table.add(L"[err]", "wrong format: stream should be list token");
-	//	return false;
-	//}
-	CStatePhrase* state = ConvertTokenType<CStatePhrase>(table, ls_stream->GetSubToken(1));
-	//jcvos::auto_interface<CStatePhrase> state(dynamic_cast<CStatePhrase*>(ls_stream->GetSubToken(1)));
-	//if (state == nullptr || state->getState() != 0)
-	//{
-	//	LOG_ERROR(L"[err] wrong format or failed result, code=0x%X", state ? state->getState() : 0);
-	//	table.add(L"[err]", "wrong format or failed result,");
-	//	return false;
-	//}
+	ListToken* cols = ConvertTokenType<ListToken>(res, ls_stream->GetSubToken(0));
+	CStatePhrase* state = ConvertTokenType<CStatePhrase>(res, ls_stream->GetSubToken(1));
 
+	boost::property_tree::wptree table;
 	// get table
 	UINT64 tt_id = CUidMap::Uid2Uint(table_id);
 	DWORD tt_hid = (DWORD)((tt_id >> 32) & 0xFFFFFFFF);
@@ -240,6 +227,8 @@ bool CSecurityParser::TableParse(boost::property_tree::wptree& table, const TCG_
 		}
 		col_info->ToProperty(table, name_token->m_value);
 	}
+	table.add(L"xmlattr.name", tab_info->m_name);
+	res.add_child(L"Table", table);
 
 	return true;
 }
