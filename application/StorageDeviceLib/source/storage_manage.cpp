@@ -77,8 +77,7 @@ bool CStorageManager::ListDisk(void)
 	penum.reset();
 	hres = m_services->CreateInstanceEnum(BSTR(L"MSFT_DiskToPartition"), WBEM_FLAG_FORWARD_ONLY , NULL, &penum);
 	if (FAILED(hres) || !penum) THROW_COM_ERROR(hres, L"failed on quering disk-partition, error=0x%X", hres);
-	//hres = m_services->CreateClassEnum(BSTR(L"MSFT_Disk"), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &penum);
-	//if (FAILED(hres) || !penum) THROW_COM_ERROR(hres, L"failed on quering physical disk, error=0x%X", hres);
+
 	while (1)
 	{
 		auto_unknown<IWbemClassObject> obj;
@@ -102,12 +101,6 @@ bool CStorageManager::ListDisk(void)
 			}
 		}
 
-
-		//VARIANT val;
-		//CIMTYPE type;
-		//long flavor;
-		//hres = obj->Get(L"__PATH", 0, &val, &type, &flavor);
-		//wprintf_s(L"path=%s\n", val.bstrVal);
 	}
 	return true;
 }

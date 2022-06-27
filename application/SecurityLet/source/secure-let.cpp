@@ -244,14 +244,14 @@ const TCG_UID& SecureLet::ToUid(SecureLet::TCG_UID_INDEX index)
 //	TCG_UID uu;
 	switch (index)
 	{
-	case SecureLet::TCG_UID_INDEX::THISSP:			return OPAL_THISSP_UID;		
-	case SecureLet::TCG_UID_INDEX::ADMINSP:			return OPAL_ADMINSP_UID;  	
-	case SecureLet::TCG_UID_INDEX::LOCKINGSP:		return OPAL_LOCKINGSP_UID;	
-	case SecureLet::TCG_UID_INDEX::SID:				return OPAL_SID_UID;		
+	case SecureLet::TCG_UID_INDEX::THISSP:			return tcg::opal_sp::THISSP;		
+	case SecureLet::TCG_UID_INDEX::ADMINSP:			return tcg::opal_sp::ADMINSP;  	
+	case SecureLet::TCG_UID_INDEX::LOCKINGSP:		return tcg::opal_sp::LOCKINGSP;	
+	case SecureLet::TCG_UID_INDEX::SID:				return tcg::opal_authority::SID;		
 	case SecureLet::TCG_UID_INDEX::PSID:			return OPAL_PSID_UID;
-	case SecureLet::TCG_UID_INDEX::ANYBODY:			return OPAL_ANYBODY;		
-	case SecureLet::TCG_UID_INDEX::ADMIN1:			return OPAL_ADMIN1;			
-	case SecureLet::TCG_UID_INDEX::USER1:			return OPAL_USER1;			
+	case SecureLet::TCG_UID_INDEX::ANYBODY:			return tcg::opal_authority::ANYBODY;		
+	case SecureLet::TCG_UID_INDEX::ADMIN1:			return tcg::opal_authority::ADMIN1;			
+	case SecureLet::TCG_UID_INDEX::USER1:			return tcg::opal_authority::USER1;			
 	//case SecureLet::TCG_UID_INDEX::				return OPAL_				
 	//case SecureLet::TCG_UID_INDEX::				return OPAL_				
 	case SecureLet::TCG_UID_INDEX::TCG_NONE:		return OPAL_UID_HEXFF;		

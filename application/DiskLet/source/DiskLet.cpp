@@ -486,3 +486,12 @@ void DiskLet::ConnectToStorageDevice::InternalProcessRecord()
 	Clone::StorageDevice^ dev = gcnew Clone::StorageDevice(dd);
 	WriteObject(dev);
 }
+
+void DiskLet::ConnectNVMe::InternalProcessRecord()
+{
+	jcvos::auto_interface<IStorageDevice> dd;
+	IStorageDevice::CreateNVMeByIndex(dd, dev_num);
+	if (!dd) throw gcnew System::ApplicationException(L"device is not selected");
+	Clone::StorageDevice^ dev = gcnew Clone::StorageDevice(dd);
+	WriteObject(dev);
+}

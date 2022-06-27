@@ -53,6 +53,8 @@ public:
 		return false;
 	}
 	virtual bool GetLogPage(BYTE lid, WORD numld, BYTE * data, size_t data_len);
+	virtual WORD GetFeature(BYTE* buf, size_t buf_len, DWORD& comp, BYTE fid, BYTE sel) { return false; }
+
 
 protected:
 	virtual bool NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length)
@@ -117,10 +119,12 @@ public:
 public:
 	virtual bool ReadIdentifyDevice(BYTE cns, WORD nvmsetid, BYTE * data, size_t data_len);
 	virtual bool GetLogPage(BYTE lid, WORD numld, BYTE * data, size_t data_len);
+	virtual WORD GetFeature(BYTE * buf, size_t buf_len, DWORD & comp, BYTE fid, BYTE sel);
 
 // NVMe Interface
 protected:
 	virtual bool NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length);
+	bool NVMeCommandDebug(BYTE protocol, BYTE opcode, NVME_COMMAND* cmd, BYTE* buf, size_t length);
 
 	// 用于派生类检测链接的device是否合适
 	virtual bool OnConnectDevice(void);

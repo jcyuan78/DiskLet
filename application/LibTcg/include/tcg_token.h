@@ -102,6 +102,8 @@ public:
 		return tt;
 	}
 
+	size_t ToBuffer(BYTE* buf, size_t buf_size);
+
 public:
 	static MidAtomToken * CreateToken(const std::wstring& str);
 	static MidAtomToken* CreateToken(UINT64 val);
@@ -147,6 +149,7 @@ public:
 	}
 	void AddToken(CTcgTokenBase* tt) { m_tokens.push_back(tt); tt->AddRef(); }
 	friend class CSecurityParser;
+	friend class CTcgSession;
 protected:
 	CTcgTokenBase* GetSubToken(int index)
 	{

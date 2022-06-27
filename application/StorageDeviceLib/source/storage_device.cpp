@@ -11,11 +11,30 @@ LOCAL_LOGGER_ENABLE(L"storage_device", LOGGER_LEVEL_NOTICE);
 #define SCSIOP_SECURITY_IN		0xA2
 #define SCSIOP_SECURITY_OUT		0xB5
 #define SCSIOP_WRITE_BUFFER		0x3B
+#define SCSIOP_LOG_SENSE		0x4D
+#define SCSIOP_INQUIRY			0x12
 
 #define CDB12GENERIC_LENGTH                  12
 
-#define Lo
-
+const wchar_t* ScsiStatusCodeToString(BYTE code)
+{
+	switch (code)
+	{
+	case SCSISTAT_GOOD:				return L"Good";
+	case SCSISTAT_CHECK_CONDITION:	return L"Check condition";
+	case SCSISTAT_CONDITION_MET:	return L"Busy";
+	case SCSISTAT_BUSY:				return L"Busy";
+	case SCSISTAT_INTERMEDIATE:		return L"Intermediate";
+	case SCSISTAT_INTERMEDIATE_COND_MET:	return L"Intermediate cond met";
+	case SCSISTAT_RESERVATION_CONFLICT:		return L"Reservation conflict";
+	case SCSISTAT_COMMAND_TERMINATED:		return L"Command terminated";
+	case SCSISTAT_QUEUE_FULL:				return L"Task set full";
+	case SCSISTAT_ACA_ACTIVE:				return L"ACA active";
+	case SCSISTAT_TASK_ABORTED:				return L"Task aborted";
+	case SCSISTAT_IO_CTRL_FAIL:				return L"DeviceIoControl() fail";
+	default: return L"Unknonw status";
+	}
+}
 
 //
 // SCSI bus status codes.
@@ -102,11 +121,6 @@ bool CStorageDeviceComm::Inquiry(IDENTIFY_DEVICE & id)
 	char * str;
 	PROPERTY_TO_STRING(ProductIdOffset, id.m_model_name);
 
-	//if (desc->ProductIdOffset)
-	//{
-	//	str = (char*)desc + desc->ProductIdOffset;
-	//	jcvos::Utf8ToUnicode(id.m_model_name, str);
-	//}
 	if (desc->SerialNumberOffset)
 	{
 		str = (char*)desc + desc->SerialNumberOffset;
@@ -123,6 +137,24 @@ bool CStorageDeviceComm::Inquiry(IDENTIFY_DEVICE & id)
 
 	return true;
 }
+
+BYTE CStorageDeviceComm::Inquiry(BYTE* buf, size_t buf_len, BYTE evpd, BYTE page_code)
+{
+	BYTE cdb[6];
+	memset(cdb, 0, 6);
+	cdb[0] = SCSIOP_INQUIRY;
+	cdb[1] = evpd;
+	if (evpd != 0) cdb[2] = page_code;
+	cdb[3] = HIBYTE(LOWORD(buf_len));
+	cdb[4] = LOBYTE(LOWORD(buf_len));
+	SENSE_DATA sense;
+	BYTE res = ScsiCommand(IStorageDevice::read, buf, buf_len, cdb, CDB6GENERIC_LENGTH,
+		(BYTE*)&sense, sizeof(SENSE_DATA), 1500);
+	if (res!= SCSISTAT_GOOD)  LOG_ERROR(L"[err] device returns error (0x%02X): %s", res, ScsiStatusCodeToString(res));
+	return res;
+}
+
+
 
 STORAGE_HEALTH_STATUS CStorageDeviceComm::GetHealthInfo(DEVICE_HEALTH_INFO& info, HEALTH_INFO_LIST& ext_info)
 {
@@ -211,32 +243,20 @@ BYTE CStorageDeviceComm::ScsiCommand(READWRITE rd_wr, BYTE * buf, size_t length,
 		&sptdwb, llength,
 		&returned, FALSE);
 	QueryPerformanceCounter(&t1);		// 性能计算
+	if (!success)
+	{
+		LOG_WIN32_ERROR(L"[err] failed on calling SCIS command");
+		return SCSISTAT_IO_CTRL_FAIL;
+	}
 	//if (t0.QuadPart <= t1.QuadPart)		m_last_invoke_time = t1.QuadPart - t0.QuadPart;
 	//else								m_last_invoke_time = 0;
 
 	if (sense) memcpy_s(sense, sense_len, sptdwb.ucSenseBuf, min(SPT_SENSE_LENGT, sense_len));
-	if (!success)	THROW_WIN32_ERROR(L"failed on calling IOCTL_SCSI_PASS_THROUGH_DIRECT ");
+//	if (!success)	THROW_WIN32_ERROR(L"failed on calling IOCTL_SCSI_PASS_THROUGH_DIRECT ");
 	return sptdwb.ucSenseBuf[0xC];
 }
 
-const wchar_t* ScsiStatusCodeToString(BYTE code)
-{
-	switch (code)
-	{
-	case SCSISTAT_GOOD:				return L"Good"; 
-	case SCSISTAT_CHECK_CONDITION:	return L"Check condition";
-	case SCSISTAT_CONDITION_MET:	return L"Busy";
-	case SCSISTAT_BUSY:				return L"Busy";
-	case SCSISTAT_INTERMEDIATE:		return L"Intermediate";
-	case SCSISTAT_INTERMEDIATE_COND_MET:	return L"Intermediate cond met";
-	case SCSISTAT_RESERVATION_CONFLICT:		return L"Reservation conflict";
-	case SCSISTAT_COMMAND_TERMINATED:		return L"Command terminated";
-	case SCSISTAT_QUEUE_FULL:				return L"Task set full";
-	case SCSISTAT_ACA_ACTIVE:				return L"ACA active";
-	case SCSISTAT_TASK_ABORTED:				return L"Task aborted";
-	default: return L"Unknonw status";
-	}
-}
+
 
 BYTE CStorageDeviceComm::SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid)
 {
@@ -316,6 +336,34 @@ BYTE CStorageDeviceComm::DownloadFirmware(BYTE* buf, size_t buf_len, size_t bloc
 	//}
 	return 0;
 }
+
+bool CStorageDeviceComm::OnConnectDevice(void)
+{
+	return true;
+}
+
+//struct CB_LOG_SENSE
+//{
+//	BYTE op = SCSIOP_LOG_SENSE;
+//	BYTE sp =0;
+//	UINT pc : 2;
+//	UINT page_code : 6;
+//	BYTE sub_page_code;
+//	BYTE reserved =0;
+//	WORD parameter_point =0;
+//	WORD allocation_length =0;
+//	BYTE control =0;
+//};
+//
+//BYTE CStorageDeviceComm::GetLogPage(BYTE* buf, size_t buf_len, BYTE LID, DWORD NUMD, UINT64 offset, DWORD param)
+//{
+//	CB_LOG_SENSE cb;
+//	cb.pc = 0;
+//	cb.page_code = LID;
+//	cb.allocation_length = LOWORD(buf_len);
+//
+//	return 0;
+//}
 
 
 

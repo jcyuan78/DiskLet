@@ -3,6 +3,8 @@
 #include "tcg_session.h"
 #include "../include/itcg.h"
 #include "../include/tcg_token.h"
+#include "../include/tcg_parser.h"
+
 #include <boost/endian.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/cast.hpp>
@@ -18,11 +20,14 @@ CTcgSession::CTcgSession(void) : m_dev(NULL), m_is_open(false), m_feature_set(NU
 	m_hsn = 0;
 	m_tsn = 0;
 	m_will_abort = false;
-#ifdef _DEBUG
-	m_invoking_id = 0;
-#endif
 	m_feature_set = jcvos::CDynamicInstance<CTcgFeatureSet>::Create();
 	if (m_feature_set == nullptr) THROW_ERROR(ERR_APP, L"failed on creating feature set");
+
+	tcg::GetSecurityParser(m_parser);
+#ifdef _DEBUG
+	m_invoking_id = 0;
+	m_log_out = &std::wcout;
+#endif
 }
 
 CTcgSession::~CTcgSession(void)
@@ -30,7 +35,16 @@ CTcgSession::~CTcgSession(void)
 	if (m_is_open) EndSession();
 	RELEASE(m_feature_set);
 	RELEASE(m_dev);
-
+	RELEASE(m_parser);
+#ifdef _DEBUG
+	if (m_log_out != &std::wcout)
+	{
+		std::wfstream* ff = dynamic_cast<std::wfstream*>(m_log_out);
+		ff->close();
+		delete m_log_out;
+	}
+	m_log_out = nullptr;
+#endif
 }
 
 bool CTcgSession::ConnectDevice(IStorageDevice* dev)
@@ -39,27 +53,34 @@ bool CTcgSession::ConnectDevice(IStorageDevice* dev)
 	m_dev = dev;
 	m_dev->AddRef();
 
-	// 获取L0Discovery
-	jcvos::auto_array<BYTE> buf(SECTOR_SIZE);
-	bool br = L0Discovery(buf);
-	if (!br)
-	{
-		LOG_ERROR(L"[err] failed on getting L0 Discovery");
-		return false;
-	}
-
-	RELEASE(m_feature_set);
-	// 解析L0Discovery
+	// 准备解析器
 	jcvos::auto_interface<tcg::ISecurityParser> parser;
 	tcg::GetSecurityParser(parser);
+	// 获取L0Discovery
+	//jcvos::auto_array<BYTE> buf(SECTOR_SIZE);
+	//bool br = L0Discovery(buf);
+	//if (!br)
+	//{
+	//	LOG_ERROR(L"[err] failed on getting L0 Discovery");
+	//	return false;
+	//}
 
-	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
-	parser->ParseSecurityCommand(sec_obj, buf, SECTOR_SIZE, tcg::PROTOCOL_ID_TCG, tcg::COMID_L0DISCOVERY, true);
-	sec_obj.detach<CTcgFeatureSet>(m_feature_set);
+	//RELEASE(m_feature_set);
+	//// 解析L0Discovery
+	//jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
+	//parser->ParseSecurityCommand(sec_obj, buf, SECTOR_SIZE, tcg::PROTOCOL_ID_TCG, tcg::COMID_L0DISCOVERY, true);
+	//sec_obj.detach<CTcgFeatureSet>(m_feature_set);
 
-	const CTcgFeature* feature_opal = m_feature_set->GetFeature(CTcgFeature::FEATURE_OPAL_SSC);
-	if (feature_opal == nullptr) THROW_ERROR(ERR_APP, L"the device does not support opal");
-	m_base_comid = feature_opal->m_features.get<WORD>(L"Base ComId");
+	//const CTcgFeature* feature_opal = m_feature_set->GetFeature(CTcgFeature::FEATURE_OPAL_SSC);
+	//if (feature_opal == nullptr) THROW_ERROR(ERR_APP, L"the device does not support opal");
+	//m_base_comid = feature_opal->m_features.get<WORD>(L"Base ComId");
+	//m_sid_pin_init = feature_opal->m_features.get<BYTE>(L"Initial C_PIN SID");
+	//const CTcgFeature* feature_locking = m_feature_set->GetFeature(CTcgFeature::FEATURE_LOCKING);
+	//if (feature_locking == nullptr) THROW_ERROR(ERR_APP, L"failed on getting locking feature");
+	//m_lock_enabled = feature_locking->m_features.get<bool>(L"Locking Enabled");
+	//m_locked = feature_locking->m_features.get<bool>(L"Locked");
+
+	UpdateFeatureState();
 
 	// 获取property
 	boost::property_tree::wptree prop;
@@ -84,6 +105,75 @@ bool CTcgSession::ConnectDevice(IStorageDevice* dev)
 	m_tperMaxToken = pt.get<UINT32>(L"MaxIndTokenSize", 0);
 
 	return true;
+}
+
+void CTcgSession::UpdateFeatureState(void)
+{
+	// 获取L0Discovery
+	jcvos::auto_array<BYTE> buf(SECTOR_SIZE);
+	bool br = L0Discovery(buf);
+	if (!br)	THROW_ERROR(ERR_APP, L"[err] failed on getting L0 Discovery");
+
+	RELEASE(m_feature_set);
+	// 解析L0Discovery
+	jcvos::auto_interface<tcg::ISecurityParser> parser;
+	tcg::GetSecurityParser(parser);
+	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
+	parser->ParseSecurityCommand(sec_obj, buf, SECTOR_SIZE, tcg::PROTOCOL_ID_TCG, tcg::COMID_L0DISCOVERY, true);
+	sec_obj.detach<CTcgFeatureSet>(m_feature_set);
+
+	const CTcgFeature* feature_opal = m_feature_set->GetFeature(CTcgFeature::FEATURE_OPAL_SSC);
+	if (feature_opal == nullptr) THROW_ERROR(ERR_APP, L"the device does not support opal");
+	m_base_comid = feature_opal->m_features.get<WORD>(L"Base ComId");
+	m_sid_pin_init = feature_opal->m_features.get<BYTE>(L"Initial C_PIN SID");
+	const CTcgFeature* feature_locking = m_feature_set->GetFeature(CTcgFeature::FEATURE_LOCKING);
+	if (feature_locking == nullptr) THROW_ERROR(ERR_APP, L"failed on getting locking feature");
+	m_lock_enabled = feature_locking->m_features.get<bool>(L"Locking Enabled");
+	m_locked = feature_locking->m_features.get<bool>(L"Locked");
+
+	const CTcgFeature* featurea_datastore = m_feature_set->GetFeature(CTcgFeature::FEATURE_DATASTORE_TABLE);
+	if (featurea_datastore != nullptr)
+	{
+		m_datastore_support = true;
+		m_datastore_alignment = featurea_datastore->m_features.get<UINT32>(L"Datastore Table Size Alignment");
+	}
+}
+
+#ifdef _DEBUG
+void CTcgSession::SetLogFile(const std::wstring& fn)
+{
+	std::wfstream* ff = new std::wfstream(fn, std::ios_base::out);
+	m_log_out = static_cast<std::wostream*>(ff);
+	//m_log_out.open(fn.c_str(), std::ios_base::out);
+	//m_out_file = true;
+}
+#endif
+
+UINT64 CTcgSession::GetState(bool reload)
+{
+	UINT64 state = 0;
+	if (reload) UpdateFeatureState();
+#if 0
+	if (m_sid_pin_init == 0) return 0;
+	else
+	{
+		state |= tcg::TS_SIDAUTH;
+		if (m_lock_enabled)
+		{
+			state |= tcg::TS_ACTIVED;
+			if (m_locked) state |= tcg::TS_LOCKED;
+		}
+
+	}
+#else
+	if (m_sid_pin_init) state |= tcg::TS_SIDAUTH;
+	if (m_lock_enabled)
+	{
+		state |= tcg::TS_ACTIVED;
+		if (m_locked) state |= tcg::TS_LOCKED;
+	}
+#endif
+	return state;
 }
 
 bool CTcgSession::GetProtocol(BYTE* buf, size_t buf_len)
@@ -142,7 +232,7 @@ BYTE CTcgSession::Properties(boost::property_tree::wptree& props, const std::vec
 	if (parameters == nullptr) THROW_ERROR(ERR_MEM, L"failed on creating list token");
 
 	DtaResponse response;
-	cmd->reset(OPAL_SMUID_UID, METHOD_HOSTPROP);
+	cmd->reset(tcg::opal_sp::SMUID, METHOD_HOSTPROP);
 	if (!props.empty())
 	{
 		//组装参数
@@ -185,7 +275,7 @@ BYTE CTcgSession::StartSession(const TCG_UID sp, const char* host_challenge, con
 	if (NULL == cmd)	THROW_ERROR(ERR_APP, L"failed on creating dta command");
 again:
 	DtaResponse response;
-	cmd->reset(OPAL_SMUID_UID, METHOD_STARTSESSION);
+	cmd->reset(tcg::opal_sp::SMUID, METHOD_STARTSESSION);
 	// add request parameters
 	cmd->addToken(OPAL_TOKEN::STARTLIST); // [  (Open Bracket)
 	cmd->addToken(105); // HostSessionID : sessionnumber
@@ -235,6 +325,11 @@ again:
 		LOG_ERROR(L"[err] Session start failed rc = %d", lastRC);
 		return lastRC;
 	}
+	jcvos::auto_interface<tcg::ISecurityObject> res;
+	response.GetResToken(res);
+	jcvos::auto_cif<CStatePhrase, tcg::ISecurityObject> state;
+	res->GetSubItem(state, L"state");
+	
 	// call user method SL HSN TSN EL EOD SL 00 00 00 EL
 	//   0   1     2     3  4   5   6  7   8
 	m_hsn = boost::endian::endian_reverse(response.getUint32(4));
@@ -245,6 +340,12 @@ again:
 		auth.push_back(OPAL_SHORT_ATOM::BYTESTRING8);
 		for (int i = 0; i < 8; i++) auth.push_back(sign_authority[i]);
 		return(Authenticate(auth, host_challenge));
+	}
+	WORD err = state->getState();
+	if (err != OPALSTATUSCODE::SUCCESS)
+	{
+		LOG_ERROR(L"[err] failed on start session, code=%d, error=%s", err, DtaResponse::MethodStatusCodeToString((BYTE)err));
+		return (BYTE)err;
 	}
 	m_is_open = true;
 	LOG_NOTICE(L"started session, host session id=0x%X, SP session id=0x%X", m_hsn, m_tsn);
@@ -275,31 +376,9 @@ BYTE CTcgSession::EndSession(void)
 	return err;
 }
 
-BYTE CTcgSession::GetTable(tcg::ISecurityObject*& res, const TCG_UID table, WORD start_col, WORD end_col)
-{
-	JCASSERT(res == nullptr);
-	DtaResponse rr;
-	BYTE err = GetTable(rr, table, start_col, end_col);
-	rr.GetResToken(res);
-//	if (err) return err;
 
-	//jcvos::auto_interface<tcg::ISecurityObject> token;
-	//res->GetSubItem(token, L"token");
 
-	// for my parser
-	jcvos::auto_interface<tcg::ISecurityParser> parser;
-	tcg::GetSecurityParser(parser);
-	boost::property_tree::wptree table_prop;
-	parser->TableParse(table_prop, table, res);
-//	parser->ParseSecurityCommand(m_result, m_payload, m_data_len, m_protocol, m_comid, true);
 
-#ifdef _DEBUG
-	auto setting = boost::property_tree::xml_writer_settings<std::wstring>('\t', 1);
-	boost::property_tree::write_xml(std::wcout, table_prop, setting);
-#endif
-
-	return err;
-}
 
 BYTE CTcgSession::GetTable(DtaResponse& response, const TCG_UID table, WORD start_col, WORD end_col)
 {
@@ -325,6 +404,46 @@ BYTE CTcgSession::GetTable(DtaResponse& response, const TCG_UID table, WORD star
 	lastRC = InvokeMethod(*get, response);
 	if (lastRC != 0)		return lastRC;
 	return 0;
+}
+
+BYTE CTcgSession::GetTable(tcg::ISecurityObject*& res, const TCG_UID table, WORD start_col, WORD end_col)
+{
+	JCASSERT(res == nullptr);
+	DtaResponse rr;
+	BYTE err = GetTable(rr, table, start_col, end_col);
+	rr.GetResToken(res);
+
+	// for my parser
+	boost::property_tree::wptree table_prop;
+	m_parser->TableParse(table_prop, table, res);
+
+#ifdef _DEBUG
+	auto setting = boost::property_tree::xml_writer_settings<std::wstring>('\t', 1);
+	boost::property_tree::write_xml(*m_log_out , table_prop, setting);
+	m_log_out->flush();
+#endif
+
+	return err;
+}
+
+void CTcgSession::GetTable(boost::property_tree::wptree& res, const TCG_UID table, WORD start_col, WORD end_col)
+{
+	DtaResponse rr;
+	BYTE err = GetTable(rr, table, start_col, end_col);
+	if (err) THROW_ERROR(ERR_APP, 
+		L"failed on getting table, code=%d, err=%s", err, DtaResponse::MethodStatusCodeToString(err));
+	jcvos::auto_interface<tcg::ISecurityObject> sec_res;
+	rr.GetResToken(sec_res);
+
+	// for my parser
+	m_parser->TableParse(res, table, sec_res);
+#ifdef _DEBUG
+	auto setting = boost::property_tree::xml_writer_settings<std::wstring>('\t', 1);
+	boost::property_tree::write_xml(*m_log_out, res, setting);
+	m_log_out->flush();
+#endif
+
+//	return err;
 }
 
 //BYTE CTcgSession::SetTable(const TCG_UID table, OPAL_TOKEN name, vector<BYTE>& value)
@@ -476,6 +595,28 @@ void CTcgSession::Reset(void)
 	m_will_abort = false;
 }
 
+BYTE CTcgSession::BlockSID(BYTE clear_event, BYTE freeze)
+{
+	JCASSERT(m_dev);
+	jcvos::auto_array<BYTE> buf(SECTOR_SIZE, 0);
+	buf[0] = clear_event;
+	buf[1] = freeze;
+	BYTE err = m_dev->SecuritySend(buf, SECTOR_SIZE, 0x02, 0x0005);
+	if (err) LOG_ERROR(L"[err] Block SID returns fail, code=%d", err);
+	return err;
+}
+
+void CTcgSession::GetLockingRangeUid(TCG_UID uuid, UINT id)
+{
+	if (id == 0) memcpy_s(uuid, sizeof(TCG_UID), tcg::opal_obj::LOCKING_GLOBAL, sizeof(TCG_UID));
+	else
+	{
+		memcpy_s(uuid, sizeof(TCG_UID), tcg::opal_obj::LOCKING_RANGE, sizeof(TCG_UID));
+		uuid[7] = id;
+	}
+//	return nullptr;
+}
+
 BYTE CTcgSession::Activate(tcg::ISecurityObject*& response, const TCG_UID obj)
 {
 	LOG_STACK_TRACE();
@@ -539,14 +680,14 @@ BYTE CTcgSession::GetDefaultPassword(std::string& password)
 	uint8_t lastRC;
 
 	vector<uint8_t> hash;
-	lastRC = StartSession(OPAL_ADMINSP_UID, NULL, OPAL_UID_HEXFF);
+	lastRC = StartSession(tcg::opal_sp::ADMINSP, NULL, OPAL_UID_HEXFF);
 	if (lastRC != SUCCESS)
 	{
 		LOG_ERROR(L"Unable to start Unauthenticated session, code=%d", lastRC);
 		return lastRC;
 	}
 	DtaResponse response;
-	lastRC = GetTable(response, OPAL_C_PIN_MSID, PIN, PIN);
+	lastRC = GetTable(response, tcg::opal_obj::C_PIN_MSID, PIN, PIN);
 	if (lastRC != 0)
 	{
 		LOG_ERROR(L"[err] GetTable failed, code=%d", lastRC);
@@ -571,21 +712,21 @@ BYTE CTcgSession::SetSIDPassword(const char* old_pw, const char* new_pwd)
 	bool hasholdpwd = false, hashnewpwd = false;
 //	if (!hasholdpwd) session->dontHashPwd();
 
-	lastRC = StartSession(OPAL_ADMINSP_UID, old_pw, OPAL_SID_UID);
+	lastRC = StartSession(tcg::opal_sp::ADMINSP, old_pw, tcg::opal_authority::SID);
 	if (lastRC != 0)
 	{
 		LOG_ERROR(L"[err] failed on open session code=%d", lastRC);
 		return lastRC;
 	}
 
-	//if ((lastRC = session->start(OPAL_UID::OPAL_ADMINSP_UID,
+	//if ((lastRC = session->start(OPAL_UID::tcg::opal_sp::ADMINSP,
 	//	oldpassword, OPAL_UID::OPAL_SID_UID)) != 0) {
 	//	delete session;
 	//	return lastRC;
 	//}
-	table.clear();
-	table.push_back(OPAL_SHORT_ATOM::BYTESTRING8);
-	for (int i = 0; i < 8; i++) 	table.push_back(OPAL_C_PIN_SID[i]);
+	//table.clear();
+	//table.push_back(OPAL_SHORT_ATOM::BYTESTRING8);
+	//for (int i = 0; i < 8; i++) 	table.push_back(OPAL_C_PIN_SID[i]);
 
 	//hash.clear();
 	//if (hashnewpwd);// DtaHashPwd(hash, new_pwd, this);
@@ -596,7 +737,7 @@ BYTE CTcgSession::SetSIDPassword(const char* old_pw, const char* new_pwd)
 	//	for (uint16_t i = 0; i < strnlen(new_pwd, 255); i++) hash.push_back(new_pwd[i]);
 	//}
 	jcvos::auto_interface<tcg::ISecurityObject> res;
-	lastRC = SetTable(res, OPAL_C_PIN_SID, OPAL_TOKEN::PIN, new_pwd);
+	lastRC = SetTable(res, tcg::opal_obj::C_PIN_SID, OPAL_TOKEN::PIN, new_pwd);
 	if (lastRC != 0) LOG_ERROR(L"[err] unable to set new SID password, code=%d", lastRC);
 	EndSession();
 	return lastRC;
@@ -605,7 +746,7 @@ BYTE CTcgSession::SetSIDPassword(const char* old_pw, const char* new_pwd)
 BYTE CTcgSession::RevertTPer(const char* password, const TCG_UID authority, const TCG_UID sp)
 {
 	jcvos::auto_interface<tcg::ISecurityObject> res;
-	BYTE err = StartSession(OPAL_ADMINSP_UID, password, authority, true);
+	BYTE err = StartSession(tcg::opal_sp::ADMINSP, password, authority, true);
 	if (err)
 	{
 		LOG_ERROR(L"[err] failed on start AdminSP session, code=%d", err);
@@ -628,7 +769,7 @@ BYTE CTcgSession::SetLockingRange(UINT range_id, UINT64 start, UINT64 length)
 	// 获取Locking Info基本参数
 	BYTE err = 0;
 	jcvos::auto_interface<tcg::ISecurityObject> res;
-	err = GetTable(res, OPAL_LOCKING_INFO, 2, 10);
+	err = GetTable(res, tcg::opal_obj::LOCKING_INFO, 2, 10);
 	if (err || res==nullptr) THROW_ERROR(ERR_APP, L"failed on getting locking info");
 	boost::property_tree::wptree locking_info_pt;
 	res->ToProperty(locking_info_pt);
@@ -641,8 +782,6 @@ BYTE CTcgSession::SetLockingRange(UINT range_id, UINT64 start, UINT64 length)
 	// enable user
 	TCG_UID user_uid;
 	GetAuthorityUid(user_uid, 0x09, false, range_id);	// Authority tab
-	//memcpy_s(user_uid, sizeof(user_uid), OPAL_AUTHORITY_USER, sizeof(OPAL_AUTHORITY_USER));
-	//user_uid[7] = range_id;
 
 	res.release();
 	// Enable user authority in Locking SP
@@ -651,7 +790,7 @@ BYTE CTcgSession::SetLockingRange(UINT range_id, UINT64 start, UINT64 length)
 
 	// set the range
 	TCG_UID range_uid;
-	memcpy_s(range_uid, sizeof(range_uid), OPAL_LOCKING_RANGE, sizeof(OPAL_LOCKING_RANGE));
+	memcpy_s(range_uid, sizeof(range_uid), tcg::opal_obj::LOCKING_RANGE, sizeof(tcg::opal_obj::LOCKING_RANGE));
 	range_uid[7] = range_id;
 
 	res.release();
@@ -663,6 +802,7 @@ BYTE CTcgSession::SetLockingRange(UINT range_id, UINT64 start, UINT64 length)
 	jcvos::auto_interface<NameToken> name_length(NameToken::CreateToken(OPAL_TOKEN::RANGELENGTH, aligned_len));
 	jcvos::auto_interface<NameToken> name_readlocked(NameToken::CreateToken(OPAL_TOKEN::READLOCKENABLED, 1));
 	jcvos::auto_interface<NameToken> name_writelocked(NameToken::CreateToken(OPAL_TOKEN::WRITELOCKENABLED, 1));
+	LOG_DEBUG(L"set range[%d], start=%lld, len=%lld", range_id, aligned_start, aligned_len);
 	col_list->AddToken(name_start);
 	col_list->AddToken(name_length);
 	col_list->AddToken(name_readlocked);
@@ -726,17 +866,144 @@ BYTE CTcgSession::WriteShadowMBR(jcvos::IBinaryBuffer* buf)
 	return 0;
 }
 
-void CTcgSession::SetPassword(UINT user_id, bool admin, const char* new_pw)
+void CTcgSession::WriteDataTable(const TCG_UID tab_id, const BYTE* buf, size_t buf_len)
 {
 	LOG_STACK_TRACE();
-	// get user cpin
-	BYTE err = 0;
-	jcvos::auto_interface<tcg::ISecurityObject> res;
-	TCG_UID user_uid;
-	GetAuthorityUid(user_uid, 0x0B, admin, user_id);	// for C_PIN
+	JCASSERT(m_tperMaxPacket && m_tperMaxToken);
+	// 获取block size
+	UINT32 block_size = (MAX_BUFFER_LENGTH > m_tperMaxPacket) ? m_tperMaxPacket : MAX_BUFFER_LENGTH;
+	if (block_size > (m_tperMaxToken - 4)) block_size = m_tperMaxToken - 4;
 
-	err = SetTable(res, user_uid, OPAL_TOKEN::PIN, new_pw);
-	if (err) THROW_ERROR(ERR_APP, L"failed on set password for user %d", user_id);
+	const BYTE* data = buf;
+	size_t data_len = buf_len;
+	size_t offset = 0;
+
+	while (data_len)
+	{
+		size_t write_size = min(data_len, block_size);
+		jcvos::auto_interface<MidAtomToken> add(MidAtomToken::CreateToken((UINT32)offset));
+		jcvos::auto_interface<MidAtomToken> value(MidAtomToken::CreateToken(data, write_size));
+		jcvos::auto_interface<tcg::ISecurityObject> res;
+		BYTE err = SetTableBase(res, tab_id, add, value);
+		if (err)	THROW_ERROR(ERR_APP, L"[err] failed on set MBR, offset=%d, len=%d", offset, write_size);
+
+		data += write_size;
+		data_len -= write_size;
+		offset += write_size;
+	}
+}
+
+size_t CTcgSession::ReadDataTable(const TCG_UID tab_id, BYTE* buf, size_t offset, size_t len)
+{
+	LOG_STACK_TRACE();
+	jcvos::auto_ptr<DtaCommand> _cmd(new DtaCommand);
+	DtaCommand* get = (DtaCommand*)_cmd;
+	if (NULL == get)	THROW_ERROR(ERR_APP, L"failed on creating dta command");
+
+	get->reset(tab_id, METHOD_GET);
+
+	get->addToken(OPAL_TOKEN::STARTLIST);
+	get->addToken(OPAL_TOKEN::STARTLIST);
+
+	get->addNameToken(OPAL_TOKEN::STARTROW, offset);
+	get->addNameToken(OPAL_TOKEN::ENDROW, offset + len-1);
+
+	get->addToken(OPAL_TOKEN::ENDLIST);
+	get->addToken(OPAL_TOKEN::ENDLIST);
+	get->complete();
+
+	DtaResponse res;
+	BYTE err = (BYTE)InvokeMethod(*get, res);
+	if (err != 0)
+	{
+		LOG_ERROR(L"[err] failed on getting binary table, code=%d, err=%s", err,
+			DtaResponse::MethodStatusCodeToString(err));
+		return 0;
+	}
+	jcvos::auto_interface<tcg::ISecurityObject> res_obj;
+	res.GetResToken(res_obj);
+	ListToken* list = res_obj.d_cast<ListToken*>();
+	if (list == nullptr) THROW_ERROR(ERR_APP, L"result does not contains list");
+	MidAtomToken * data = dynamic_cast<MidAtomToken*>( list->GetSubToken(0));
+	if (data == nullptr) THROW_ERROR(ERR_APP, L"wrong token type for the first item");
+	size_t copy_size = data->ToBuffer(buf, len);
+
+	return copy_size;
+}
+
+void CTcgSession::SetACE(const TCG_UID obj, const std::vector<const BYTE *> & authorities)
+{
+	jcvos::auto_interface<ListToken> ace(ListToken::CreateToken());		// ac_element;
+
+#if 0
+	for (auto it = authorities.begin(); it != authorities.end(); ++it)
+	{
+		const BYTE* _uid = (*it);
+		TCG_UID user_uid;
+		memcpy_s(user_uid, sizeof(TCG_UID), _uid, sizeof(TCG_UID));
+		// ace_exp for user1
+		jcvos::auto_interface<NameToken> ace_exp(NameToken::CreateToken(HTYPE_AUTHORITY_OBJ, user_uid));
+		ace->AddToken(ace_exp);
+	}
+	if (authorities.size() > 1)
+	{
+		jcvos::auto_interface<NameToken> ace_exp(NameToken::CreateToken(HTYPE_BOOLEAN_ACE, (UINT)BOOLEAN_OR));
+		ace->AddToken(ace_exp);
+	}
+#else
+	auto it = authorities.begin();
+	if (it == authorities.end()) THROW_ERROR(ERR_USER, L"authority list cannot be empty");
+	while(1)
+	{
+		const BYTE * _uid = (*it);
+		TCG_UID user_uid;
+		memcpy_s(user_uid, sizeof(TCG_UID), _uid, sizeof(TCG_UID));
+		// ace_exp for user1
+		jcvos::auto_interface<NameToken> ace_exp(NameToken::CreateToken(HTYPE_AUTHORITY_OBJ, user_uid));	
+		ace->AddToken(ace_exp);
+		++it;
+		if (it == authorities.end()) break;
+		jcvos::auto_interface<NameToken> ace_op(NameToken::CreateToken(HTYPE_BOOLEAN_ACE, (UINT)BOOLEAN_OR));
+		ace->AddToken(ace_op);
+	}
+#endif
+
+	jcvos::auto_interface<NameToken> col(NameToken::CreateToken((UINT)3, (CTcgTokenBase*)ace));		// column
+	jcvos::auto_interface<ListToken> col_list(ListToken::CreateToken());	// column list
+	col_list->AddToken(col);
+
+	jcvos::auto_interface<tcg::ISecurityObject> res;
+	BYTE err = SetTableBase(res, obj, nullptr, col_list);
+	if (err) THROW_ERROR(ERR_APP, L"Failed on setting ACE");
+}
+
+
+//void CTcgSession::SetPassword(UINT user_id, bool admin, const char* new_pw)
+//{
+//	LOG_STACK_TRACE();
+//	// get user cpin
+//	BYTE err = 0;
+//	jcvos::auto_interface<tcg::ISecurityObject> res;
+//	TCG_UID user_uid;
+//	GetAuthorityUid(user_uid, 0x0B, admin, user_id);	// for C_PIN
+//
+//	err = SetTable(res, user_uid, OPAL_TOKEN::PIN, new_pw);
+//	if (err) THROW_ERROR(ERR_APP, L"failed on set password for user %d", user_id);
+//}
+
+void CTcgSession::SetPassword(const TCG_UID authority, const char* new_pwd)
+{
+	jcvos::auto_interface<tcg::ISecurityObject> res;
+	TCG_UID pin_uid;
+	memcpy_s(pin_uid, sizeof(TCG_UID), authority, sizeof(TCG_UID));
+	if (authority[3] == 0x09)
+	{	// authority的ID，转换为C_PIN UID
+		pin_uid[3] = 0x0B;
+		if (authority == tcg::opal_authority::SID)	{	pin_uid[7] = 0x01;	}
+	}
+
+	BYTE err = SetTable(res, pin_uid, OPAL_TOKEN::PIN, new_pwd);
+	if (err) THROW_ERROR(ERR_APP, L"failed on set password for authority, err=%d", err);
 }
 
 void CTcgSession::AssignRangeToUser(UINT range_id, UINT user_id, bool keep_admin)
@@ -751,6 +1018,7 @@ void CTcgSession::AssignRangeToUser(UINT range_id, UINT user_id, bool keep_admin
 	jcvos::auto_interface<ListToken> col_list(ListToken::CreateToken());	// column list
 	col_list->AddToken(col);
 
+	// Set ACE for range read/write
 	TCG_UID range_uid;
 	memcpy_s(range_uid, 8, ACE_LOCKING_RANGE_SET_RD, 8);
 	range_uid[7] = range_id;
@@ -762,6 +1030,19 @@ void CTcgSession::AssignRangeToUser(UINT range_id, UINT user_id, bool keep_admin
 	range_uid[7] = range_id;
 	err = SetTableBase(res, range_uid, nullptr, col_list);
 	if (err) THROW_ERROR(ERR_APP, L"Failed on setting ACE locking range WR");
+}
+
+void CTcgSession::GetLockingInfo(tcg::LOCKING_INFO& info)
+{
+	boost::property_tree::wptree pt;
+	GetTable(pt, tcg::opal_obj::LOCKING_INFO, 3, 10);
+	info.m_max_range = pt.get<UINT>(L"Table.MaxRanges", 0);
+	info.m_block_size = pt.get<UINT>(L"Table.LogicalBlockSize", 0);
+	int align_request = pt.get<int>(L"Table.AlignmentRequired", 0);
+	if (align_request)
+	{
+		info.m_alignment = pt.get<UINT>(L"Table.AlignmentGranularity", 0);
+	}
 }
 
 int CTcgSession::InvokeMethod(DtaCommand& cmd, DtaResponse& response)
@@ -844,9 +1125,10 @@ int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYT
 	jcvos::auto_interface<tcg::ISecurityParser> parser;
 	tcg::GetSecurityParser(parser);
 	parser->ParseSecurityCommand(param_obj, send_buf, send_size, protocol, comid, false);
-	std::wcout << L"invoking param:" << std::endl;
-	param_obj->ToString(std::wcout, -1, 0);
-	std::wcout << std::endl;
+	(*m_log_out) << L"invoking param:" << std::endl;
+	param_obj->ToString(*m_log_out, -1, 0);
+	(*m_log_out) << std::endl;
+	m_log_out->flush();
 	//boost::property_tree::wptree param_pt;
 	//param_obj->ToProperty(param_pt);
 	//boost::property_tree::write_xml(std::wcout, param_pt, setting);
@@ -891,12 +1173,13 @@ int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYT
 	}
 	resp.init(response_buf, MIN_BUFFER_LENGTH, protocol, comid);
 #ifdef _DEBUG
-	std::wcout << L"result out:" << std::endl;
+	(*m_log_out)<< L"result out:" << std::endl;
 
 	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
 	resp.getResult(sec_obj);
-	sec_obj->ToString(std::wcout, -1, 0);
-	std::wcout << std::endl;
+	sec_obj->ToString((*m_log_out), -1, 0);
+	(*m_log_out) << std::endl;
+	m_log_out->flush();
 //	boost::property_tree::wptree res_pt;
 //	sec_obj->ToProperty(res_pt);
 //	boost::property_tree::write_xml(std::wcout, res_pt, setting);
@@ -934,7 +1217,7 @@ BYTE CTcgSession::Authenticate(vector<uint8_t> Authority, const char* Challenge)
 	}
 
 	DtaResponse response;
-	cmd->reset(OPAL_THISSP_UID, IsEnterprise() ? METHOD_EAUTHENTICATE : METHOD_AUTHENTICATE);
+	cmd->reset(tcg::opal_sp::THISSP, IsEnterprise() ? METHOD_EAUTHENTICATE : METHOD_AUTHENTICATE);
 	cmd->addToken(OPAL_TOKEN::STARTLIST); // [  (Open Bracket)
 	cmd->addTokenByteList(Authority);
 	if (Challenge && *Challenge)

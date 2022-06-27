@@ -127,22 +127,23 @@ namespace SecureLet
 		void GetTable(TcgUid^ uid, WORD start_col, WORD end_col)
 		{
 			JCASSERT(m_session);
-			jcvos::auto_interface<tcg::ISecurityObject> res;
-			
-			BYTE err = m_session->GetTable(res, uid->GetUid(), start_col, end_col);
+//			jcvos::auto_interface<tcg::ISecurityObject> res;
+			boost::property_tree::wptree res;
+			m_session->GetTable(res, uid->GetUid(), start_col, end_col);
 		}
 
-		void SetTable(TcgUid^ table, int col, String^ val)
-		{
-			JCASSERT(m_session);
-			jcvos::auto_interface<tcg::ISecurityObject> res;
-			std::wstring wstr_val;
-			ToStdString(wstr_val, val);
-			std::string str_val;
-			jcvos::UnicodeToUtf8(str_val, wstr_val);
+		//void SetTable(TcgUid^ table, int col, String^ val)
+		//{
+		//	JCASSERT(m_session);
+		//	jcvos::auto_interface<tcg::ISecurityObject> res;
+		//	std::wstring wstr_val;
+		//	ToStdString(wstr_val, val);
+		//	std::string str_val;
+		//	jcvos::UnicodeToUtf8(str_val, wstr_val);
 
-			BYTE err = m_session->SetTable(res, table->GetUid(), col, str_val.c_str());
-		}
+		//	BYTE err = m_session->SetTable(res, table->GetUid(), col, str_val.c_str());
+		//}
+
 		void SetTable(TcgUid^ table, int col, int val)
 		{
 			JCASSERT(m_session);
@@ -174,6 +175,19 @@ namespace SecureLet
 		}
 
 	// == high level funcsions == 
+		void SetACE(TcgUid^ ace_obj, Array^ authorities)
+		{
+			JCASSERT(m_session);
+			int len = authorities->Length;
+			std::vector<const BYTE *> aa;
+			for (int ii = 0; ii < authorities->Length; ++ii)
+			{
+				System::Object ^ obj = authorities->GetValue(ii);
+				TcgUid^ uid = dynamic_cast<TcgUid^>(obj);
+				aa.push_back(uid->GetUid());
+			}
+			m_session->SetACE(ace_obj->GetUid(), aa);
+		}
 
 		void PSIDRevert(String^ pwd)
 		{
@@ -181,7 +195,7 @@ namespace SecureLet
 			std::string str_pw;
 			ToStdString(str_pw, pwd);
 
-			BYTE err = m_session->RevertTPer(str_pw.c_str(), OPAL_PSID_UID, OPAL_ADMINSP_UID);
+			BYTE err = m_session->RevertTPer(str_pw.c_str(), OPAL_PSID_UID, tcg::opal_sp::ADMINSP);
 			if (err) throw gcnew System::ApplicationException(L"failed on PSID reverting");
 		}
 
@@ -192,6 +206,14 @@ namespace SecureLet
 			if (err) throw gcnew System::ApplicationException(L"failed on setting locking range");
 		}
 
+		void SetPassword(TcgUid^ auth, String^ pwd)
+		{
+			JCASSERT(m_session);
+			std::string str_pwd;
+			ToStdString(str_pwd, pwd);
+			m_session->SetPassword(auth->GetUid(), str_pwd.c_str());
+		}
+
 		void SetUserPassword(bool admin, UINT user_id, String^ password)
 		{
 			JCASSERT(m_session);
@@ -199,8 +221,13 @@ namespace SecureLet
 			std::string str_pwd;
 			ToStdString(str_pwd, password);
 			if (str_pwd.empty())	throw gcnew System::ApplicationException(L"password cannot be empty");
-			m_session->SetPassword(user_id, admin, str_pwd.c_str());
-//			if (err) throw gcnew System::ApplicationException(L"failed on starting session");
+			TCG_UID authority_id;
+			memcpy_s(authority_id, sizeof(TCG_UID), OPAL_AUTHORITY_TABLE, sizeof(TCG_UID));
+			authority_id[5] = admin? 1:3;
+			authority_id[3] = 0x0B;
+			authority_id[7] = (BYTE)user_id;
+
+			m_session->SetPassword(authority_id, str_pwd.c_str());
 		}
 
 		void WriteShadowMBR(JcCmdLet::BinaryType^ data)
@@ -212,10 +239,28 @@ namespace SecureLet
 			if (err) throw gcnew System::ApplicationException(L"failed on setting MBR");
 		}
 
+		JcCmdLet::BinaryType^ ReadDataTable(TcgUid^ obj, size_t offset, size_t len)
+		{
+			JCASSERT(m_session);
+			jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
+			jcvos::CreateBinaryBuffer(buf, len);
+			BYTE * _buf = buf->Lock();
+			size_t out_len = m_session->ReadDataTable(obj->GetUid(), _buf, offset, len);
+			buf->Unlock(_buf);
+			return gcnew JcCmdLet::BinaryType(buf);
+		}
+
 		void AssignRangeToUser(UINT range_id, UINT user_id)
 		{
 			JCASSERT(m_session);
 			m_session->AssignRangeToUser(range_id, user_id, false);
+		}
+
+		void BlockSID(int clear_event, int freeze)
+		{
+			JCASSERT(m_session);
+			BYTE err = m_session->BlockSID((BYTE)clear_event, (BYTE)freeze);
+			wprintf_s(L"Result: 0x%02X", err);
 		}
 
 

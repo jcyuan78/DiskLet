@@ -160,6 +160,8 @@ const BYTE SCSISTAT_COMMAND_TERMINATED = 0x22;
 const BYTE SCSISTAT_QUEUE_FULL = 0x28;
 const BYTE SCSISTAT_ACA_ACTIVE = 0x30;
 const BYTE SCSISTAT_TASK_ABORTED = 0x40;
+// 当调用DeviceIoControl()是返回错误，则返回0x4F
+const BYTE SCSISTAT_IO_CTRL_FAIL = 0x4F;
 
 
 class IStorageDevice : virtual public IJCInterface
@@ -175,9 +177,11 @@ public:
 
 public:
 	static void CreateDeviceByIndex(IStorageDevice*& dev, int index);
+	static void CreateNVMeByIndex(IStorageDevice*& dev, int index);
 
 public:
 	virtual bool Inquiry(IDENTIFY_DEVICE & id) = 0;
+	virtual BYTE Inquiry(BYTE* buf, size_t buf_len, BYTE evpd, BYTE page_code) = 0;
 //	virtual bool GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree & ext_info) = 0;
 	virtual STORAGE_HEALTH_STATUS GetHealthInfo(DEVICE_HEALTH_INFO & info, std::vector<STORAGE_HEALTH_INFO_ITEM> & ext_info) = 0;
 	// rd_wr: Read (true) or Write (false)
@@ -235,6 +239,9 @@ public:
 	virtual BYTE SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid) = 0;
 
 	virtual BYTE DownloadFirmware(BYTE* buf, size_t buf_len, size_t block_size, DWORD slot, bool activate) = 0;
+	//virtual BYTE GetFeature(void) = 0;
+	//virtual BYTE SetFeature() = 0;
+	//virtual BYTE GetLogPage(void) = 0;
 
 #ifdef _DEBUG
 	//virtual HANDLE GetHandle() = 0;
@@ -247,5 +254,7 @@ public:
 	virtual bool ReadIdentifyDevice(BYTE cns, WORD nvmsetid, BYTE * data, size_t data_len) = 0;
 	virtual bool GetLogPage(BYTE lid, WORD numld, BYTE * data, size_t data_len) = 0;
 	virtual bool NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length) = 0;
+	virtual WORD GetFeature(BYTE* buf, size_t buf_len, DWORD& comp, BYTE fid, BYTE sel) = 0;
+
 };
 

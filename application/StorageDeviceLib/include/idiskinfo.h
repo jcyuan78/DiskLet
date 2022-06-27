@@ -89,7 +89,7 @@ public:
 public:
 	PartitionStyle	m_style;
 	UINT32			m_index;
-	UINT64			m_size;
+	UINT64			m_size;			// 以字节为单位
 	std::wstring	m_name;
 	GUID			m_guid;
 	BusType			m_bus_type;

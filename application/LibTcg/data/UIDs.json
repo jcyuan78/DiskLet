@@ -22,35 +22,27 @@
 	],
 	
 	"Types": [
-	{
-		"ID": "00 00 02 09",	"Name": "uid",			"BaseType": "UidRef"
-	},
-	{
-		"ID": "00 00 02 0B",	"Name": "name",			"BaseType": "Simple", 
-		"MaxBytes":32
-	},
-	{
-		"ID": "00 00 04 0E",	"Name": "boolean_ACE",	"BaseType": "Enumeration",
+	
+	{"ID": "00 00 02 09",	"Name": "uid",						"BaseType": "UidRef"},
+	{"ID": "00 00 02 0B",	"Name": "name",						"BaseType": "Simple", 
+		"MaxBytes":32	},
+	{"ID": "00 00 04 0E",	"Name": "boolean_ACE",				"BaseType": "Enumeration",
 		"Enumeration": ["And", "Or", "Not"]
 	},
+	{"ID": "00 00 04 10",	"Name": "keys_avail_conds",			"BaseType": "Enumeration",
+		"Enumeration":["None", "Authentication of Set", "Reserved"]},
+	{"ID": "00 00 04 1D",	"Name": "enc_supported",			"BaseType": "Enumeration",
+		"Enumeration": ["None", "Media Encryption", "Reserved"]},
+	{"ID": "00 00 0C 05",	"Name": "Authority_object_ref",		"BaseType": "UidRef"},
 	
-	{
-		"ID": "00 00 0C 05",	"Name": "Authority_object_ref",		"BaseType": "UidRef"
-	},
-	
-	{
-		"ID": "00 00 06 01",	"Name": "ACE_expression",			"BaseType": "Alternative",
+	{"ID": "00 00 06 01",	"Name": "ACE_expression",			"BaseType": "Alternative",
 		"ElementTypes": ["Authority_object_ref", "boolean_ACE"]
 	},
 	
-	{
-		"ID": "00 00 08 01",	"Name": "AC_element",		"BaseType": "List",
+	{"ID": "00 00 08 01",	"Name": "AC_element",				"BaseType": "List",
 		"ElementType": "ACE_expression"
 	},
-	
-	{
-		"ID": "00 00 1A 03",	"Name": "ACE_columns",		"BaseType": "Set"
-	}
+	{"ID": "00 00 1A 03",	"Name": "ACE_columns",				"BaseType": "Set"}
 	
 	],
 	
@@ -71,6 +63,8 @@
 			{"ID": "00 03 D0 00", "Name": "ACE_Locking_GlobalRange_Get_RangeStartToActiveKey"}
 		]
 	},
+	
+	
 	{
 		"ID": "00 00 00 09",
 		"Name": "Authority",
@@ -106,6 +100,57 @@
 			{"ID": "00 03 00 00", "Name": "Users"},
 			{"ID": "00 03 00 01", "Name": "User1"},
 			{"ID": "00 03 00 02", "Name": "User2"}
+		]
+	},
+	
+	{
+		"ID": "00 00 08 01",
+		"Name": "LockingInfo",
+		"Columns": [
+			{"Number": 0,  "Name": "UID", 			"Unique": 0, "Type": "uid" },
+			{"Number": 1,  "Name": "Name", 			"Unique": 0, "Type": "name"},
+			{"Number": 2,  "Name": "Version", 		"Unique": 0, "Type": "uinteger_4"},
+			{"Number": 3,  "Name": "EncryptSupport","Unique": 0, "Type": "enc_supported"},
+			{"Number": 4,  "Name": "MaxRanges", 	"Unique": 0, "Type": "uinteger_4"},	
+			{"Number": 5,  "Name": "MaxReEncryptions",		"Unique": 0, "Type": "uinteger_4" },
+			{"Number": 6,  "Name": "KeysAvailableCfg",		"Unique": 0, "Type": "keys_avail_conds"},
+			{"Number": 7,  "Name": "AlignmentRequired", 	"Unique": 0, "Type": "boolean"},
+			{"Number": 8,  "Name": "LogicalBlockSize", 		"Unique": 0, "Type": "uinteger_4"},
+			{"Number": 9,  "Name": "AlignmentGranularity", 	"Unique": 0, "Type": "uinteger_8"},	
+			{"Number": 10, "Name": "LowestAlignedLBA", 		"Unique": 0, "Type": "uinteger_8"}
+		],
+		"Rows": [
+			{"ID": "00 00 00 01", "Name": "Info"}
+		]
+	},
+		
+	{
+		"ID": "00 00 08 02",
+		"Name": "Locking",
+		"Columns": [
+			{"Number": 0,  "Name": "UID", 			"Unique": 0, "Type": "uid" },
+			{"Number": 1,  "Name": "Name", 			"Unique": 0, "Type": "name"},
+			{"Number": 2,  "Name": "CommonName",	"Unique": 0, "Type": "name"},
+			{"Number": 3,  "Name": "RangeStart",	"Unique": 0, "Type": "uinteger_8"},
+			{"Number": 4,  "Name": "RangeLength", 	"Unique": 0, "Type": "uinteger_8"},	
+			{"Number": 5,  "Name": "ReadLockEnabled",		"Unique": 0, "Type": "boolean" },
+			{"Number": 6,  "Name": "WriteLockEnabled",		"Unique": 0, "Type": "boolean"},
+			{"Number": 7,  "Name": "ReadLocked", 	"Unique": 0, "Type": "boolean"},
+			{"Number": 8,  "Name": "WriteLocked",	"Unique": 0, "Type": "boolean"},
+			{"Number": 9,  "Name": "LockOnReset", 	"Unique": 0, "Type": "reset_types"},	
+			{"Number": 10, "Name": "ActiveKey",		"Unique": 0, "Type": "mediakey_object_uidref"},
+			{"Number": 11, "Name": "NextKey", 		"Unique": 0, "Type": "mediakey_object_uidref"},
+			{"Number": 12, "Name": "ReEncryptState","Unique": 0, "Type": "reencrypt_state"},
+			{"Number": 13, "Name": "ReEncryptRequest", 		"Unique": 0, "Type": "reencrypt_request"},
+			{"Number": 14, "Name": "AdvKeyMode", 	"Unique": 0, "Type": "adv_key_mode"},
+			{"Number": 15, "Name": "VerifyMode",	"Unique": 0, "Type": "verify_mode"},
+			{"Number": 16, "Name": "ContOnReset",	"Unique": 0, "Type": "reset_types"},
+			{"Number": 17, "Name": "LastReEncryptLBA", 		"Unique": 0, "Type": "uinteger_8"},
+			{"Number": 18, "Name": "LastReEncStat", "Unique": 0, "Type": "last_reenc_stat"},
+			{"Number": 19, "Name": "GeneralStatus",	"Unique": 0, "Type": "gen_status"}
+		],
+		"Rows": [
+			{"ID": "00 00 00 01", "Name": "GlobalRange"}
 		]
 	}
 	

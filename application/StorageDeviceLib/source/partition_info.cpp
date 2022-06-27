@@ -1,19 +1,21 @@
-﻿#include "pch.h"
+﻿///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "pch.h"
 #include "disk_info.h"
 #include "../include/utility.h"
 #include "storage_manager.h"
 
-LOCAL_LOGGER_ENABLE(L"partition_info", LOGGER_LEVEL_NOTICE);
+LOCAL_LOGGER_ENABLE(L"partition_info", LOGGER_LEVEL_DEBUGINFO);
 namespace prop_tree = boost::property_tree;
 
-CPartitionInfo::CPartitionInfo(void)
-	: m_volume(NULL)
+CPartitionInfo::CPartitionInfo(void): m_volume(NULL)
 {
+	LOG_DEBUG(L"this=%llX", (UINT64)this);
 	m_class_name = L"MSFT_Partition";
 }
 
 CPartitionInfo::~CPartitionInfo(void)
 {
+	LOG_DEBUG(L"this=%llX", (UINT64)this);
 	RELEASE(m_volume);
 }
 

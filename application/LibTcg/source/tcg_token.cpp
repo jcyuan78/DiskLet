@@ -5,7 +5,7 @@
 //#include "tcg_parser.h"
 #include <boost/cast.hpp>
 
-LOCAL_LOGGER_ENABLE(L"tcg_parser", LOGGER_LEVEL_DEBUGINFO);
+LOCAL_LOGGER_ENABLE(L"tcg_parser", LOGGER_LEVEL_NOTICE);
 
 static const wchar_t* _INDENTATION = L"                              ";
 static const wchar_t* INDENTATION = _INDENTATION + wcslen(_INDENTATION);
@@ -485,6 +485,15 @@ bool MidAtomToken::FormatToByteString(std::wstring& str) const
 	*ch = 0;
 	str.resize(out_len);
 	return true;
+}
+
+size_t MidAtomToken::ToBuffer(BYTE* outbuf, size_t buf_size)
+{
+	if (m_type != CTcgTokenBase::BinaryAtom) return false;
+	size_t copy_size = min(buf_size, m_len);
+	const BYTE* buf = (m_len > 8) ? m_data : m_data_val;
+	memcpy_s(outbuf, buf_size, buf, copy_size);
+	return copy_size;
 }
 
 MidAtomToken* MidAtomToken::CreateToken(const std::wstring& wstr)

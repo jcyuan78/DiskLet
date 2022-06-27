@@ -72,6 +72,8 @@
 		"Fields": [
 			{"FieldName":"SID Value State",		"StartByte":4, "ByteNumber":1, "StartBit":0, "BitNumber":1},
 			{"FieldName":"SID Blocked State",	"StartByte":4, "ByteNumber":1, "StartBit":1, "BitNumber":1},
+			{"FieldName":"Freeze Lock Supported",	"StartByte":4, "ByteNumber":1, "StartBit":2, "BitNumber":1},
+			{"FieldName":"Freeze Lock State",	"StartByte":4, "ByteNumber":1, "StartBit":3, "BitNumber":1},
 			{"FieldName":"Hardware Reset",		"StartByte":5, "ByteNumber":1, "StartBit":0, "BitNumber":1}
 		]
 	}

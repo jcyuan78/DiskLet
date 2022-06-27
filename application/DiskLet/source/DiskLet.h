@@ -394,12 +394,6 @@ namespace DiskLet
 		~ConnectToStorageDevice(void) {};
 
 	public:
-		//[Parameter(Position = 0,
-		//	ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
-		//	ParameterSetName = "ByDevice",
-		//	HelpMessage = "specify device object")]
-		//property Clone::StorageDevice^ dev;
-
 		[Parameter(Position = 0,
 			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
 			ParameterSetName = "ByIndex",
@@ -411,6 +405,24 @@ namespace DiskLet
 		virtual void InternalProcessRecord() override;
 	};
 
-	
+	[CmdletAttribute(VerbsCommunications::Connect, "NVMe")]
+	public ref class ConnectNVMe : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		ConnectNVMe(void) { dev_num = -1; };
+		~ConnectNVMe(void) {};
+
+	public:
+		[Parameter(Position = 0,
+			ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true,
+			ParameterSetName = "ByIndex",
+			HelpMessage = "specify device object")]
+		property int dev_num;
+
+	public:
+		virtual void InternalProcessRecord() override;
+	};
+
+
 };	
 

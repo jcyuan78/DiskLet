@@ -81,6 +81,41 @@ namespace Clone
 			if (dev) dev->AddRef();
 		}
 
+		JcCmdLet::BinaryType^ GetFeature(BYTE fid, BYTE sel, size_t out_len)
+		{
+			INVMeDevice* dev = dynamic_cast<INVMeDevice*>(m_storage);
+			if (dev == nullptr) throw gcnew System::ApplicationException(L"non NVMe device");
+
+			BYTE* buf = nullptr;
+			jcvos::auto_interface<jcvos::IBinaryBuffer> _buf;
+			DWORD comp = 0;
+			if (out_len > 0)
+			{
+				jcvos::CreateBinaryBuffer(_buf, out_len);
+				buf = _buf->Lock();
+			}
+			dev->GetFeature(buf, out_len, comp, fid, sel);
+			if (out_len > 0)
+			{
+				_buf->Unlock(buf);
+				return gcnew JcCmdLet::BinaryType(_buf);
+			}
+			else return nullptr;
+
+		}
+
+		JcCmdLet::BinaryType^ Inquire(BYTE page_code, size_t data_len)
+		{
+			jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
+			bool br = jcvos::CreateBinaryBuffer(buf, data_len);
+			if (!br || !buf) THROW_ERROR(ERR_MEM, L"failed on creating buffer, size=%d", data_len);
+			BYTE* _buf = buf->Lock();
+			BYTE res = m_storage->Inquiry(_buf, data_len, page_code == 0xFF ? 0 : 1, page_code);
+			wprintf_s(L"device returns: %02X\n", res);
+			buf->Unlock(_buf);
+			return gcnew JcCmdLet::BinaryType(buf);
+		}
+
 /*
 		JcCmdLet::BinaryType ^ Test1(void)
 		{
@@ -121,5 +156,14 @@ namespace Clone
 	};
 
 
+	//public ref class NVMeDevice : public StorageDevice
+	//{
+	//public:
+	//	NVMeDevice(IStorageDevice* storage) : StorageDevice(storage) {};
+	//	~NVMeDevice(void) {};
+
+	//public:
+
+	//};
 
 };

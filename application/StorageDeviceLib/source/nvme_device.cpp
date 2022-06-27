@@ -14,6 +14,7 @@ LOCAL_LOGGER_ENABLE(L"nvme_device", LOGGER_LEVEL_NOTICE);
 
 #define NVME_CMD_GET_LOG	(0x02)
 #define NVME_CMD_IDENTIFY	(0x06)
+#define NVME_CMD_GET_FEATURE	(0x0A)
 
 typedef struct _SCSI_PASS_THROUGH_WITH_BUFFERS24 {
 	SCSI_PASS_THROUGH Spt;
@@ -587,7 +588,7 @@ bool CNVMePassthroughDevice::NVMETest(jcvos::IBinaryBuffer *& data)
 bool CNVMePassthroughDevice::Inquiry(IDENTIFY_DEVICE & id)
 {
 	jcvos::auto_array<BYTE> data(4096);
-	bool br=ReadIdentifyDevice(1, 0, data, 4096);
+	bool br=ReadIdentifyDevice(1, 0, data, 1024);
 	if (!br)
 	{
 		LOG_ERROR(L"[err] failed on reading Identify");
@@ -620,38 +621,6 @@ bool CNVMePassthroughDevice::OnConnectDevice(void)
 	if (id.m_model_name.empty()) return false;
 	return true;
 }
-
-/*
-bool CNVMePassthroughDevice::GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree & ext_info)
-{
-	memset(&info, 0, sizeof(DEVICE_HEALTH_INFO));
-	jcvos::auto_array<BYTE> data_buf(4096);
-	// smart info
-	bool br = GetLogPage(0x02, 0x7F, data_buf, IDENTIFY_BUFFER_SIZE);
-	if (!br)
-	{
-		LOG_ERROR(L"[err] failed on getting smart info");
-		return false;
-	}
-
-	WORD * wbuf = (WORD*)((BYTE*)data_buf);
-	UINT64 * llbuf = (UINT64*)((BYTE*)data_buf);
-	info.m_host_read = llbuf[4]*1000 / 2048;
-	info.m_host_write = llbuf[6]*1000 / 2048;
-	info.m_power_cycle = llbuf[14];
-	info.m_power_on_hours = llbuf[16];
-	info.m_unsafe_shutdowns = llbuf[18];
-	info.m_error_count = llbuf[20] + llbuf[22];
-	info.m_temperature_cur = (short)(MAKEWORD(data_buf[1], data_buf[2])) + ABSOLUTE_ZERO;
-	info.m_percentage_used = data_buf[5];
-	info.m_bad_block_num = 100 - data_buf[3];
-
-	br = GetLogPage(0x09, 0x7F, data_buf, IDENTIFY_BUFFER_SIZE);
-	info.m_media_write = llbuf[10] * 1024;
-
-	return true;
-}
-*/
 
 bool CNVMePassthroughDevice::ReadIdentifyDevice(BYTE cns, WORD nvmsetid, BYTE * data, size_t data_len)
 {
@@ -694,6 +663,97 @@ bool CNVMePassthroughDevice::GetLogPage(BYTE lid, WORD numld, BYTE * data, size_
 	return true;
 }
 
+WORD CNVMePassthroughDevice::GetFeature(BYTE* buf, size_t buf_len, DWORD & comp, BYTE fid, BYTE sel)
+{
+	NVME_COMMAND nvme_cmd;
+	memset(&nvme_cmd, 0, sizeof(NVME_COMMAND));
+	nvme_cmd.CDW0.OPC = NVME_CMD_GET_FEATURE;
+	nvme_cmd.NSID = 0xFFFFFFFF;
+	nvme_cmd.u.GETFEATURES.CDW10.FID = fid;
+//	.GETLOGPAGE.CDW10.LID = lid;
+	nvme_cmd.u.GETFEATURES.CDW10.SEL = sel;
+//	.CDW10_V13.NUMDL = numld;
+
+//	bool br = NVMeCommand(0x82, NVME_CMD_GET_LOG, &nvme_cmd, buf, buf_len);
+	if (buf == nullptr && buf_len == 0)
+	{
+		buf = new BYTE[512];
+		buf_len = 512;
+	}
+	bool br = NVMeCommandDebug(0x80, NVME_CMD_GET_LOG, &nvme_cmd, buf, buf_len);
+	if (!br)
+	{
+		LOG_ERROR(L"[err] ");
+		return false;
+	}
+	return true;
+
+}
+
+// 0x80: send command
+// 0x82: read data
+
+bool CNVMePassthroughDevice::NVMeCommandDebug(BYTE protocol, BYTE opcode, NVME_COMMAND* cmd, BYTE* buf, size_t length)
+{
+	BYTE sense_buf[24];
+	memset(sense_buf, 0, 24);
+
+	wprintf_s(L"Try for protocols \n");
+
+	for (BYTE ii = 1; ii <= 0x80; ii <<= 1)
+	{
+		BYTE cdb[CDB10GENERIC_LENGTH];
+		memset(cdb, 0, CDB10GENERIC_LENGTH);
+		cdb[0] = 0xA1;	// NVMe pass through
+		cdb[1] = 0x80;	// send command
+		cdb[4] = 2;
+
+		BYTE data_buf[IDENTIFY_BUFFER_SIZE];
+		memset(data_buf, 0, IDENTIFY_BUFFER_SIZE);
+
+		DWORD* cdw = (DWORD*)((BYTE*)data_buf);
+		data_buf[0] = 'N'; data_buf[1] = 'V'; data_buf[2] = 'M'; data_buf[3] = 'E';
+		memcpy_s(data_buf + 8, sizeof(NVME_COMMAND), cmd, sizeof(NVME_COMMAND));
+
+		wprintf_s(L"Send command with protocol 0x80 \n");
+		BYTE status = ScsiCommand(write, data_buf, IDENTIFY_BUFFER_SIZE, cdb, 12, sense_buf, 24, 2000);
+//		if (status != 0) return false;
+		wprintf_s(L"status = %02X, sense = %02X, %02X, %02X, %02X \n", 
+			status, sense_buf[0], sense_buf[1], sense_buf[2], sense_buf[3]);
+
+		if (protocol & 0x02)
+		{
+			wprintf_s(L"read payload by procotol 0x82 \n");
+			cdb[1] = 0x82;
+			status = ScsiCommand(read, buf, length, cdb, 12, sense_buf, 24, 2000);
+//			if (status != 0) return false;
+			wprintf_s(L"status = %02X, sense = %02X, %02X, %02X, %02X \n",
+				status, sense_buf[0], sense_buf[1], sense_buf[2], sense_buf[3]);
+
+		}
+
+		try
+		{
+			wprintf_s(L"read completion by protocol 0x%02X \n", ii);
+			cdb[1] = ii;
+			status = ScsiCommand(read, buf, length, cdb, 12, sense_buf, 24, 2000);
+			//		if (status != 0) return false;
+			wprintf_s(L"status = %02X, sense = %02X, %02X, %02X, %02X \n",
+				status, sense_buf[0], sense_buf[1], sense_buf[2], sense_buf[3]);
+			wprintf_s(L"complete=%08X, %08X, %08X, %08X \n",
+				((DWORD*)buf)[0], ((DWORD*)buf)[1], ((DWORD*)buf)[2], ((DWORD*)buf)[3]);
+		}
+		catch (jcvos::CJCException & err)
+		{
+			wprintf_s(L"detected error in the SCSI call, %s", err.WhatT());
+		}
+
+		Sleep(3000);
+	}
+
+	return true;
+}
+
 bool CNVMePassthroughDevice::NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length)
 {
 	BYTE sense_buf[24];
@@ -723,4 +783,25 @@ bool CNVMePassthroughDevice::NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAN
 	}
 
 	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ==== Factorys ====
+void IStorageDevice::CreateNVMeByIndex(IStorageDevice*& dev, int index)
+{
+	wchar_t path[32];
+	swprintf_s(path, L"\\\\.\\PhysicalDrive%d", index);
+	HANDLE hdev = CreateFile(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+		OPEN_EXISTING, 0, NULL);
+	if (hdev == INVALID_HANDLE_VALUE) THROW_WIN32_ERROR(L"failed on opening device: %s", path);
+	CNVMePassthroughDevice* _dev = jcvos::CDynamicInstance<CNVMePassthroughDevice>::Create();
+	if (!_dev) THROW_ERROR(ERR_APP, L"mem full, failed on creating storage device object");
+	bool br = _dev->Connect(hdev, true, path, DISK_PROPERTY::BUS_NVMe);
+	if (!br)
+	{
+		RELEASE(_dev);
+		THROW_ERROR(ERR_APP, L"[err] failed on connecting device to handle.");
+	}
+	dev = static_cast<IStorageDevice*>(_dev);
+
 }

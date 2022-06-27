@@ -9,16 +9,7 @@
 
 LOCAL_LOGGER_ENABLE(L"security_parse", LOGGER_LEVEL_NOTICE);
 
-template <typename T> T* ConvertTokenType(boost::property_tree::wptree& pt, CTcgTokenBase* token)
-{
-	T* tt = dynamic_cast<T*>(token);
-	if (tt == nullptr)
-	{
-		pt.put_value(L"[err] token type does not match");
-		THROW_ERROR(ERR_APP, L"token type does not match");
-	}
-	return tt;
-}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -220,14 +211,20 @@ bool CSecurityParser::TableParse(boost::property_tree::wptree& res, const TCG_UI
 		}
 		UINT col_id = name_token->GetName<UINT>();
 		const PARAM_INFO * col_info = tab_info->GetColumn(col_id);
-		if (col_info == nullptr)
+		if (col_info)	{	col_info->ToProperty(table, name_token->m_value);	}
+		else
 		{
-			LOG_ERROR(L"[err] item %d is out of column number, col_id=%d", ii, col_id);
-			return false;
+			boost::property_tree::wptree value;
+			name_token->m_value->ToProperty(value);
+			//std::wstring str_name = L"COL_" + std::to_wstring(col_id);
+			//table.add_child(str_name, value);
 		}
-		col_info->ToProperty(table, name_token->m_value);
 	}
-	table.add(L"xmlattr.name", tab_info->m_name);
+	boost::property_tree::wptree table_attr;
+	table.add(L"<xmlattr>.name", tab_info->m_name);
+	//table_attr.add(L"name", tab_info->m_name);
+	////table.add_child(L"xmlattr", table_attr);
+	//res.add_child(L"Table.xmlattr", table_attr);
 	res.add_child(L"Table", table);
 
 	return true;
@@ -651,6 +648,7 @@ void PARAM_INFO::LoadParameter(const boost::property_tree::wptree& pt, CUidMap* 
 	if (m_type_info == nullptr)
 	{
 		if (m_type == L"uidref") m_type_id = PARAM_INFO::UidRef;
+		else if (m_type == L"uinteger_4" || m_type == L"uinteger_8") m_type_id = PARAM_INFO::Uinteger;
 		else m_type_id = PARAM_INFO::OtherType;
 	}
 }
@@ -659,10 +657,7 @@ void PARAM_INFO::ToProperty(boost::property_tree::wptree& pt, CTcgTokenBase* tok
 {
 	boost::property_tree::wptree value_pt;
 	if (m_type_info) {	m_type_info->ToProperty(value_pt, token);	}
-	else
-	{
-		token->ToProperty(pt);
-	}
+	else	{		token->ToProperty(value_pt);	}
 
 	pt.add_child(m_name, value_pt);
 }

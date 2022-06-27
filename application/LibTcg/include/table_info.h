@@ -68,7 +68,7 @@ public:
 	{
 		OtherType,
 		Err_MissingRequest,	// dummy type: 表示错误，遗漏了相应的requested parameter
-		UidRef,
+		UidRef, Uinteger, Integer,
 	};
 public:
 	DWORD			m_num;

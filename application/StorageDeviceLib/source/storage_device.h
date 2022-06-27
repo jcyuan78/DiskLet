@@ -47,6 +47,8 @@ public:
 	bool Connect(HANDLE dev, bool own, const std::wstring & dev_id, DISK_PROPERTY::BusType bus_type);
 	//virtual bool Detect(void) { return false; }
 	virtual bool Inquiry(IDENTIFY_DEVICE & id);
+	virtual BYTE Inquiry(BYTE* buf, size_t buf_len, BYTE evpd, BYTE page_code);
+
 //	virtual bool ReadSmart(jcvos::IBinaryBuffer * & data) { return false; }
 
 	virtual STORAGE_HEALTH_STATUS GetHealthInfo(DEVICE_HEALTH_INFO& info, HEALTH_INFO_LIST& ext_info);
@@ -82,11 +84,14 @@ public:
 	virtual BYTE SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
 
 	virtual BYTE DownloadFirmware(BYTE* buf, size_t buf_len, size_t block_size, DWORD slot, bool activate);
+	//virtual BYTE GetFeature(void) = 0;
+	//virtual BYTE SetFeature() = 0;
+	//virtual BYTE GetLogPage(BYTE * buf, size_t buf_len, BYTE LID, DWORD NUMD, UINT64 offset, DWORD param);
 
 
 protected:
 	// 用于派生类检测链接的device是否合适
-	virtual bool OnConnectDevice(void) { return true; };
+	virtual bool OnConnectDevice(void);
 
 	//virtual bool L0Discovery(BYTE* buf);
 

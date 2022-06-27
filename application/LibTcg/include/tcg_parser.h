@@ -31,3 +31,19 @@ protected:
 	CL0DiscoveryDescription m_feature_description;
 	CUidMap m_uid_map;
 };
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ==== support functions
+
+template <typename T> T* ConvertTokenType(boost::property_tree::wptree& pt, CTcgTokenBase* token)
+{
+	T* tt = dynamic_cast<T*>(token);
+	if (tt == nullptr)
+	{
+		pt.put_value(L"[err] token type does not match");
+		THROW_ERROR(ERR_APP, L"token type does not match");
+	}
+	return tt;
+}
+

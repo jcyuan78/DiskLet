@@ -10,7 +10,7 @@ namespace prop_tree = boost::property_tree;
 
 CWmiObjectBase::~CWmiObjectBase(void)
 {
-	if (m_obj) m_obj->Release();
+	//if (m_obj) m_obj->Release();
 }
 
 void CWmiObjectBase::Initialize(IWbemClassObject * obj, CStorageManager * manager)
@@ -28,7 +28,6 @@ void CWmiObjectBase::Initialize(IWbemClassObject * obj, CStorageManager * manage
 	m_obj_path = val.bstrVal;
 	VariantClear(&val);
 
-
 	hres = obj->Get(L"__RELPATH", 0, &val, &type, &flavor);
 	if (FAILED(hres)) THROW_COM_ERROR(hres, L"failed on getting __PATH");
 	size_t str_len = SysStringLen(val.bstrVal);
@@ -40,8 +39,8 @@ void CWmiObjectBase::Initialize(IWbemClassObject * obj, CStorageManager * manage
 
 	SetWmiProperty(obj);
 
-	m_obj = obj;
-	m_obj->AddRef();
+	//m_obj = obj;
+	//m_obj->AddRef();
 }
 
 bool CWmiObjectBase::Refresh(void)

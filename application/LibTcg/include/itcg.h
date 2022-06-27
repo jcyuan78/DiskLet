@@ -20,19 +20,36 @@ namespace tcg
 	static const DWORD COMID_L0DISCOVERY = (0x01);
 	static const DWORD COMID_TPER_RESET = (0x04);
 
+	enum TPER_STATE
+	{
+		TS_FREE = 0,		// 初始床状态
+		TS_SIDAUTH =	0x01,		// 获取SID的权限，并且修改SID密码
+		TS_ACTIVED =	0x02,		// LockingSP被Enable了
+		TS_LOCKED =		0x04,
+		TS_UNLOCK =		0x00,
+	};
+
+	class LOCKING_INFO
+	{
+	public:
+		UINT m_max_range;
+		UINT m_block_size;
+		UINT m_alignment;
+	};
+
 	class ITcgSession : virtual public IJCInterface
 	{
 	public:
+		virtual UINT64 GetState(bool reload) =0;
+
 	// ==== 基本API：直接对应TCG的command或者call ====
 		virtual bool GetProtocol(BYTE* buf, size_t buf_len) = 0;
-		/// <summary>
-		/// 获取TCG支持的features (L0Discovery). 通常从Session的缓存获取，如果force为true，则重新执行L0Discovery。
+		/// <summary> 获取TCG支持的features (L0Discovery). 通常从Session的缓存获取，如果force为true，则重新执行L0Discovery。
 		/// </summary>
 		/// <param name="feature">[OUT]feature结果</param>
 		/// <param name="force">[IN]是否强制刷新</param>
 		/// <returns></returns>
 		virtual bool GetFeatures(ISecurityObject * & feature, bool force) = 0;
-		virtual bool L0Discovery(BYTE* buf) = 0;
 		// Properties
 		// @props: [INOUT]请求的属性，已经device的答复
 		virtual BYTE Properties(boost::property_tree::wptree & props, const std::vector<std::wstring>& req) = 0;
@@ -44,7 +61,9 @@ namespace tcg
 
 
 		//
-		virtual BYTE GetTable(ISecurityObject * & res, const TCG_UID table, WORD start_col, WORD end_col)=0;
+//		virtual BYTE GetTable(ISecurityObject * & res, const TCG_UID table, WORD start_col, WORD end_col)=0;
+		virtual void GetTable(boost::property_tree::wptree& res, const TCG_UID table, WORD start_col, WORD end_col) = 0;
+
 		virtual BYTE SetTable(ISecurityObject * & res, const TCG_UID table, int name, const char* value) = 0;
 		virtual BYTE SetTable(ISecurityObject*& res, const TCG_UID table, int name, int val)=0;
 
@@ -52,17 +71,46 @@ namespace tcg
 		virtual BYTE Revert(ISecurityObject*& res, const TCG_UID sp) = 0;
 		virtual BYTE TperReset(void) = 0;
 
+		virtual BYTE BlockSID(BYTE clear_event, BYTE freeze) =0;
+		virtual bool L0Discovery(BYTE* buf) = 0;
+
+
 	// ==== 中级功能：一些TCG call的组合，或者特定调用，需要start session ====
 		virtual BYTE WriteShadowMBR(jcvos::IBinaryBuffer* buf) = 0;
+
+		virtual void WriteDataTable(const TCG_UID tab_id, const BYTE* buf, size_t buf_len) = 0;
+		virtual size_t ReadDataTable(const TCG_UID, BYTE* buf, size_t offset, size_t len) = 0;
+
+
 		virtual BYTE SetLockingRange(UINT range_id, UINT64 start, UINT64 length) = 0;
-		virtual void SetPassword(UINT user_id, bool admin, const char* new_pw) = 0;
+		//virtual void SetPassword(UINT user_id, bool admin, const char* new_pw) = 0;
 		virtual void AssignRangeToUser(UINT range_id, UINT user_id, bool keep_admin) = 0;
+		virtual void SetPassword(const TCG_UID authority, const char* new_pwd) =0;
+		virtual void SetACE(const TCG_UID obj, const std::vector<const BYTE*> &authorities) = 0;
+		virtual void GetLockingInfo(tcg::LOCKING_INFO& info) = 0;
+
 
 	// ==== 高级功能：完成一些特定的功能，实现中已经包括了start session ====
 		virtual BYTE RevertTPer(const char* password, const TCG_UID authority, const TCG_UID sp) = 0;
 		virtual BYTE GetDefaultPassword(std::string& password) = 0;
-		virtual BYTE SetSIDPassword(const char* old_pw, const char* new_pw) = 0;
+		//virtual BYTE SetSIDPassword(const char* old_pw, const char* new_pw) = 0;
 		virtual void Reset(void) = 0;
+	// ==== 其他功能 ====
+		virtual void GetLockingRangeUid(TCG_UID uuid, UINT id) = 0;
+
+
+#ifdef _DEBUG
+		virtual void SetLogFile(const std::wstring& fn) = 0;
+#endif
+	};
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	/// <summary> Security Device，提供TCG的高级服务。对一些TCG功能的封装 </summary>
+	class ISecurityDevice : virtual public IJCInterface
+	{
+	public:
+
 	};
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -118,7 +166,7 @@ namespace tcg
 	// == Security Object ==
 	//	解析security command的对象
 
-
+//	void ConnectSecurityDevice(ISecurityDevice*& security, IStorageDevice* dev);
 	void CreateTcgSession(ITcgSession*& session, IStorageDevice* dev);
 
 	// 指定数据文件路径
