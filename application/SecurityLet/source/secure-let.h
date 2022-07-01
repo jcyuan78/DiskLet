@@ -75,8 +75,20 @@ namespace SecureLet
 #endif
 	};
 
+	public enum class EncodeType{
+		
+
+	};
+
 	public ref class TcgSession : public Object
 	{
+	public:
+		enum class EncodeType {		// 密码的编码形式。用户界面上，密码都是以字符串形式表示。字符如何编码二进制串
+			ASCII,	// ASCII字符表示
+			HEX,	// 以字节为单位，2个字符表示一个字节，
+			BASE32, BASE64	// 标准编码
+		};
+
 	public:
 		TcgSession(tcg::ITcgSession* session) : m_session(nullptr)
 		{
@@ -102,7 +114,7 @@ namespace SecureLet
 			return gcnew TcgFeatureSet(feature);
 		}
 
-		void StartSession(TcgUid ^sp, TcgUid ^ auth, String^ challenge, bool write)
+		void StartSession(TcgUid ^sp, TcgUid ^ auth, String^ challenge, bool write, EncodeType encode)
 		{
 			JCASSERT(m_session);
 			const char* pw = nullptr;
@@ -110,10 +122,14 @@ namespace SecureLet
 			if (challenge != nullptr)
 			{
 				ToStdString(str_pwd, challenge);
-				//			if (!str_pwd.empty())	pw = str_pwd.c_str();
-				pw = str_pwd.c_str();
+				switch (encode)
+				{
+				case EncodeType::ASCII:	pw = str_pwd.c_str();	break;
+				case EncodeType::HEX:	pw = HexDecoder(str_pwd); break;
+				}
 			}
 			BYTE err = m_session->StartSession(sp->GetUid(), pw, auth->GetUid(), write);
+			if (encode == EncodeType::HEX) delete[] pw;
 			if (err) throw gcnew System::ApplicationException(L"failed on starting session");
 		}
 
@@ -121,7 +137,6 @@ namespace SecureLet
 		{
 			JCASSERT(m_session);
 			BYTE br = m_session->EndSession();
-//			return br;
 		}
 
 		void GetTable(TcgUid^ uid, WORD start_col, WORD end_col)
