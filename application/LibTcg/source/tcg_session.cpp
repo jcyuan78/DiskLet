@@ -1,5 +1,7 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "pch.h"
+
+
 #include "tcg_session.h"
 #include "../include/itcg.h"
 #include "../include/tcg_token.h"
@@ -11,6 +13,9 @@
 #include <iostream>
 
 LOCAL_LOGGER_ENABLE(L"tcg.session", LOGGER_LEVEL_DEBUGINFO);
+
+#define DECODE_TCG_STREAM
+//#define LOG_BINARY
 
 using tcg::ITcgSession;
 
@@ -24,10 +29,8 @@ CTcgSession::CTcgSession(void) : m_dev(NULL), m_is_open(false), m_feature_set(NU
 	if (m_feature_set == nullptr) THROW_ERROR(ERR_APP, L"failed on creating feature set");
 
 	tcg::GetSecurityParser(m_parser);
-#ifdef _DEBUG
 	m_invoking_id = 0;
 	m_log_out = &std::wcout;
-#endif
 }
 
 CTcgSession::~CTcgSession(void)
@@ -36,7 +39,6 @@ CTcgSession::~CTcgSession(void)
 	RELEASE(m_feature_set);
 	RELEASE(m_dev);
 	RELEASE(m_parser);
-#ifdef _DEBUG
 	if (m_log_out != &std::wcout)
 	{
 		std::wfstream* ff = dynamic_cast<std::wfstream*>(m_log_out);
@@ -44,7 +46,6 @@ CTcgSession::~CTcgSession(void)
 		delete m_log_out;
 	}
 	m_log_out = nullptr;
-#endif
 }
 
 bool CTcgSession::ConnectDevice(IStorageDevice* dev)
@@ -56,29 +57,6 @@ bool CTcgSession::ConnectDevice(IStorageDevice* dev)
 	// 准备解析器
 	jcvos::auto_interface<tcg::ISecurityParser> parser;
 	tcg::GetSecurityParser(parser);
-	// 获取L0Discovery
-	//jcvos::auto_array<BYTE> buf(SECTOR_SIZE);
-	//bool br = L0Discovery(buf);
-	//if (!br)
-	//{
-	//	LOG_ERROR(L"[err] failed on getting L0 Discovery");
-	//	return false;
-	//}
-
-	//RELEASE(m_feature_set);
-	//// 解析L0Discovery
-	//jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
-	//parser->ParseSecurityCommand(sec_obj, buf, SECTOR_SIZE, tcg::PROTOCOL_ID_TCG, tcg::COMID_L0DISCOVERY, true);
-	//sec_obj.detach<CTcgFeatureSet>(m_feature_set);
-
-	//const CTcgFeature* feature_opal = m_feature_set->GetFeature(CTcgFeature::FEATURE_OPAL_SSC);
-	//if (feature_opal == nullptr) THROW_ERROR(ERR_APP, L"the device does not support opal");
-	//m_base_comid = feature_opal->m_features.get<WORD>(L"Base ComId");
-	//m_sid_pin_init = feature_opal->m_features.get<BYTE>(L"Initial C_PIN SID");
-	//const CTcgFeature* feature_locking = m_feature_set->GetFeature(CTcgFeature::FEATURE_LOCKING);
-	//if (feature_locking == nullptr) THROW_ERROR(ERR_APP, L"failed on getting locking feature");
-	//m_lock_enabled = feature_locking->m_features.get<bool>(L"Locking Enabled");
-	//m_locked = feature_locking->m_features.get<bool>(L"Locked");
 
 	UpdateFeatureState();
 
@@ -122,10 +100,21 @@ void CTcgSession::UpdateFeatureState(void)
 	parser->ParseSecurityCommand(sec_obj, buf, SECTOR_SIZE, tcg::PROTOCOL_ID_TCG, tcg::COMID_L0DISCOVERY, true);
 	sec_obj.detach<CTcgFeatureSet>(m_feature_set);
 
-	const CTcgFeature* feature_opal = m_feature_set->GetFeature(CTcgFeature::FEATURE_OPAL_SSC);
-	if (feature_opal == nullptr) THROW_ERROR(ERR_APP, L"the device does not support opal");
-	m_base_comid = feature_opal->m_features.get<WORD>(L"Base ComId");
-	m_sid_pin_init = feature_opal->m_features.get<BYTE>(L"Initial C_PIN SID");
+	const CTcgFeature* ssc_feature = nullptr;
+	if (ssc_feature = m_feature_set->GetFeature(CTcgFeature::FEATURE_OPAL_SSC))
+	{
+		m_ssc_type = tcg::SSC_OPAL;
+	}
+	else if (ssc_feature = m_feature_set->GetFeature(CTcgFeature::FEATURE_PYRITEV200))
+	{
+		m_ssc_type = tcg::SSC_PYRITE;
+	}
+	else THROW_ERROR(ERR_APP, L"unknown ssc type");
+
+//	if (feature_opal == nullptr) THROW_ERROR(ERR_APP, L"the device does not support opal");
+	m_base_comid = ssc_feature->m_features.get<WORD>(L"Base ComId");
+	m_sid_pin_init = ssc_feature->m_features.get<BYTE>(L"Initial C_PIN SID");
+
 	const CTcgFeature* feature_locking = m_feature_set->GetFeature(CTcgFeature::FEATURE_LOCKING);
 	if (feature_locking == nullptr) THROW_ERROR(ERR_APP, L"failed on getting locking feature");
 	m_lock_enabled = feature_locking->m_features.get<bool>(L"Locking Enabled");
@@ -139,15 +128,11 @@ void CTcgSession::UpdateFeatureState(void)
 	}
 }
 
-#ifdef _DEBUG
 void CTcgSession::SetLogFile(const std::wstring& fn)
 {
 	std::wfstream* ff = new std::wfstream(fn, std::ios_base::out);
 	m_log_out = static_cast<std::wostream*>(ff);
-	//m_log_out.open(fn.c_str(), std::ios_base::out);
-	//m_out_file = true;
 }
-#endif
 
 UINT64 CTcgSession::GetState(bool reload)
 {
@@ -417,7 +402,7 @@ BYTE CTcgSession::GetTable(tcg::ISecurityObject*& res, const TCG_UID table, WORD
 	boost::property_tree::wptree table_prop;
 	m_parser->TableParse(table_prop, table, res);
 
-#ifdef _DEBUG
+#ifdef DECODE_TCG_STREAM
 	auto setting = boost::property_tree::xml_writer_settings<std::wstring>('\t', 1);
 	boost::property_tree::write_xml(*m_log_out , table_prop, setting);
 	m_log_out->flush();
@@ -437,7 +422,7 @@ void CTcgSession::GetTable(boost::property_tree::wptree& res, const TCG_UID tabl
 
 	// for my parser
 	m_parser->TableParse(res, table, sec_res);
-#ifdef _DEBUG
+#ifdef DECODE_TCG_STREAM
 	auto setting = boost::property_tree::xml_writer_settings<std::wstring>('\t', 1);
 	boost::property_tree::write_xml(*m_log_out, res, setting);
 	m_log_out->flush();
@@ -1108,9 +1093,8 @@ int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYT
 	size_t send_size = cmd.outputBufferSize();
 	WORD comid = GetComId();
 
-#ifdef _DEBUG
+#ifdef LOG_BINARY
 	auto setting = boost::property_tree::xml_writer_settings<std::wstring>('\t', 1);
-
 	wchar_t fn[MAX_PATH];
 	swprintf_s(fn, L"send-%04X.bin", m_invoking_id++);
 	FILE* file = NULL;
@@ -1120,7 +1104,9 @@ int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYT
 	fclose(file);
 	file = NULL;
 	LOG_DEBUG(L"saved send security data in %s", fn);
+#endif
 
+#ifdef DECODE_TCG_STREAM
 	jcvos::auto_interface<tcg::ISecurityObject> param_obj;
 	jcvos::auto_interface<tcg::ISecurityParser> parser;
 	tcg::GetSecurityParser(parser);
@@ -1129,9 +1115,6 @@ int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYT
 	param_obj->ToString(*m_log_out, -1, 0);
 	(*m_log_out) << std::endl;
 	m_log_out->flush();
-	//boost::property_tree::wptree param_pt;
-	//param_obj->ToProperty(param_pt);
-	//boost::property_tree::write_xml(std::wcout, param_pt, setting);
 #endif
 
 	JCASSERT(m_dev);
@@ -1156,7 +1139,7 @@ int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYT
 //		lastRC = sendCmd(IF_RECV, protocol, comID(), cmd->getRespBuffer(), MIN_BUFFER_LENGTH);
 	}     while ((0 != hdr->cp.outstandingData) && (0 == hdr->cp.minTransfer));
 
-#ifdef _DEBUG
+#ifdef LOG_BINARY
 	file = NULL;
 	swprintf_s(fn, L"receive-%04X.bin", m_invoking_id++);
 	_wfopen_s(&file, fn, L"w+");
@@ -1172,7 +1155,8 @@ int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYT
 		return -lastRC;
 	}
 	resp.init(response_buf, MIN_BUFFER_LENGTH, protocol, comid);
-#ifdef _DEBUG
+
+#ifdef DECODE_TCG_STREAM
 	(*m_log_out)<< L"result out:" << std::endl;
 
 	jcvos::auto_interface<tcg::ISecurityObject> sec_obj;
@@ -1180,10 +1164,8 @@ int CTcgSession::ExecSecureCommand(const DtaCommand& cmd, DtaResponse& resp, BYT
 	sec_obj->ToString((*m_log_out), -1, 0);
 	(*m_log_out) << std::endl;
 	m_log_out->flush();
-//	boost::property_tree::wptree res_pt;
-//	sec_obj->ToProperty(res_pt);
-//	boost::property_tree::write_xml(std::wcout, res_pt, setting);
 #endif
+
 	WORD status_code = resp.getStatusCode();
 	LOG_DEBUG(L"device returns status 0x%X", status_code);
 	return 0;

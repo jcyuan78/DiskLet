@@ -29,6 +29,11 @@ namespace tcg
 		TS_UNLOCK =		0x00,
 	};
 
+	enum SSC_TYPE
+	{
+		SSC_UNKNOWN, SSC_OPAL, SSC_PYRITE,
+	};
+
 	class LOCKING_INFO
 	{
 	public:
