@@ -67,6 +67,17 @@
 		]
 	},
 	{
+		"FeatureCode":"0x0303",
+		"FeatureName":"Pyrite SSC V2.00 Feature",
+		"Fields": [
+			{"FieldName":"Base ComId",			"StartByte":4, "ByteNumber":2},
+			{"FieldName":"Number of ComId",		"StartByte":6, "ByteNumber":2},
+			{"FieldName":"Initial C_PIN SID",	"StartByte":13, "ByteNumber":1},
+			{"FieldName":"Behavior of C_PIN SID","StartByte":14, "ByteNumber":1}
+		]
+	},
+
+	{
 		"FeatureCode":"0x0402",
 		"FeatureName":"Block SID",
 		"Fields": [
@@ -76,6 +87,27 @@
 			{"FieldName":"Freeze Lock State",	"StartByte":4, "ByteNumber":1, "StartBit":3, "BitNumber":1},
 			{"FieldName":"Hardware Reset",		"StartByte":5, "ByteNumber":1, "StartBit":0, "BitNumber":1}
 		]
+	},
+	{
+		"FeatureCode":"0x0404",
+		"FeatureName":"Supported Data Removal Mechanism Feature",
+		"Fields": [
+			{"FieldName":"DR Operation Processing",				"StartByte":5, "ByteNumber":1, "StartBit":0, "BitNumber":1},
+			{"FieldName":"Supported Data Removal Mechanism",	"StartByte":6, "ByteNumber":1},
+			{"FieldName":"DR Time Format 0",					"StartByte":7, "ByteNumber":1, "StartBit":0, "BitNumber":1},
+			{"FieldName":"DR Time Format 1",					"StartByte":7, "ByteNumber":1, "StartBit":1, "BitNumber":1},
+			{"FieldName":"DR Time Format 2",					"StartByte":7, "ByteNumber":1, "StartBit":2, "BitNumber":1},
+			{"FieldName":"DR Time Format 3",					"StartByte":7, "ByteNumber":1, "StartBit":3, "BitNumber":1},
+			{"FieldName":"DR Time Format 4",					"StartByte":7, "ByteNumber":1, "StartBit":4, "BitNumber":1},
+			{"FieldName":"DR Time Format 5",					"StartByte":7, "ByteNumber":1, "StartBit":5, "BitNumber":1},
+			{"FieldName":"DR Time 0",							"StartByte":8, "ByteNumber":2},
+			{"FieldName":"DR Time 1",							"StartByte":10, "ByteNumber":2},
+			{"FieldName":"DR Time 2",							"StartByte":12, "ByteNumber":2},
+			{"FieldName":"DR Time 3",							"StartByte":14, "ByteNumber":2},
+			{"FieldName":"DR Time 4",							"StartByte":16, "ByteNumber":2},
+			{"FieldName":"DR Time 5",							"StartByte":18, "ByteNumber":2}
+		]
 	}
+	
 	]
 }

@@ -135,15 +135,18 @@ protected:
 
 	tcg::ISecurityParser* m_parser=nullptr;
 
-#ifdef _DEBUG
-public:
-	virtual void SetLogFile(const std::wstring& fn);
+	tcg::SSC_TYPE m_ssc_type=tcg::SSC_UNKNOWN;
+
+//#ifdef LOG_BINARY
+//public:
+//protected:
+//#endif
 protected:
 	//命令计数，用于保存调试数据
 	UINT32 m_invoking_id;
 	std::wostream* m_log_out = nullptr;
-//	bool m_out_file = false;
-#endif
+public:
+	virtual void SetLogFile(const std::wstring& fn);
 };
 
 //void DtaHashPwd(vector<uint8_t>& hash, char* password, DtaDev* d);
