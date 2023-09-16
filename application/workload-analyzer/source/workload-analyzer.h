@@ -39,15 +39,19 @@ public:
 	uint32_t file_offset;
 };
 
+class FILE_INFO;
+
 class SEGMENT
 {
 public:
 	SEGMENT(uint64_t f, uint32_t s, uint32_t n) : first_cluster(f), start(s), num(n) {};
-	SEGMENT(const SEGMENT & ss) : first_cluster(ss.first_cluster), start(ss.start), num(ss.num) {};
+	SEGMENT(const SEGMENT & ss) : first_cluster(ss.first_cluster), start(ss.start), num(ss.num), file(ss.file) {};
+	SEGMENT(void) {};
 public:
 	uint64_t first_cluster;		// 这一段的起始的磁盘lba （4KB单位）
 	uint32_t start;				// 这一段在文件中的偏移量
 	uint32_t num;
+	FILE_INFO* file;
 };
 
 class FILE_INFO
@@ -56,7 +60,6 @@ public:
 	FID fid;
 	std::wstring fn;
 	uint32_t length;		// 以4K为单位
-//	uint64_t * cluster_mapping;
 	std::vector<SEGMENT> segments;
 };
 
@@ -132,6 +135,63 @@ extern GlobalInit global;
 typedef jcvos::CGlobalSingleToneNet<CAddressRank> CAddressRankInstance;
 
 namespace WLA {
+
+	public ref class FileInfo : public Object
+	{
+	public:
+		FileInfo(FILE_INFO* f) :file_info(f) { JCASSERT(file_info); };
+	public:
+		property int32_t fid {
+			int32_t get() { return file_info->fid; }
+		};
+		property String^ filename {
+			String^ get() { return gcnew String(file_info->fn.c_str()); }
+		}
+		
+	protected:
+		FILE_INFO* file_info=nullptr;
+	};
+
+	public ref class FileMap : public Object
+	{
+	public:
+		FileMap(void);
+		~FileMap(void);
+	public:
+		void AddSegment(uint64_t lba, uint64_t secs, String^ attr, int32_t fid, String^ filename);
+		FileInfo^ FindFile(uint64_t lba);
+	public:
+		std::map<int32_t, FILE_INFO*>* m_files;
+		std::vector<SEGMENT>* m_segments;
+	};
+
+	[CmdletAttribute(VerbsCommon::New, "FileMap")]
+	public ref class NewFileMap : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		virtual void InternalProcessRecord() override;
+	};
+
+/*
+	[CmdletAttribute(VerbsCommon::Find, "FileInfo")]
+	public ref class TraceIntervalTime : public JcCmdLet::JcCmdletBase
+	{
+	public:
+		[Parameter(Position = 2, Mandatory = true,
+			HelpMessage = "offset of the device")]
+		property uint64_t start_lba;
+
+		[Parameter(Position = 0, Mandatory = true,
+			HelpMessage = "disk size, in sector")]
+		property uint64_t secs;
+
+	public:
+//		virtual void BeginProcessing()	override;
+//		virtual void EndProcessing()	override;
+		virtual void InternalProcessRecord() override;
+	};
+*/
+
 	// -- my cmdlet base class, to handle exceptions	
 	// 包含 文件的offset
 	[CmdletAttribute(VerbsCommon::Set, "StaticMapping")]
@@ -212,12 +272,12 @@ namespace WLA {
 		~AddFileMapping(void) {};
 
 	public:
-		//[Parameter(Position = 0, ValueFromPipeline = true,
-		//	ValueFromPipelineByPropertyName = true, Mandatory = true,
-		//	HelpMessage = "input object")]
-		//property PSObject ^ file_mapping;
-		[Parameter(Position = 2, HelpMessage = "fid")]
+		[Parameter(HelpMessage = "fid")]
 		property int32_t fid;
+
+//		[Parameter(HelpMessage = "start lba")]
+//		property uint64_t start;
+
 
 		[Parameter(Position = 0, ValueFromPipeline = true,
 			ValueFromPipelineByPropertyName = true, Mandatory = true,
@@ -238,8 +298,6 @@ namespace WLA {
 
 	public:
 		virtual void InternalProcessRecord() override;
-
-
 	};
 
 
@@ -509,8 +567,8 @@ namespace WLA {
 	public ref class DecodeNVMeCmd : public JcCmdLet::JcCmdletBase
 	{
 	public:
-		DecodeNVMeCmd(void);
-		~DecodeNVMeCmd(void);
+		DecodeNVMeCmd(void) {};
+		~DecodeNVMeCmd(void) {};
 
 	public:
 		[Parameter(Position = 0, ValueFromPipeline = true,
@@ -519,8 +577,8 @@ namespace WLA {
 		property PSObject^ input_obj;
 
 	public:
-		virtual void BeginProcessing()	override;
-		virtual void EndProcessing()	override;
+		virtual void BeginProcessing()	override {};
+		virtual void EndProcessing()	override {};
 		virtual void InternalProcessRecord() override;
 
 	protected:

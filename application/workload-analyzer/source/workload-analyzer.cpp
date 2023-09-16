@@ -287,13 +287,7 @@ void WLA::ProcessTrace::InternalProcessRecord()
 void WLA::AddFileMapping::InternalProcessRecord()
 {
 	if (fid == 0) fid = 0x10000000;
-/*
-	std::wstring fn;
-	ToStdString(fn, file_mapping->Members[L"fn"]->Value->ToString());
-	uint64_t secs = System::Convert::ToUInt64(file_mapping->Members[L"file_length"]->Value);
-	PSObject ^ ss = (PSObject ^)(file_mapping->Members[L"segments"]->Value);
-	Type ^ type = ss->GetType();
-*/
+
 	std::wstring str_fn;
 	ToStdString(str_fn, fn);
 	LBA_INFO * lba_mapping = global.ClusterToFid(0);
@@ -501,4 +495,110 @@ void WLA::DecodeNVMeCmd::InternalProcessRecord()
 {
 	uint64_t lba = System::Convert::ToUInt64(input_obj->Members[L"lba"]->Value);
 
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+inline WLA::FileMap::FileMap(void)
+{
+//	throw gcnew System::NotImplementedException();
+	m_files = new std::map<int32_t, FILE_INFO*>;
+	m_segments = new std::vector<SEGMENT>;
+}
+
+WLA::FileMap::~FileMap(void)
+{
+//	throw gcnew System::NotImplementedException();
+	for (auto it = m_files->begin(); it != m_files->end(); it++)
+	{
+		if (it->second) delete it->second;
+	}
+	delete m_files;
+	delete m_segments;
+}
+
+void WLA::FileMap::AddSegment(uint64_t lba, uint64_t secs, String^ attr, int32_t fid, String^ filename)
+{
+	JCASSERT(m_segments);
+//	throw gcnew System::NotImplementedException();
+	// 查找文件
+	FILE_INFO* file_info = nullptr;
+	auto it = m_files->find(fid);
+	if (it == m_files->end())
+	{	// 
+		file_info = new FILE_INFO;
+		file_info->fid = fid;
+		ToStdString(file_info->fn, filename);
+		m_files->insert(std::make_pair(fid, file_info));
+	}
+	else
+	{
+		file_info = (it->second);
+	}
+	JCASSERT(file_info);
+	// 将segmeng添加在尾部，确保按顺序添加
+	if (!m_segments->empty())
+	{
+		SEGMENT& last = m_segments->back();
+		if (last.first_cluster + last.num > lba) throw gcnew System::ApplicationException(L"segment is not in order");
+	}
+	m_segments->emplace_back();
+//	m_segments->emplace();
+//	m_segments->push_back(SEGMENT());
+	SEGMENT& new_seg = m_segments->back();
+	new_seg.first_cluster = lba;
+	new_seg.num = secs;
+	new_seg.file = file_info;
+}
+
+WLA::FileInfo^ WLA::FileMap::FindFile(uint64_t lba)
+{
+//	throw gcnew System::NotImplementedException();
+	// TODO: 在此处插入 return 语句
+	size_t seg_num = m_segments->size();
+#if 1
+	// 用二分查找实现
+	size_t hh = 0, tt = seg_num;
+	while (1)
+	{
+		if (tt <= hh) break;
+		size_t mm = (hh + tt) / 2;
+		SEGMENT& seg = m_segments->at(mm);
+		if (lba < seg.first_cluster)
+		{
+			tt = mm;
+		}
+		else if (lba >= (seg.first_cluster + seg.num))
+		{
+			hh = mm + 1;
+		}
+		else
+		{
+			FileInfo^ fi = gcnew FileInfo(seg.file);
+			return fi;
+		}
+	}
+	return nullptr;
+
+#else
+	// 用顺序查找实现
+	for (size_t ii = 0; ii < seg_num; ++ii)
+	{
+		SEGMENT& seg = m_segments->at(ii);
+		if (lba >= seg.first_cluster && lba < (seg.first_cluster + seg.num))
+		{
+			FileInfo^ fi = gcnew FileInfo(seg.file);
+			return fi;
+		}
+	}
+	return nullptr;
+
+#endif
+}
+
+void WLA::NewFileMap::InternalProcessRecord()
+{
+//	throw gcnew System::NotImplementedException();
+	FileMap^ file_map = gcnew FileMap;
+	WriteObject(file_map);
 }
