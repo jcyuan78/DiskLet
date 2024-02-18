@@ -1,4 +1,5 @@
-﻿#include "pch.h"
+﻿///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "pch.h"
 #include "disk_info.h"
 #include "../include/utility.h"
 #include "storage_manager.h"
@@ -115,7 +116,7 @@ void CDiskInfo::AddPartition(const std::wstring & path)
 {
 	jcvos::auto_interface<CPartitionInfo> part;
 	bool br = CPartitionInfo::CreatePartitionInfo(part, path, this, m_manager);
-	if (!br || part == NULL) { LOG_ERROR(L"failed on create partition %s", path.c_str()); }
+	if (!br || part == nullptr) { LOG_ERROR(L"failed on create partition %s", path.c_str()); }
 	AddPartition(part);
 }
 
@@ -408,7 +409,7 @@ CDiskInfo::PROTOCOL CDiskInfo::DetectDevice(IStorageDevice *& dev, HANDLE handle
 		return ATA_DEVICE;
 	case DISK_PROPERTY::BUS_NVMe: {
 		jcvos::auto_interface<CNVMeDevice> sdev(jcvos::CDynamicInstance<CNVMeDevice>::Create());
-		if (sdev == NULL) THROW_ERROR(ERR_APP, L"failed on creating NVMe device");
+		if (sdev == nullptr) THROW_ERROR(ERR_APP, L"failed on creating NVMe device");
 		if (sdev) sdev->Connect(handle, false);
 		jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
 		sdev->NVMeTest(buf);
@@ -419,7 +420,7 @@ CDiskInfo::PROTOCOL CDiskInfo::DetectDevice(IStorageDevice *& dev, HANDLE handle
 	case DISK_PROPERTY::BUS_USB: {	// 尝试不同连接
 		// （1） ATA PASS THROW
 		jcvos::auto_interface<CAtaPassThroughDevice> sdev(jcvos::CDynamicInstance<CAtaPassThroughDevice>::Create());
-		if (sdev == NULL) THROW_ERROR(ERR_APP, L"failed on creating ATA pass through device");
+		if (sdev == nullptr) THROW_ERROR(ERR_APP, L"failed on creating ATA pass through device");
 		bool br = sdev->Connect(handle, false);
 		br = sdev->Detect();
 		if (br)
@@ -439,7 +440,7 @@ CDiskInfo::PROTOCOL CDiskInfo::DetectDevice(IStorageDevice *& dev, HANDLE handle
 	case DISK_PROPERTY::BUS_RAID: {
 		// （1） ATA PASS THROW
 		jcvos::auto_interface<CAtaPassThroughDevice> sdev(jcvos::CDynamicInstance<CAtaPassThroughDevice>::Create());
-		if (sdev == NULL) THROW_ERROR(ERR_APP, L"failed on creating ATA pass through device");
+		if (sdev == nullptr) THROW_ERROR(ERR_APP, L"failed on creating ATA pass through device");
 		bool br = sdev->Connect(handle, false);
 		br = sdev->Detect();
 		if (br)

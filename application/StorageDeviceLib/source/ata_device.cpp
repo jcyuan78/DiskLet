@@ -45,12 +45,12 @@ CAtaDeviceComm::~CAtaDeviceComm(void)
 
 bool CAtaDeviceComm::Inquiry(jcvos::IBinaryBuffer *& data)
 {	// identify device
-	JCASSERT(data == NULL);
+	JCASSERT(data == nullptr);
 	JCASSERT(m_hdev && m_hdev!=INVALID_HANDLE_VALUE);
 
 	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
 	bool res = jcvos::CreateBinaryBuffer(buf, READ_ATTRIBUTE_BUFFER_SIZE);
-	if (!res || buf == NULL) THROW_ERROR(ERR_APP, L"failed on creating buffer.");
+	if (!res || !buf) THROW_ERROR(ERR_APP, L"failed on creating buffer.");
 	BYTE * _buf = buf->Lock();
 	memset(_buf, 0, READ_ATTRIBUTE_BUFFER_SIZE);
 
@@ -81,7 +81,7 @@ bool CAtaDeviceComm::Inquiry(IDENTIFY_DEVICE & id)
 	static const size_t BUF_LEN = 128;
 	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
 	bool br = Inquiry(buf);
-	if (!br || buf == NULL)
+	if (!br || buf == nullptr)
 	{
 		LOG_ERROR(L"[err] failed on reading identify device");
 		return false;
@@ -106,12 +106,12 @@ bool CAtaDeviceComm::Inquiry(IDENTIFY_DEVICE & id)
 
 bool CAtaDeviceComm::ReadSmart(BYTE * _buf, size_t length)
 {
-//	JCASSERT(data == NULL);
+//	JCASSERT(data == nullptr);
 	JCASSERT(m_hdev && m_hdev!=INVALID_HANDLE_VALUE);
 
 //	jcvos::auto_interface<jcvos::IBinaryBuffer> buf;
 //	bool res = jcvos::CreateBinaryBuffer(buf, READ_ATTRIBUTE_BUFFER_SIZE);
-//	if (!res || buf == NULL) THROW_ERROR(ERR_APP, L"failed on creating buffer.");
+//	if (!res || buf == nullptr) THROW_ERROR(ERR_APP, L"failed on creating buffer.");
 //	BYTE * _buf = buf->Lock();
 
 	ATA_REGISTER reg;
@@ -203,8 +203,8 @@ bool CAtaDeviceComm::GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tr
 bool CAtaDeviceComm::AtaCommand(ATA_REGISTER & reg, ATA_PROTOCOL prot, BYTE * buf, size_t secs)
 {
 	LOG_STACK_TRACE();
-	LOG_TRACE(_T("Send ata cmd: %02X, %02X, %02X, %02X, %02X, %02X, %02X")
-		, reg.feature, reg.sec_count, reg.lba_low, reg.lba_mid, reg.lba_hi, reg.device, reg.command);
+	//LOG_TRACE(_T("Send ata cmd: %02X, %02X, %02X, %02X, %02X, %02X, %02X")
+	//	, reg.feature, reg.sec_count, reg.lba_low, reg.lba_mid, reg.lba_hi, reg.device, reg.command);
 	JCASSERT(m_hdev);
 
 	if (prot == NON_DATA || (!buf && secs == 0)) return AtaCommandNoData(reg);
@@ -249,7 +249,7 @@ bool CAtaDeviceComm::AtaCommand(ATA_REGISTER & reg, ATA_PROTOCOL prot, BYTE * bu
 	DWORD readsize = 0;
 	BOOL br = DeviceIoControl(m_hdev, IOCTL_ATA_PASS_THROUGH_DIRECT, 
 		&hdr_in, boost::numeric_cast<DWORD>(hdr_size), &hdr_in, boost::numeric_cast<DWORD>(hdr_size), 
-		&readsize, NULL);
+		&readsize, nullptr);
 	if (!br)
 	{
 		jcvos::CWin32Exception err(GetLastError(), _T("failure on ata command "));
@@ -304,7 +304,7 @@ bool CAtaDeviceComm::AtaCommand48(ATA_REGISTER &reg_pre, ATA_REGISTER &reg_cur,
 	DWORD readsize = 0;
 	BOOL br = DeviceIoControl(m_hdev, IOCTL_ATA_PASS_THROUGH_DIRECT, 
 		&hdr_in, boost::numeric_cast<DWORD>(hdr_size), &hdr_out, boost::numeric_cast<DWORD>(hdr_size), 
-		&readsize, NULL);
+		&readsize, nullptr);
 	memcpy_s(&reg_cur, 8, hdr_out.CurrentTaskFile, 8);
 	memcpy_s(&reg_pre, 8, hdr_out.PreviousTaskFile, 8);
 
@@ -319,7 +319,7 @@ bool CAtaDeviceComm::AtaCommandNoData(ATA_REGISTER &reg)
 	ATA_PASS_THROUGH_DIRECT	hdr_in;
 	memset(&hdr_in, 0, hdr_size);
 	hdr_in.DataTransferLength = 0;
-	hdr_in.DataBuffer = NULL;
+	hdr_in.DataBuffer = nullptr;
 	hdr_in.AtaFlags |= ATA_FLAGS_NO_MULTIPLE;
 	hdr_in.Length = (USHORT)hdr_size;
 	hdr_in.TimeOutValue = 5;
@@ -327,7 +327,7 @@ bool CAtaDeviceComm::AtaCommandNoData(ATA_REGISTER &reg)
 	DWORD readsize = 0;
 	BOOL br = DeviceIoControl(m_hdev, IOCTL_ATA_PASS_THROUGH_DIRECT, 
 		&hdr_in, boost::numeric_cast<DWORD>(hdr_size), &hdr_in, boost::numeric_cast<DWORD>(hdr_size), 
-		&readsize, NULL);
+		&readsize, nullptr);
 	if (!br)
 	{
 		jcvos::CWin32Exception err(GetLastError(), _T("failure on ata command "));
@@ -351,8 +351,8 @@ bool CAtaDeviceComm::Detect(void)
 bool CAtaPassThroughDevice::AtaCommand(ATA_REGISTER & reg, ATA_PROTOCOL prot, BYTE * buf, size_t secs)
 {
 	LOG_STACK_TRACE();
-	LOG_TRACE(L"Send ata cmd: %02X, %02X, %02X, %02X, %02X, %02X, %02X"
-		, reg.feature, reg.sec_count, reg.lba_low, reg.lba_mid, reg.lba_hi, reg.device, reg.command);
+	//LOG_TRACE(L"Send ata cmd: %02X, %02X, %02X, %02X, %02X, %02X, %02X"
+	//	, reg.feature, reg.sec_count, reg.lba_low, reg.lba_mid, reg.lba_hi, reg.device, reg.command);
 	JCASSERT(m_hdev);
 
 	BYTE cb[CDB10GENERIC_LENGTH];

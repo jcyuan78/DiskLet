@@ -27,7 +27,7 @@ namespace Clone
 
 	public enum class PartitionType {
 		EFI_Partition, Microsoft_Reserved, Basic_Data, LDM_Metadata, LDM_Data, Microsoft_Recovery,
-		Unkown_Partition,
+		Unkown_Partition, Empty_Partition,
 	};
 
 
@@ -152,6 +152,9 @@ namespace Clone
 	};
 
 
+
+
+
 	//-----------------------------------------------------------------------------
 	// -- disk info	
 	public ref class DiskInfo : public Object
@@ -231,7 +234,7 @@ namespace Clone
 
 Clone::PartitionType GuidToPartitionType(System::Guid^ type_id);
 
-inline System::Guid^ GptTypeToGuid(const Clone::PartitionType& type)
+inline System::Guid^ GptTypeToGuid(const Clone::PartitionType type)
 {
 	System::Guid^ type_id = nullptr;
 

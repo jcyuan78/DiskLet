@@ -1,18 +1,15 @@
 #pragma once
 
-//#include "../include/utility.h"
 #include <jccmdlet-comm.h>
 #include "../include/jcbuffer.h"
 
 using namespace System::Management::Automation;
 #pragma make_public(jcvos::IBinaryBuffer)
 
-
 #include <boost/cast.hpp>
 
 namespace JcCmdLet
 {
-
 	//-----------------------------------------------------------------------------
 	// -- show binary
 	[CmdletAttribute(VerbsData::Out, "Binary")]

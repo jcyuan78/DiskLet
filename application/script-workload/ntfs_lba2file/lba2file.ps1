@@ -22,7 +22,6 @@ process
 		"1"	{#file name
 			$file_name = $line
 			$status = 2
-			$file_offset = 0;
 		}
 		"2" {#attributes
 			if ($line -match "(\$\w+)\s+\((\w+)\)")
@@ -40,11 +39,9 @@ process
 					'len'=$length;
 					'attr'=$attr;
 					'fid'=$file_id;
-					'fn'=$file_name;
-					'file_offset'=$file_offset;}	
+					'fn'=$file_name}	
 				)
 				$lba_map
-				$file_offset += $length;
 			}
 		}
 	}
@@ -56,8 +53,7 @@ end
 		'len'=0;
 		'attr'="";
 		'fid'= -2;
-		'fn'="=END=";
-		'file_offset'=0;}	
+		'fn'="=END="}
 	)
-	$lba_map
+#	$lba_map
 }

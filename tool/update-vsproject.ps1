@@ -1,4 +1,4 @@
-# This script is used to update vc project file for fitting vs 2019 or vs 2017
+﻿# This script is used to update vc project file for fitting vs 2019 or vs 2017
 param($proj_fn, $vs_ver, $win_sdk=0)
 #convert event.csv file, parse the detail field
 
@@ -12,6 +12,7 @@ write-debug "$project"
 $properties = $project.PropertyGroup;
 
 #.PlatformToolset
+#修改tool change版本号
 foreach ($pp in $properties)
 {
 	$platform = $pp.PlatformToolset;
@@ -23,12 +24,13 @@ foreach ($pp in $properties)
 			$pp.PlatformToolset = "v141"; 
 		}
 		elseif ($vs_ver -eq "2019") { $pp.platformtoolset = "v142"; }
+		elseif ($vs_ver -eq "2022") { $pp.platformtoolset = "v143"; }
 	}
 }
 
 $properties = $project.PropertyGroup | ?{$_.Label -eq "Globals"};
 write-debug "prop = $properties"
-
+#修改SDK版本号，10.0表示最新版
 foreach ($pp in $properties)
 {
 	if ($pp.WindowsTargetPlatformVersion -ne $null)
@@ -39,6 +41,7 @@ foreach ($pp in $properties)
 			$pp.WindowsTargetPlatformVersion = $win_sdk; 
 		}
 		elseif ($vs_ver -eq "2019") { $pp.WindowsTargetPlatformVersion = "10.0"; }
+		elseif ($vs_ver -eq "2022") { $pp.WindowsTargetPlatformVersion = "10.0"; }
 	}
 }
 

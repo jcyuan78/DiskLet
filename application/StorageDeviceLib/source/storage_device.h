@@ -35,6 +35,7 @@ protected:
 
 public:
 	bool Connect(HANDLE dev, bool own);
+
 //	virtual bool Inquiry(jcvos::IBinaryBuffer * & data) { return false; }
 
 //	virtual bool Identify(boost::property_tree::wptree & prop);
@@ -49,8 +50,8 @@ public:
 	virtual bool SectorRead(BYTE * buf, FILESIZE lba, size_t sectors, UINT timeout) { return false; }
 	virtual bool SectorWrite(BYTE * buf, FILESIZE lba, size_t sectors, UINT timeout) { return false; }
 
-	virtual bool Read(BYTE * buf, FILESIZE lba, size_t secs) { return false; }
-	virtual bool Write(BYTE * buf, FILESIZE lba, size_t secs) { return false; }
+	virtual bool Read(BYTE* buf, FILESIZE lba, size_t secs);
+	virtual bool Write(BYTE* buf, FILESIZE lba, size_t secs);
 	virtual void FlushCache() { return; }
 
 	//virtual bool StartStopUnit(bool stop) = 0;
@@ -76,11 +77,22 @@ public:
 	virtual BYTE SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
 	virtual BYTE SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid);
 
+	virtual BYTE DownloadFirmware(BYTE* buf, size_t buf_len, size_t block_size, DWORD slot, bool activate);
+	//virtual BYTE GetFeature(void) = 0;
+	//virtual BYTE SetFeature() = 0;
+	//virtual BYTE GetLogPage(BYTE * buf, size_t buf_len, BYTE LID, DWORD NUMD, UINT64 offset, DWORD param);
+
+
+protected:
+	// 用于派生类检测链接的device是否合适
+	virtual bool OnConnectDevice(void);
+
 	//virtual bool L0Discovery(BYTE* buf);
 
 
 protected:
 	HANDLE		m_hdev;
+	std::wstring m_dev_id;
 
 
 };

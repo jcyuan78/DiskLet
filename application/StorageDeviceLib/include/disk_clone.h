@@ -110,7 +110,9 @@ template <class FUNC>
 class CAsyncCall : public CCopyProgress
 {
 public:
-	CAsyncCall(FUNC & f) : m_func(f) {}
+	CAsyncCall(const FUNC & f) : m_func(f) {}
+	CAsyncCall(FUNC& f) : m_func(f) {}
+	CAsyncCall(void) {}
 	~CAsyncCall(void) {}
 
 public:
@@ -145,8 +147,11 @@ protected:
 };
 
 template <class FUNC>
-CAsyncCall<FUNC> * CreateAsyncCall(FUNC & f)
+CAsyncCall<FUNC> * CreateAsyncCall(const FUNC & f)
 {
-	CAsyncCall<FUNC> *ff = new jcvos::CDynamicInstance<CAsyncCall<FUNC> >(f);
-	return ff;
+	CAsyncCall<FUNC> *f1 = jcvos::CDynamicInstance<CAsyncCall<FUNC> >::Create();
+
+//	CAsyncCall<FUNC> *ff = new jcvos::CDynamicInstance<CAsyncCall<FUNC> >(f);
+
+	return f1;
 }

@@ -12,7 +12,25 @@ LOCAL_LOGGER_ENABLE(L"storage_device", LOGGER_LEVEL_NOTICE);
 
 #define CDB12GENERIC_LENGTH                  12
 
-#define Lo
+const wchar_t* ScsiStatusCodeToString(BYTE code)
+{
+	switch (code)
+	{
+	case SCSISTAT_GOOD:				return L"Good";
+	case SCSISTAT_CHECK_CONDITION:	return L"Check condition";
+	case SCSISTAT_CONDITION_MET:	return L"Busy";
+	case SCSISTAT_BUSY:				return L"Busy";
+	case SCSISTAT_INTERMEDIATE:		return L"Intermediate";
+	case SCSISTAT_INTERMEDIATE_COND_MET:	return L"Intermediate cond met";
+	case SCSISTAT_RESERVATION_CONFLICT:		return L"Reservation conflict";
+	case SCSISTAT_COMMAND_TERMINATED:		return L"Command terminated";
+	case SCSISTAT_QUEUE_FULL:				return L"Task set full";
+	case SCSISTAT_ACA_ACTIVE:				return L"ACA active";
+	case SCSISTAT_TASK_ABORTED:				return L"Task aborted";
+//	case SCSISTAT_IO_CTRL_FAIL:				return L"DeviceIoControl() fail";
+	default: return L"Unknonw status";
+	}
+}
 
 //
 // SCSI bus status codes.
@@ -55,7 +73,9 @@ bool CStorageDeviceComm::Connect(HANDLE dev, bool own)
 			return false;
 		}
 	}
-	return true;
+	bool br = OnConnectDevice();
+	if (!br) LOG_ERROR(L"[err] failed on connecting to device");
+	return br;
 }
 //
 //bool CStorageDeviceComm::Identify(boost::property_tree::wptree & prop)
@@ -84,8 +104,7 @@ bool CStorageDeviceComm::Inquiry(IDENTIFY_DEVICE & id)
 
 	DWORD read;
 	BOOL br = DeviceIoControl(m_hdev, IOCTL_STORAGE_QUERY_PROPERTY,
-		query, sizeof(STORAGE_PROPERTY_QUERY),
-		_query_out, 512, &read, NULL);
+		query, sizeof(STORAGE_PROPERTY_QUERY),	_query_out, 512, &read, NULL);
 	if (!br) THROW_WIN32_ERROR(L"failed on calling IOCTL_STORAGE_QUERY_PROPERTY");
 	STORAGE_DEVICE_DESCRIPTOR * desc = (STORAGE_DEVICE_DESCRIPTOR*)_query_out;
 
@@ -114,6 +133,51 @@ bool CStorageDeviceComm::Inquiry(IDENTIFY_DEVICE & id)
 	PROPERTY_TO_STRING(ProductRevisionOffset, id.m_firmware);
 
 	return true;
+}
+
+//bool CStorageDeviceComm::Inquiry(IDENTIFY_DEVICE& id)
+//{
+	//BYTE cdb[6];
+	//memset(cdb, 0, 6);
+	//cdb[0] = SCSIOP_INQUIRY;
+	//cdb[1] = evpd;
+	//if (evpd != 0) cdb[2] = page_code;
+	//cdb[3] = HIBYTE(LOWORD(buf_len));
+	//cdb[4] = LOBYTE(LOWORD(buf_len));
+	//SENSE_DATA sense;
+	//BYTE res = ScsiCommand(IStorageDevice::read, buf, buf_len, cdb, CDB6GENERIC_LENGTH,
+	//	(BYTE*)&sense, sizeof(SENSE_DATA), 1500);
+	//if (res!= SCSISTAT_GOOD)  LOG_ERROR(L"[err] device returns error (0x%02X): %s", res, ScsiStatusCodeToString(res));
+	//return res;
+//	return false;
+//}
+
+
+
+//STORAGE_HEALTH_STATUS CStorageDeviceComm::GetHealthInfo(DEVICE_HEALTH_INFO& info, HEALTH_INFO_LIST& ext_info)
+//{
+//	CLONE_ERROR(DR_NOT_SUPPORT, L"device (%s) does not support health info", m_dev_id.c_str());
+//	return STATUS_ERROR;
+//}
+
+bool CStorageDeviceComm::Read(BYTE* buf, FILESIZE lba, size_t secs)
+{
+	DWORD read = 0;
+	LARGE_INTEGER ptr;
+	ptr.QuadPart = lba * SECTOR_SIZE;
+	SetFilePointerEx(m_hdev, ptr, NULL, FILE_BEGIN);
+	BOOL br = ReadFile(m_hdev, buf, boost::numeric_cast<DWORD>(secs*SECTOR_SIZE), &read, NULL);
+	return (br != 0);
+}
+
+bool CStorageDeviceComm::Write(BYTE* buf, FILESIZE lba, size_t secs)
+{
+	DWORD written = 0;
+	LARGE_INTEGER ptr;
+	ptr.QuadPart = lba * SECTOR_SIZE;
+	SetFilePointerEx(m_hdev, ptr, NULL, FILE_BEGIN);
+	BOOL br = WriteFile(m_hdev, buf, boost::numeric_cast<DWORD>(secs*SECTOR_SIZE), &written, NULL);
+	return (br != 0);
 }
 
 
@@ -177,32 +241,18 @@ BYTE CStorageDeviceComm::ScsiCommand(READWRITE rd_wr, BYTE * buf, size_t length,
 		&sptdwb, llength,
 		&returned, FALSE);
 	QueryPerformanceCounter(&t1);		// 性能计算
+	if (!success)
+	{
+		LOG_WIN32_ERROR(L"[err] failed on calling SCIS command");
+//		return SCSISTAT_IO_CTRL_FAIL;
+		return -1;
+	}
 	//if (t0.QuadPart <= t1.QuadPart)		m_last_invoke_time = t1.QuadPart - t0.QuadPart;
 	//else								m_last_invoke_time = 0;
 
 	if (sense) memcpy_s(sense, sense_len, sptdwb.ucSenseBuf, min(SPT_SENSE_LENGT, sense_len));
-	if (!success)	THROW_WIN32_ERROR(L"failed on calling IOCTL_SCSI_PASS_THROUGH_DIRECT ");
-//	return sptdwb.ucSenseBuf[0xC];
-	return sptdwb.sptd.ScsiStatus;
-}
-
-const wchar_t* ScsiStatusCodeToString(BYTE code)
-{
-	switch (code)
-	{
-	case SCSISTAT_GOOD:				return L"Good"; 
-	case SCSISTAT_CHECK_CONDITION:	return L"Check condition";
-	case SCSISTAT_CONDITION_MET:	return L"Busy";
-	case SCSISTAT_BUSY:				return L"Busy";
-	case SCSISTAT_INTERMEDIATE:		return L"Intermediate";
-	case SCSISTAT_INTERMEDIATE_COND_MET:	return L"Intermediate cond met";
-	case SCSISTAT_RESERVATION_CONFLICT:		return L"Reservation conflict";
-	case SCSISTAT_COMMAND_TERMINATED:		return L"Command terminated";
-	case SCSISTAT_QUEUE_FULL:				return L"Task set full";
-	case SCSISTAT_ACA_ACTIVE:				return L"ACA active";
-	case SCSISTAT_TASK_ABORTED:				return L"Task aborted";
-	default: return L"Unknonw status";
-	}
+//	if (!success)	THROW_WIN32_ERROR(L"failed on calling IOCTL_SCSI_PASS_THROUGH_DIRECT ");
+	return sptdwb.ucSenseBuf[0xC];
 }
 
 BYTE CStorageDeviceComm::SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid)
@@ -247,15 +297,122 @@ BYTE CStorageDeviceComm::SecuritySend(BYTE* buf, size_t buf_len, DWORD protocoli
 	return res;
 }
 
+struct CB_WRITE_BUFFER
+{
+	BYTE op = 0;// SCSIOP_WRITE_BUFFER;
+	UINT mode_specific : 3;
+	UINT mode : 5;
+	BYTE buffer_id;
+	UINT buffer_offset : 24;
+	UINT length : 24;
+	BYTE control;
+};
+
+
+BYTE CStorageDeviceComm::DownloadFirmware(BYTE* buf, size_t buf_len, size_t block_size, DWORD slot, bool activate)
+{
+	size_t remain = buf_len;
+	DWORD buf_offset = 0;	// device端的buffer offset
+	BYTE* offset = buf;
+	JCASSERT(sizeof(CB_WRITE_BUFFER) == 10);
+	CB_WRITE_BUFFER cb;
+	cb.mode = 0x0E; // download and save only
+//	memset(&cb, 0, 10);
+
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // -- TCG features
 
-//bool CStorageDeviceComm::L0Discovery(BYTE* buf)
+	//while (1)
+	//{
+	//	size_t download_size = min(remain, block_size);
+	//	cb.mode = ;
+	//	cb.buffer_offset = 
+	//	ScsiCommand()
+
+	//}
+	return 0;
+}
+
+
+
+//void CStorageDeviceComm::GetFirmwareInfo(void)
 //{
-//	bool br = SecurityReceive(buf, 512, 0x01, 0x01);
-//	if (!br) { LOG_ERROR(L"[err] failed on calling security receive command"); }
-//	return br;
-//}
+//	STORAGE_HW_FIRMWARE_INFO* firmware_info = (STORAGE_HW_FIRMWARE_INFO*)(new char[4096]);
+//	memset(firmware_info, 0, 4096);
+//	firmware_info->Version = sizeof(STORAGE_HW_FIRMWARE_INFO);
+//	firmware_info->Size = sizeof(STORAGE_HW_FIRMWARE_INFO) + sizeof(STORAGE_HW_FIRMWARE_SLOT_INFO) * 2;
 //
+//	STORAGE_HW_FIRMWARE_INFO_QUERY query;
+//	query.Version = sizeof(STORAGE_HW_FIRMWARE_INFO_QUERY);
+//	query.Size = sizeof(STORAGE_HW_FIRMWARE_INFO_QUERY);
+//	query.Flags = STORAGE_HW_FIRMWARE_REQUEST_FLAG_CONTROLLER;
+//
+//	DWORD read = 0;
+//	BOOL br = DeviceIoControl(m_hdev, IOCTL_STORAGE_FIRMWARE_GET_INFO,
+//		&query, query.Size,
+//		firmware_info, firmware_info->Size,
+//		& read, nullptr);
+//	if (!br) THROW_WIN32_ERROR(L"failed on getting firmware info");
+//	wprintf_s(L"slot number=%d\n", firmware_info->SlotCount);
+//	for (BYTE ii = 0; ii < firmware_info->SlotCount; ++ii)
+//	{
+//		STORAGE_HW_FIRMWARE_SLOT_INFO& slot = firmware_info->Slot[ii];
+//		wprintf_s(L"slot[%d], slot_num=%d, fw=%S\n", ii, slot.SlotNumber, slot.Revision);
+//	}
+//	delete[] firmware_info;
+//}
+
+bool CStorageDeviceComm::OnConnectDevice(void)
+{
+	return true;
+}
+
+//struct CB_LOG_SENSE
+//{
+//	BYTE op = SCSIOP_LOG_SENSE;
+//	BYTE sp =0;
+//	UINT pc : 2;
+//	UINT page_code : 6;
+//	BYTE sub_page_code;
+//	BYTE reserved =0;
+//	WORD parameter_point =0;
+//	WORD allocation_length =0;
+//	BYTE control =0;
+//};
+//
+//BYTE CStorageDeviceComm::GetLogPage(BYTE* buf, size_t buf_len, BYTE LID, DWORD NUMD, UINT64 offset, DWORD param)
+//{
+//	CB_LOG_SENSE cb;
+//	cb.pc = 0;
+//	cb.page_code = LID;
+//	cb.allocation_length = LOWORD(buf_len);
+//
+//	return 0;
+//}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// -- TCG features
+
+
+
+//void IStorageDevice::CreateDeviceByIndex(IStorageDevice*& dev, int index)
+//{
+//	wchar_t path[32];
+//	swprintf_s(path, L"\\\\.\\PhysicalDrive%d", index);
+//	HANDLE hdev = CreateFile(path, GENERIC_READ| GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
+//		OPEN_EXISTING, 0, NULL);
+//	if (hdev == INVALID_HANDLE_VALUE) THROW_WIN32_ERROR(L"failed on opening device: %s", path);
+//	CStorageDeviceComm* _dev = jcvos::CDynamicInstance<CStorageDeviceComm>::Create();
+//	if (!_dev) THROW_ERROR(ERR_APP, L"mem full, failed on creating storage device object");
+//	bool br = _dev->Connect(hdev, true, path, DISK_PROPERTY::BUS_SCSI);
+//	if (!br)
+//	{
+//		RELEASE(_dev);
+//		THROW_ERROR(ERR_APP, L"[err] failed on connecting device to handle.");
+//	}
+//	dev = static_cast<IStorageDevice*>(_dev);
+//}

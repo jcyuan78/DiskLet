@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 using namespace System;
 using namespace System::Management::Automation;
@@ -27,8 +27,8 @@ namespace Clone
 		DiskSize media_write;		// in MB unit
 		UINT64 error_count;
 		UINT   bad_block_num;
-		short  temperature_cur;	// µ¥Î»£ºÉãÊÏ¶È
-		short  temperature_max;	// µ¥Î»£ºÉãÊÏ¶È
+		short  temperature_cur;	// å•ä½ï¼šæ‘„æ°åº¦
+		short  temperature_max;	// å•ä½ï¼šæ‘„æ°åº¦
 		BYTE   percentage_used;
 	};
 
@@ -69,6 +69,11 @@ namespace Clone
 			JCASSERT(dev == NULL);
 			dev = m_storage;
 			if (dev) dev->AddRef();
+		}
+
+		void GetFirmwareInfo(void)
+		{
+			m_storage->GetFirmwareInfo();
 		}
 
 /*

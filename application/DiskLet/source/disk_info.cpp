@@ -285,4 +285,20 @@ Clone::PartitionType GuidToPartitionType(System::Guid^ type_id)
 
 	return type;
 }
-
+//
+//System::Guid ^ PartitionTypeToGuid(Clone::PartitionType type)
+//{
+//	switch (type)
+//	{
+//	case Clone::PartitionType::EFI_Partition: return gcnew System::Guid("{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}");
+//	case Clone::PartitionType::Microsoft_Reserved: return gcnew System::Guid("{e3c9e316-0b5c-4db8-817d-f92df00215ae}");
+//	case Clone::PartitionType::Basic_Data: return gcnew System::Guid("{ebd0a0a2-b9e5-4433-87c0-68b6b72699c7}");
+//	case Clone::PartitionType::LDM_Metadata: return gcnew System::Guid("{5808c8aa-7e8f-42e0-85d2-e1e90434cfb3}");
+//	case Clone::PartitionType::LDM_Data: return gcnew System::Guid("{af9b60a0-1431-4f62-bc68-3311714a69ad}");
+//	case Clone::PartitionType::Microsoft_Recovery: return gcnew System::Guid("{de94bba4-06d1-4d40-a16a-bfd50179d6ac}");
+//	//case Clone::PartitionType::_Partition: return gcnew System::Guid();
+//	//case Clone::PartitionType::_Partition: return gcnew System::Guid();
+//	//case Clone::PartitionType::_Partition: return gcnew System::Guid();
+//	default: return gcnew System::Guid;
+//	}
+//}

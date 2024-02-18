@@ -54,7 +54,7 @@ bool CVolumeInfo::CreateShadowVolume(IVolumeInfo *& _shadow)
 	{
 		auto_unknown<IVssBackupComponents> backup;
 		bool br = CreateSnapshotSet(backup, snapshotSetID, prop);
-		if (!br || backup == NULL)  THROW_ERROR(ERR_APP, L"CreateSnapshotSet failed");
+		if (!br || backup == nullptr)  THROW_ERROR(ERR_APP, L"CreateSnapshotSet failed");
 		CShadowVolume * shadow = jcvos::CDynamicInstance<CShadowVolume>::Create();
 
 		shadow->m_size = m_size;
@@ -76,7 +76,7 @@ bool CVolumeInfo::CreateShadowVolume(IVolumeInfo *& _shadow)
 
 bool CVolumeInfo::CreateVolume(CVolumeInfo *& vol, const std::wstring & path, CStorageManager * manager)
 {
-	JCASSERT(manager && vol == NULL);
+	JCASSERT(manager && vol == nullptr);
 	auto_unknown<IWbemClassObject> obj;
 	GetObjectFromPath(obj, path, manager);
 	return CreateVolume(vol, obj, manager);
@@ -92,7 +92,7 @@ bool CVolumeInfo::CreateVolume(CVolumeInfo *& vol, IWbemClassObject * obj, CStor
 
 bool CVolumeInfo::CreateSnapshotSet(IVssBackupComponents *& backup, VSS_ID & snapshotSetId, VSS_SNAPSHOT_PROP & prop)
 {
-	JCASSERT(backup == NULL);
+	JCASSERT(backup == nullptr);
 
 	//IVssAsync            *pAsync = NULL;
 	HRESULT              hres = S_OK;

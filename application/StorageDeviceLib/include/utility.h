@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <WbemIdl.h>
 #include <vector>
@@ -26,7 +26,7 @@ void GetWmiError(wchar_t * out_msg, size_t buf_size, HRESULT res, const wchar_t 
 	jcvos::auto_array<wchar_t> buf(256);	\
 	GetWmiError(buf, 256, res, msg, __VA_ARGS__);	\
 	jcvos::CJCException err(buf, jcvos::CJCException::ERR_APP);	\
-    LogException(__FUNCTION__, __LINE__, err);	\
+    LogException(__STR2WSTR__(__FUNCTION__), __LINE__, err);	\
     throw err;	} while(0);
 
 #define LOG_COM_ERROR(res, msg, ...)	do {\
@@ -161,18 +161,18 @@ void PrintDrive(IVdsDrive * drive);
 
 inline UINT64 ByteToMB(UINT64 size)
 {
-	// È·±£ÄÜ¹»±»1MBÕû³ý¡£
+	// È·ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½1MBï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	JCASSERT((size &(_1MB - 1)) == 0);
 	return size / _1MB;
 }
 
-// ÏòÉÏÈ¡Õû¶ÔÆE
+// ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ÆE
 inline UINT64 ByteToMB_Up(UINT64 size)
 {
 	return ((size-1) >>20) +1;
 }
 
-// ÏòÏÂÈ¡Õû¶ÔÆE
+// ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ÆE
 inline UINT64 ByteToMB_Down(UINT64 size)
 {
 	return (size >>20);

@@ -1,6 +1,8 @@
+param($offset)
+
 begin
 {
-	[int64]$next_start = 0
+	[int64]$next_start = $offset
 }
 process
 {

@@ -27,45 +27,10 @@ DtaCommand::DtaCommand(const BYTE InvokingUid[8], const BYTE method[8])
 void
 DtaCommand::reset()
 {
-    //LOG(D1) << "Entering DtaCommand::reset()";
     LOG_STACK_TRACE();
-
     memset(cmdbuf, 0, MAX_BUFFER_LENGTH);
-	//memset(respbuf, 0, MIN_BUFFER_LENGTH);
     bufferpos = sizeof (OPALHeader);
 }
-
-//void DtaCommand::reset(OPAL_UID InvokingUid, vector<uint8_t> method)
-//{
-//	//LOG(D1) << "Entering DtaCommand::reset(OPAL_UID,uint8_t)";
-//    LOG_STACK_TRACE();
-//	reset();
-//	cmdbuf[bufferpos++] = OPAL_TOKEN::CALL;
-//	addToken(InvokingUid);
-//	addToken(method);
-//}
-//
-//void DtaCommand::reset(vector<uint8_t> InvokingUid, vector<uint8_t> method)
-//{
-//	//LOG(D1) << "Entering DtaCommand::reset(uint8_t,uint8_t)";
-//    LOG_STACK_TRACE();
-//	reset();
-//	cmdbuf[bufferpos++] = OPAL_TOKEN::CALL;
-//	addToken(InvokingUid);
-//	addToken(method);
-//}
-//
-//void DtaCommand::reset(OPAL_UID InvokingUid, OPAL_METHOD method)
-//{
-//    //LOG(D1) << "Entering DtaCommand::reset(OPAL_UID, OPAL_METHOD)";
-//    LOG_STACK_TRACE();
-//    reset(); 
-//    cmdbuf[bufferpos++] = OPAL_TOKEN::CALL;
-//	addToken(InvokingUid);
-//    cmdbuf[bufferpos++] = OPAL_SHORT_ATOM::BYTESTRING8;
-//    memcpy(&cmdbuf[bufferpos], &OPALMETHOD[method][0], 8); /* bytes 11-18 */
-//    bufferpos += 8;
-//}
 
 void DtaCommand::reset(const TCG_UID invoking_uid, const TCG_UID method)
 {

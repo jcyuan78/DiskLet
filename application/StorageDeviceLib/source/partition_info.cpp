@@ -39,7 +39,7 @@ bool CPartitionInfo::GetVolume(IVolumeInfo *& vol)
 
 bool CPartitionInfo::GetParent(IDiskInfo *& disk)
 {
-	JCASSERT(disk == NULL);
+	JCASSERT(disk == nullptr);
 	disk = static_cast<IDiskInfo*>(m_parent);
 	JCASSERT(disk);
 	disk->AddRef();
@@ -116,14 +116,14 @@ bool CPartitionInfo::FormatVolume(IVolumeInfo *& new_vol, const std::wstring & f
 
 	auto_unknown<IWbemClassObject> vol_obj;
 	bool br = m_volume->FormatVolume(vol_obj, fs_type, label, full, compress);
-	if (!br || vol_obj == NULL)
+	if (!br || vol_obj == nullptr)
 	{
 		LOG_ERROR(L"[err] failed on format volume %s", m_volume->m_name.c_str());
 		return false;
 	}
 	jcvos::auto_interface<CVolumeInfo> vol_info;
 	br = CVolumeInfo::CreateVolume(vol_info, vol_obj, m_manager);
-	if (!br || vol_info == NULL)
+	if (!br || vol_info == nullptr)
 	{
 		LOG_ERROR(L"[err] failed on creating volume info object");
 		return false;
@@ -233,7 +233,7 @@ void CPartitionInfo::SetWmiProperty(IWbemClassObject * obj)
 bool CPartitionInfo::CreatePartitionInfo(CPartitionInfo * & part, const std::wstring & path, 
 		CDiskInfo * parent,  CStorageManager * manager)
 {
-	JCASSERT(manager && part==NULL);
+	JCASSERT(manager && part==nullptr);
 	auto_unknown<IWbemClassObject> obj;
 	GetObjectFromPath(obj, path, manager);
 	return CreatePartitionInfo(part, obj, parent, manager);
@@ -242,7 +242,7 @@ bool CPartitionInfo::CreatePartitionInfo(CPartitionInfo * & part, const std::wst
 bool CPartitionInfo::CreatePartitionInfo(CPartitionInfo *& part, IWbemClassObject * obj, 
 		CDiskInfo * parent, CStorageManager * manager)
 {
-	JCASSERT(manager && part==NULL);
+	JCASSERT(manager && part==nullptr);
 	part = jcvos::CDynamicInstance<CPartitionInfo>::Create();
 	part->CWmiObjectBase::Initialize(obj, manager);
 	part->m_parent = parent;
@@ -263,10 +263,10 @@ bool CPartitionInfo::ListVolumes(void)
 		ULONG count = 0;
 		hres = penum->Next(WBEM_INFINITE, 1, &obj, &count);
 		if (FAILED(hres))	THROW_COM_ERROR(hres, L"failed on getting physical disk, error=0x%X", hres);
-		if (hres == S_FALSE || obj == NULL) break;
+		if (hres == S_FALSE || obj == nullptr) break;
 		// 处理查询结果
 		prop_tree::wptree prop;
-		if (!(obj == NULL)) ReadWmiObject(prop, obj);
+		if (!(obj == nullptr)) ReadWmiObject(prop, obj);
 
 		std::wstring & volume_path = prop.get<std::wstring>(L"Volume");
 		std::wstring & partition_path = prop.get<std::wstring>(L"Partition");

@@ -64,7 +64,7 @@ bool CWmiObjectBase::IsObject(const std::wstring & path)
 
 bool CWmiObjectBase::GetObjectFromPath(IWbemClassObject *& obj, const std::wstring & path, CStorageManager * manager)
 {
-	JCASSERT(manager && obj == NULL);
+	JCASSERT(manager && obj == nullptr);
 	HRESULT hres = manager->m_services->GetObject(
 		BSTR(path.c_str()), WBEM_FLAG_RETURN_WBEM_COMPLETE,
 		NULL, &obj, NULL);

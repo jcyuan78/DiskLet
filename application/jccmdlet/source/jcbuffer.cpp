@@ -109,7 +109,7 @@ void JcCmdLet::ShowBinary::InternalProcessRecord()
 	// output data
 	BYTE * val_array = bdata->Lock();
 	LOG_DEBUG(L"buf = %08X, data=%02X, %02X", val_array, val_array[0], val_array[1]);
-	// 仅支持行对苼E
+	// 锟斤拷支锟斤拷锟叫讹拷苼E
 	size_t add = (show_start) & 0xFFFFFF;
 
 	ii = show_start;
@@ -298,11 +298,11 @@ void JcCmdLet::JcCmdletBase::ProcessRecord()
 		std::wstring err_msg;
 		jcvos::Utf8ToUnicode(err_msg, err.what());
 		LOG_ERROR(L"[err] %s", err_msg.c_str());
-//				System::String ^ msg = gcnew System::String(err.what());
 		System::Exception ^ exp = gcnew PipelineStoppedException( System::String::Format(L"[err] {0}", 
 			gcnew System::String(err_msg.c_str())) );
 		ErrorRecord ^er = gcnew	ErrorRecord(exp, L"stderr", ErrorCategory::FromStdErr, this);
 		WriteError(er);
+
+//		throw exp;
 	}
-//			ShowPipeMessage();
 }

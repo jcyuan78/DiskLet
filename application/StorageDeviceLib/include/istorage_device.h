@@ -121,12 +121,7 @@ public:
 	virtual FILESIZE GetCapacity(void) = 0;
 	virtual bool DeviceLock(void) = 0;
 	virtual bool DeviceUnlock(void) = 0;
-	//virtual bool Dismount(void) = 0;
 
-	//virtual void SetDeviceName(LPCTSTR name) = 0;
-	//virtual LPCTSTR GetBusName(void) = 0;
-
-	//virtual void UnmountAllLogical(void) = 0;
 	// time out in second
 	virtual BYTE ScsiCommand(READWRITE rd_wr, BYTE *buf, size_t length, 
 		_In_ const BYTE *cb, size_t cb_length,		// input of command block
@@ -140,6 +135,11 @@ public:
 
 	virtual BYTE SecurityReceive(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid) = 0;
 	virtual BYTE SecuritySend(BYTE* buf, size_t buf_len, DWORD protocolid, DWORD comid) = 0;
+
+	virtual BYTE DownloadFirmware(BYTE* buf, size_t buf_len, size_t block_size, DWORD slot, bool activate) = 0;
+	//virtual BYTE GetFeature(void) = 0;
+	//virtual BYTE SetFeature() = 0;
+	//virtual BYTE GetLogPage(void) = 0;
 
 #ifdef _DEBUG
 	//virtual HANDLE GetHandle() = 0;
