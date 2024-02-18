@@ -28,6 +28,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'" Label="Configuration">
+    <VcpkgConfiguration>Debug</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -35,6 +36,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'" Label="Configuration">
+    <VcpkgConfiguration>Release</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -42,6 +44,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'" Label="Configuration">
+    <VcpkgConfiguration>Debug</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -49,6 +52,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'" Label="Configuration">
+    <VcpkgConfiguration>Release</VcpkgConfiguration>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -115,12 +119,13 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN64;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN64;_DEBUG;INTERNAL_USE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <NoEntryPoint>false</NoEntryPoint>
       <EntryPointSymbol>
       </EntryPointSymbol>
-      <NoEntryPoint>true</NoEntryPoint>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">
@@ -131,9 +136,9 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Link />
     <Link>
-      <NoEntryPoint>true</NoEntryPoint>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <NoEntryPoint>false</NoEntryPoint>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">
@@ -143,24 +148,29 @@
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <Link />
     <Link>
-      <NoEntryPoint>true</NoEntryPoint>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <NoEntryPoint>false</NoEntryPoint>
     </Link>
+    <PostBuildEvent>
+      <Command>C:\Windows\system32\Windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass -file $(WORKSPACE)\tool\increase-version.ps1 "$(ProjectDir)app.rc" </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;INTERNAL_USE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
     </ClCompile>
     <Link>
-      <EntryPointSymbol>
-      </EntryPointSymbol>
-      <NoEntryPoint>true</NoEntryPoint>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <NoEntryPoint>false</NoEntryPoint>
     </Link>
+    <PostBuildEvent>
+      <Command>C:\Windows\system32\Windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass -file $(WORKSPACE)\tool\increase-version.ps1 "$(ProjectDir)app.rc" </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\disk_info.h" />

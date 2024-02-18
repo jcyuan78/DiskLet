@@ -4,6 +4,7 @@ using namespace System;
 #include "../../StorageManagementLib/storage_management_lib.h"
 #include "disk_info.h"
 
+#define WM_STORAGE_DEVICE_CHANGE (WM_USER+1)
 
 #pragma make_public(IStorageManager)
 
@@ -36,23 +37,14 @@ namespace Clone
 		~InvokingProgress(void);
 	public:
 		//PROGRESS ^ GetProgress(UINT32 timeout);
+		bool CancelProcess(DWORD timeout) {
+			return m_progress->CancelProcess(timeout);
+		}
 
 	public:
-		property int state_num {
-			int get() {
-				return 0;
-			}
-		}
-		property int cur_state {
-			int get() {
-				return 0;
-			}
-		}
-		property int result {
-			int get() {
-				return m_progress->GetResult();
-			}
-		}
+		property int state_num { int get() { return m_progress->GetStageNumber(); }	}
+		property int cur_state { int get() { return m_progress->GetCurStage(); }	}
+		property int result {int get() {return m_progress->GetResult();	}	}
 		property String ^ status {
 			String ^ get() {
 				std::wstring str_status;
@@ -61,10 +53,10 @@ namespace Clone
 			}
 		}
 
-		property float progress {
-			float get() {
+		property int progress {
+			int get() {
 				int pp = m_progress->GetProgress();
-				return (float)((float)pp *100.0 / INT_MAX);
+				return (int)((float)pp *100.0 / PERCENT_100);
 			}
 		}
 		property UINT32 timeout;
@@ -73,9 +65,37 @@ namespace Clone
 		IJCProgress * m_progress;
 	};
 
+///////////////////////////////////////////////////////////////////////////////
+// == Storage Manager ==
+	public interface class DeviceDetector
+	{
+	public:
+		virtual bool OnDeviceChanged(int type, ULONG volumes) = 0;
+	};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // == Storage Manager ==
+
+	class CDeviceListener : public IDeviceChangeListener
+	{
+	public:
+		CDeviceListener(void) :m_hwnd(NULL) {}
+	public:
+		virtual void OnDeviceChange(EVENT_TYPE event, ULONG disk_id)
+		{
+			if (m_hwnd)
+			{
+				PostMessage(m_hwnd, WM_STORAGE_DEVICE_CHANGE, (int)(event), disk_id);
+			}
+		}
+		void SetCallbackWindow(HWND hwnd)
+		{
+			m_hwnd = hwnd;
+		}
+	protected:
+		HWND m_hwnd;
+	};
 
 	public ref class StorageManager : public Object
 	{
@@ -86,9 +106,16 @@ namespace Clone
 		bool ListDisk(void);
 		UINT GetPhysicalDiskNum(void);
 		DiskInfo ^ GetPhysicalDisk(UINT index);
+		bool RegisterWindow(UINT64 handle);
+
+		bool LoadConfig(const std::wstring& fn);
 
 	protected:
+		CDeviceListener * m_listener;
 		IStorageManager * m_manager;
+		DeviceDetector^ m_dector;
+
+
 	};
 
 ///////////////////////////////////////////////////////////////////////////////

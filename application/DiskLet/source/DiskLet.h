@@ -124,6 +124,35 @@ namespace DiskLet
 	};
 
 
+	[CmdletAttribute(VerbsCommon::Copy, "Disk")]
+	public ref class CopyDisk : public DiskCmdBase
+	{
+	public:
+		CopyDisk(void) { };
+		~CopyDisk(void) {};
+
+	public:
+		[Parameter(Position = 0, Mandatory = true, ParameterSetName = "ByDiskObj",
+			HelpMessage = "source disk for copy")]
+		property Clone::DiskInfo^ src;
+
+		[Parameter(Position = 1, Mandatory = true, ParameterSetName = "ByDiskObj",
+			HelpMessage = "destination disk for copy")]
+		property Clone::DiskInfo^ dst;
+
+		[Parameter(Position = 0, Mandatory = true, ParameterSetName = "ByDiskNum",
+			HelpMessage = "source disk for copy")]
+		property UINT src_num;
+
+		[Parameter(Position = 1, Mandatory = true, ParameterSetName = "ByDiskNum",
+			HelpMessage = "destination disk for copy")]
+		property UINT dst_num;
+
+	public:
+		virtual void InternalProcessRecord() override;
+	};
+
+
 
 	[CmdletAttribute(VerbsCommon::Copy, "Partition")]
 	public ref class CopyPartition : public DiskLetBase
@@ -341,6 +370,26 @@ namespace DiskLet
 
 	public:
 		virtual void InternalProcessRecord() override;
+	};
+
+	[CmdletAttribute(VerbsLifecycle::Register, "Module")]
+	public ref class CRegisterModule : public DiskLetBase
+	{
+	public:
+		CRegisterModule(void) {};
+		~CRegisterModule(void) {};
+
+	public:
+		//[Parameter(Position = 0, HelpMessage = "specify the index of disk, default returns all disks")]
+		//property UINT32 index;
+
+	public:
+		virtual void InternalProcessRecord() override
+		{
+			//CSoftwareAuthorize * authorize = CSoftwareAuthorize::Instance();
+			//GUID lib_clone = { 0x22431a3a, 0x2ca4, 0x4e29, { 0xbf, 0xf0, 0x9b, 0x17, 0x96, 0xc, 0x58, 0x17 } };
+			//authorize->SetAuthority(lib_clone);
+		}
 	};
 
 	//-----------------------------------------------------------------------------

@@ -478,6 +478,43 @@ void DiskLet::SelectDisk::InternalProcessRecord()
 	global.SelectDisk(disk);
 }
 
+void DiskLet::CopyDisk::InternalProcessRecord()
+{
+	jcvos::auto_interface<IDiskInfo> src_disk;
+	jcvos::auto_interface<IDiskInfo> dst_disk;
+
+	if (src && dst)
+	{
+		src->GetDiskInfo(src_disk);
+		dst->GetDiskInfo(dst_disk);
+	}
+
+	if (src_disk == nullptr) throw gcnew System::ApplicationException(L"src disk is not specify");
+	if (dst_disk == nullptr) throw gcnew System::ApplicationException(L"dst disk is not specify");
+	if (dst_disk->GetIndex() == src_disk->GetIndex()) throw gcnew System::ApplicationException(L"source and destination cannot be same");
+
+	Clone::DiskClone^ clone = gcnew Clone::DiskClone;
+	Clone::InvokingProgress^ progress = clone->CopyDisk(src, dst);
+
+	ProgressRecord^ running = gcnew ProgressRecord(100, L"Copy partition", L"copying");
+	running->RecordType = ProgressRecordType::Processing;
+	int res = -1;
+	while (1)
+	{
+		int pp = progress->progress;
+		running->StatusDescription = progress->status;
+
+		running->PercentComplete = pp;
+		WriteProgress(running);
+		Sleep(500);
+		res = progress->result;
+		if (res >= 0) break;
+	}
+	running->RecordType = ProgressRecordType::Completed;
+	wprintf_s(L"copy completed: result=%d\n", res);
+}
+
+
 void DiskLet::ConnectToStorageDevice::InternalProcessRecord()
 {
 	jcvos::auto_interface<IStorageDevice> dd;

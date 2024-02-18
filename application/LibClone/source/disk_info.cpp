@@ -36,6 +36,8 @@ Clone::VolumeInfo::VolumeInfo(IVolumeInfo * vol_info)
 	DriveLetter = gcnew String(prop.m_drive_letter.c_str());
 	cluster_size = (DWORD)(prop.m_clust_size/1024);
 	DosPath = gcnew String(prop.m_dos_path.c_str());
+	FileSystem = gcnew String(prop.m_filesystem.c_str());
+	Label = gcnew String(prop.m_label.c_str());
 }
 
 //-----------------------------------------------------------------------------
@@ -74,7 +76,7 @@ VolumeInfo ^ Clone::PartInfo::GetVolume(void)
 {
 	jcvos::auto_interface<IVolumeInfo> vol;
 	bool br = m_part_info->GetVolume(vol);
-	if (!br || vol == NULL) throw gcnew System::ApplicationException(L"volume is null");
+	if (!br || vol == NULL) return nullptr;
 	return gcnew VolumeInfo(vol);
 }
 

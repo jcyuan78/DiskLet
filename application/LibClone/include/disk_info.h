@@ -110,6 +110,8 @@ namespace Clone
 		property String ^ DriveLetter;
 		property DWORD cluster_size;	// 以K为单位
 		property String ^ DosPath;
+		property String^ FileSystem;
+		property String^ Label;
 
 	protected:
 		IVolumeInfo * m_volume;
