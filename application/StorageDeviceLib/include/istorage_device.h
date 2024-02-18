@@ -49,14 +49,87 @@ typedef struct _ATA_REGISTER
 class IDENTIFY_DEVICE
 {
 public:
+	enum VENDOR_ID
+	{
+		VENDOR_UNKNOWN = 0,
+
+		VENDOR_MICRON =		0x8800,	VENDOR_MICRON_CRUCIAL=0x8801, VENDOR_MICRON_MU02=0x8802,
+		VENDOR_SMI=			0x6600,
+		VENDOR_MTRON =		0x0200,
+		VENDOR_INDILINX =	0x0300,
+		VENDOR_JMICRON =	0x0400,
+		VENDOR_INTEL =		0x0500,
+		VENDOR_SAMSUNG =	0x0600,
+		VENDOR_SANDFORCE =	0x0700,
+		VENDOR_OCZ =		0x0900,
+		VENDOR_SEAGATE =	0x0A00,
+		VENDOR_WDC =		0x1100,
+		VENDOR_PLEXTOR =	0x1200,
+		VENDOR_SANDISK =	0x1300,
+//		VENDOR_OCZ_VECTOR = 14,
+		VENDOR_TOSHIBA =	0x1500,
+		VENDOR_CORSAIR =	0x1600,
+		VENDOR_KINGSTON =	0x1700,
+//		VENDOR_MICRON_MU02 = 18,
+		VENDOR_NVME = 19,
+		VENDOR_REALTEK =	0x2000,
+		VENDOR_SKHYNIX =	0x2100,
+		VENDOR_KIOXIA =		0x2200,
+		VENDOR_SSSTC =		0x2300,
+//		VENDOR_INTEL_DC = 24,
+		VENDOR_APACER =		0x2500,
+		VENDOR_PHISON =		0x2700,
+		VENDOR_MARVELL =	0x2800,
+		VENDOR_MAXIOTEK =	0x2900,
+		VENDOR_YMTC =		0x3000,
+//		VENDOR_MAX = 99,
+
+		//VENDOR_UNKNOWN = 0x0000,
+		VENDOR_BUFFALO = 0x0411,
+		VENDOR_IO_DATA = 0x04BB,
+		VENDOR_LOGITEC = 0x0789,
+		VENDOR_INITIO = 0x13FD,
+		VENDOR_SUNPLUS = 0x04FC,
+//		VENDOR_JMICRON = 0x152D,
+		VENDOR_CYPRESS = 0x04B4,
+		VENDOR_OXFORD = 0x0928,
+		VENDOR_PROLIFIC = 0x067B,
+//		VENDOR_REALTEK = 0x0BDA,
+		VENDOR_ALL = 0xFFFF,
+	};
 	std::wstring m_model_name;
 	std::wstring m_serial_num;
 	std::wstring m_firmware;
 	std::wstring m_vendor;
+	std::wstring m_cur_transfer;
+	std::wstring m_max_transfer;
+	std::wstring m_interface;
 	BYTE m_dev_type;
 	STORAGE_BUS_TYPE m_bus_type;
 };
 
+enum STORAGE_HEALTH_STATUS
+{
+	STATUS_ERROR = 0, STATUS_GOOD = 1, STATUS_WARNING = 2, STATUS_BAD = 3,
+};
+
+class STORAGE_HEALTH_INFO_ITEM
+{
+public:
+	STORAGE_HEALTH_INFO_ITEM(void) {}
+	STORAGE_HEALTH_INFO_ITEM(BYTE attr, DWORD id, INT64 value, const std::wstring& unit)
+		: m_attr_id(attr), m_item_id(id), m_item_value(value), m_unit(unit) {}
+
+public:
+	INT64 m_item_value;
+	DWORD m_item_id;
+	BYTE  m_attr_id;
+	STORAGE_HEALTH_STATUS m_status = STATUS_ERROR;
+	std::wstring m_unit;
+//	std::wstring m_item_name;
+//	std::wstring m_str_value;
+};
+typedef std::vector<STORAGE_HEALTH_INFO_ITEM> HEALTH_INFO_LIST;
 
 class DEVICE_HEALTH_INFO
 {
@@ -87,6 +160,8 @@ const BYTE SCSISTAT_COMMAND_TERMINATED = 0x22;
 const BYTE SCSISTAT_QUEUE_FULL = 0x28;
 const BYTE SCSISTAT_ACA_ACTIVE = 0x30;
 const BYTE SCSISTAT_TASK_ABORTED = 0x40;
+// 当调用DeviceIoControl()是返回错误，则返回0x4F
+const BYTE SCSISTAT_IO_CTRL_FAIL = 0x4F;
 
 
 class IStorageDevice : virtual public IJCInterface
@@ -101,16 +176,38 @@ public:
 	};
 
 public:
+	static void CreateDeviceByIndex(IStorageDevice*& dev, int index);
+	static void CreateNVMeByIndex(IStorageDevice*& dev, int index);
+
+public:
 	virtual bool Inquiry(IDENTIFY_DEVICE & id) = 0;
-	virtual bool GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree * ext_info) = 0;
+	virtual BYTE Inquiry(BYTE* buf, size_t buf_len, BYTE evpd, BYTE page_code) = 0;
+//	virtual bool GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree & ext_info) = 0;
+	virtual STORAGE_HEALTH_STATUS GetHealthInfo(DEVICE_HEALTH_INFO & info, std::vector<STORAGE_HEALTH_INFO_ITEM> & ext_info) = 0;
 	// rd_wr: Read (true) or Write (false)
-	// Sector Read / Write通过Interface转用方法实现
+	// 
+	// 
+	// 
+
+
+	/// <summary> Sector Read / Write通过Device的Interface专用方法读写磁盘 </summary>
+	/// <param name="buf">[OUT] 读取到的data</param>
+	/// <param name="lba">[IN] 起始LBA地址</param>
+	/// <param name="sectors">[IN] 数据长度，以Sector为单位</param>
+	/// <param name="timeout"></param>
+	/// <returns></returns>
 	virtual bool SectorRead(BYTE * buf, FILESIZE lba, size_t sectors, UINT timeout) = 0;
 	virtual bool SectorWrite(BYTE * buf, FILESIZE lba, size_t sectors, UINT timeout) = 0;
 
-	// Read/Write方法通过系统Read/Write函数实现，
-	virtual bool Read(BYTE * buf, FILESIZE lba, size_t secs) = 0;
-	virtual bool Write(BYTE * buf, FILESIZE lba, size_t secs) = 0;
+	// 
+
+	/// <summary> Read/Write方法通过系统调用Read/Write读写磁盘 </summary>
+	/// <param name="buf">[OUT] 读取到的data</param>
+	/// <param name="lba">[IN] 起始LBA地址</param>
+	/// <param name="secs">[IN] 数据长度，以Sector为单位</param>
+	/// <returns></returns>
+	virtual bool Read(void * buf, FILESIZE lba, size_t secs) = 0;
+	virtual bool Write(const void * buf, FILESIZE lba, size_t secs) = 0;
 	virtual void FlushCache() = 0;
 
 	//virtual bool StartStopUnit(bool stop) = 0;
@@ -152,5 +249,7 @@ public:
 	virtual bool ReadIdentifyDevice(BYTE cns, WORD nvmsetid, BYTE * data, size_t data_len) = 0;
 	virtual bool GetLogPage(BYTE lid, WORD numld, BYTE * data, size_t data_len) = 0;
 	virtual bool NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length) = 0;
+	virtual WORD GetFeature(BYTE* buf, size_t buf_len, DWORD& comp, BYTE fid, BYTE sel) = 0;
+
 };
 

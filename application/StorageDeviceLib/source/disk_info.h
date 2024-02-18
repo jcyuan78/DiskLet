@@ -40,36 +40,38 @@ enum WMI_DISK_OPERATION_STATUS {
 	FAILED = 0xD014,
 };
 
-class PartitionEntry
-{
-public:
-	GUID type;
-	GUID part_id;
-	UINT64 first_lba;
-	UINT64 last_lba;
-	UINT64 attribute;
-	wchar_t name[36];
-};
+// move to idiskinfo.h
 
-class GptHeader
-{
-public:
-	char signature[8];
-	DWORD revision;
-	DWORD header_size;
-	DWORD header_crc;
-	DWORD reserved1;
-	UINT64 current_lba;
-	UINT64 backup_lba;
-	UINT64 first_usable;
-	UINT64 last_usable;
-	GUID disk_gid;
-	UINT64 starting_lba;
-	DWORD entry_num;
-	DWORD entry_size;
-	DWORD entry_crc;
-	char reserved2[420];
-};
+//class PartitionEntry
+//{
+//public:
+//	GUID type;
+//	GUID part_id;
+//	UINT64 first_lba;
+//	UINT64 last_lba;
+//	UINT64 attribute;
+//	wchar_t name[36];
+//};
+//
+//class GptHeader
+//{
+//public:
+//	char signature[8];
+//	DWORD revision;
+//	DWORD header_size;
+//	DWORD header_crc;
+//	DWORD reserved1;
+//	UINT64 current_lba;
+//	UINT64 backup_lba;
+//	UINT64 first_usable;
+//	UINT64 last_usable;
+//	GUID disk_gid;
+//	UINT64 starting_lba;
+//	DWORD entry_num;
+//	DWORD entry_size;
+//	DWORD entry_crc;
+//	char reserved2[420];
+//};
 
 ///////////////////////////////////////////////////////////////////////////////
 // -- volume info ----------------------------------------------------------
@@ -204,7 +206,7 @@ public:
 public:
 	friend class CPartitionInfo;
 	friend class CStorageManager;
-	enum PROTOCOL {
+	enum DEVICE_CLASS {
 		UNKNOWN=0, SCSI_DEVICE=1, ATA_DEVICE=2, ATA_PASSTHROUGH=3, NVME_DEVICE=4, NVME_PASSTHROUGH = 5,
 	};
 
@@ -241,8 +243,27 @@ protected:
 	void AddPartition(CPartitionInfo * part);
 	void RefreshPartitionList(void);
 	void RemovePartition(CPartitionInfo * part);
-	PROTOCOL DetectDevice(IStorageDevice * & dev, HANDLE handle);
+	DEVICE_CLASS DetectDevice(IStorageDevice * & dev/*, HANDLE handle*/);
 
+	template <class DEV_TYPE>
+	bool CreateStorageDevice(IStorageDevice*& dev, DWORD access = (GENERIC_READ | GENERIC_WRITE) )
+	{
+		wchar_t path[32];
+		swprintf_s(path, L"\\\\.\\PhysicalDrive%d", m_property.m_index);
+		HANDLE hdev = CreateFile(path, access, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+		if (hdev == INVALID_HANDLE_VALUE) THROW_WIN32_ERROR(L"failed on opening device: %s", path);
+		DEV_TYPE* _dev = jcvos::CDynamicInstance<DEV_TYPE>::Create();
+		if (!_dev) THROW_ERROR(ERR_APP, L"mem full, failed on creating storage device object");
+		bool br = _dev->Connect(hdev, true, path, m_property.m_bus_type);
+		if (!br)
+		{
+			LOG_ERROR(L"[err] failed on connecting device to handle.");
+			RELEASE(_dev);
+			return false;
+		}
+		dev = static_cast<IStorageDevice*>(_dev);
+		return true;
+	}
 
 	bool UpdateCRC(void);
 
@@ -256,7 +277,7 @@ public:
 	std::wstring m_bus_type;
 
 protected:
-	PROTOCOL m_protocol;
+	DEVICE_CLASS m_device_class;
 	DISK_PROPERTY m_property;
 	UINT16 m_operation_status;
 
@@ -264,8 +285,11 @@ protected:
 	bool m_readonly;
 
 	GptHeader * m_header;
+	GptHeader* m_secondy_header;
 	PartitionEntry * m_pentry;
-	HANDLE m_hdisk;
+	PartitionEntry* m_secondy_pentry;
+	IStorageDevice* m_sdev;
+	//HANDLE m_hdisk;
 
 	bool m_offline;
 };

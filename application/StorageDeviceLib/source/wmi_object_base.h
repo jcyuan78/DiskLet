@@ -35,7 +35,7 @@ protected:
 };
 
 
-///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // -- progress class ---------------------------------------------------------
 class CQuerySink : public IWbemObjectSink
 {
@@ -125,7 +125,7 @@ protected:
 class CWmiObjectBase
 {
 public:
-	CWmiObjectBase(void) : m_obj(NULL) {}
+	CWmiObjectBase(void) /*: m_obj(NULL)*/ {}
 	~CWmiObjectBase(void);
 public:
 	virtual void SetWmiProperty(IWbemClassObject * obj) = 0;
@@ -327,7 +327,7 @@ public:
 
 		// Execute Method
 		hres = InternalInvokeMethodAsync(progress, name, in_signaure);
-		if (FAILED(hres) || progress == NULL) THROW_COM_ERROR(hres, L"failed on invoking method (%s)", name);
+		if (FAILED(hres) || progress == nullptr) THROW_COM_ERROR(hres, L"failed on invoking method (%s)", name);
 		return 0;
 	}
 
@@ -337,7 +337,7 @@ public:
 
 protected:
 	std::wstring m_obj_path;
-	IWbemClassObject * m_obj;
+	//IWbemClassObject * m_obj;
 
 	std::wstring m_rel_path;
 	std::wstring m_class_name;

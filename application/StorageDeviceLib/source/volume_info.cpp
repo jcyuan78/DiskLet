@@ -275,7 +275,7 @@ bool CVolumeInfo::FormatVolume(IWbemClassObject *& vol_obj, const std::wstring &
 	}
 	IUnknown * obj = ((VARIANT&)volume_val).punkVal;	JCASSERT(obj);
 	hres = obj->QueryInterface(&vol_obj);
-	if (FAILED(hres) || (vol_obj == NULL))
+	if (FAILED(hres) || (vol_obj == nullptr))
 	{
 		THROW_COM_ERROR(hres, L"[warning] failed on getting volume interface");
 	}

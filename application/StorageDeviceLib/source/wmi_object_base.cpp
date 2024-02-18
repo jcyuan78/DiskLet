@@ -10,7 +10,7 @@ namespace prop_tree = boost::property_tree;
 
 CWmiObjectBase::~CWmiObjectBase(void)
 {
-	if (m_obj) m_obj->Release();
+	//if (m_obj) m_obj->Release();
 }
 
 void CWmiObjectBase::Initialize(IWbemClassObject * obj, CStorageManager * manager)
@@ -28,7 +28,6 @@ void CWmiObjectBase::Initialize(IWbemClassObject * obj, CStorageManager * manage
 	m_obj_path = val.bstrVal;
 	VariantClear(&val);
 
-
 	hres = obj->Get(L"__RELPATH", 0, &val, &type, &flavor);
 	if (FAILED(hres)) THROW_COM_ERROR(hres, L"failed on getting __PATH");
 	size_t str_len = SysStringLen(val.bstrVal);
@@ -40,8 +39,8 @@ void CWmiObjectBase::Initialize(IWbemClassObject * obj, CStorageManager * manage
 
 	SetWmiProperty(obj);
 
-	m_obj = obj;
-	m_obj->AddRef();
+	//m_obj = obj;
+	//m_obj->AddRef();
 }
 
 bool CWmiObjectBase::Refresh(void)
@@ -74,7 +73,7 @@ bool CWmiObjectBase::GetObjectFromPath(IWbemClassObject *& obj, const std::wstri
 
 HRESULT CWmiObjectBase::InternalInvokeMethodAsync(IJCProgress *& progress, const wchar_t * name, IWbemClassObject * class_instance)
 {
-	JCASSERT(progress == NULL);
+	JCASSERT(progress == nullptr);
 	HRESULT hres;
 	//auto_unknown<IWbemUnsecuredApartment> unsec_app;
 	//CoCreateInstance(CLSID_WbemUnsecuredApartment, NULL, CLSCTX_LOCAL_SERVER,
@@ -97,7 +96,7 @@ HRESULT CWmiObjectBase::InternalInvokeMethodAsync(IJCProgress *& progress, const
 		NULL, class_instance, NULL, &call_result);
 //	if (FAILED(hres)) THROW_COM_ERROR(hres, L"failed on invoking method (%s)", name);
 
-	if (SUCCEEDED(hres) && !(call_result == NULL))
+	if (SUCCEEDED(hres) && !(call_result == nullptr))
 	{
 		CWmiSemisyncProgress * pp = jcvos::CDynamicInstance<CWmiSemisyncProgress>::Create();
 		pp->SetResult(call_result);

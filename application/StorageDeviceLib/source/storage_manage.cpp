@@ -65,7 +65,7 @@ bool CStorageManager::ListDisk(void)
 		ULONG count = 0;
 		hres = penum->Next(WBEM_INFINITE, 1, &obj, &count);
 		if (FAILED(hres))	THROW_COM_ERROR(hres, L"failed on getting physical disk, error=0x%X", hres);
-		if (hres == S_FALSE || obj == NULL) break;
+		if (hres == S_FALSE || obj == nullptr) break;
 		// 处理查询结果
 
 		CDiskInfo * disk_info = jcvos::CDynamicInstance<CDiskInfo>::Create();
@@ -77,15 +77,14 @@ bool CStorageManager::ListDisk(void)
 	penum.reset();
 	hres = m_services->CreateInstanceEnum(BSTR(L"MSFT_DiskToPartition"), WBEM_FLAG_FORWARD_ONLY , NULL, &penum);
 	if (FAILED(hres) || !penum) THROW_COM_ERROR(hres, L"failed on quering disk-partition, error=0x%X", hres);
-	//hres = m_services->CreateClassEnum(BSTR(L"MSFT_Disk"), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &penum);
-	//if (FAILED(hres) || !penum) THROW_COM_ERROR(hres, L"failed on quering physical disk, error=0x%X", hres);
+
 	while (1)
 	{
 		auto_unknown<IWbemClassObject> obj;
 		ULONG count = 0;
 		hres = penum->Next(WBEM_INFINITE, 1, &obj, &count);
 		if (FAILED(hres)) LOG_COM_ERROR(hres, L"failed on getting object");
-		if (hres == S_FALSE || obj == NULL) break;
+		if (hres == S_FALSE || obj == nullptr) break;
 		prop_tree::wptree prop;
 		if (!(obj==NULL)) ReadWmiObject(prop, obj);
 		std::wstring & disk_path = prop.get<std::wstring>(L"Disk");
@@ -94,7 +93,7 @@ bool CStorageManager::ListDisk(void)
 		for (auto it = m_disk_list.begin(); it != m_disk_list.end(); ++it)
 		{
 			CDiskInfo * disk_info = *it;
-			if (disk_info == NULL) continue;
+			if (disk_info == nullptr) continue;
 			if (disk_info->IsObject(disk_path))
 			{
 				disk_info->AddPartition(partition_path);
@@ -102,12 +101,6 @@ bool CStorageManager::ListDisk(void)
 			}
 		}
 
-
-		//VARIANT val;
-		//CIMTYPE type;
-		//long flavor;
-		//hres = obj->Get(L"__PATH", 0, &val, &type, &flavor);
-		//wprintf_s(L"path=%s\n", val.bstrVal);
 	}
 	return true;
 }

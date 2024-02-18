@@ -1,17 +1,20 @@
-﻿#include "pch.h"
+﻿///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "pch.h"
 
 #include "nvme_device.h"
 #include <ntddscsi.h>
 #include <boost/cast.hpp>
 #include <boost/algorithm/string.hpp>
 #define _NVME 0
-//#include "../include/utility.h"
+#include "../include/utility.h"
+#include "SlotSpeedGetter.h"
 //#include <nvme.h>
 
-LOCAL_LOGGER_ENABLE(L"sata_device", LOGGER_LEVEL_NOTICE);
+LOCAL_LOGGER_ENABLE(L"nvme_device", LOGGER_LEVEL_NOTICE);
 
 #define NVME_CMD_GET_LOG	(0x02)
 #define NVME_CMD_IDENTIFY	(0x06)
+#define NVME_CMD_GET_FEATURE	(0x0A)
 
 typedef struct _SCSI_PASS_THROUGH_WITH_BUFFERS24 {
 	SCSI_PASS_THROUGH Spt;
@@ -26,6 +29,35 @@ CNVMeDevice::CNVMeDevice(void)
 
 CNVMeDevice::~CNVMeDevice(void)
 {
+}
+
+int string_printf(std::wstring& buf_str, size_t buf_size, const wchar_t* format, ...)
+{
+	va_list argptr;
+	va_start(argptr, format);
+	
+	buf_str.resize(buf_size);
+	wchar_t* buf = const_cast<wchar_t*>(buf_str.data());
+	int res = vswprintf_s(buf, buf_size, format, argptr);
+//	buf_str.resize(res);
+	buf_str.shrink_to_fit();
+	return res;
+}
+
+bool CNVMeDevice::Inquiry(IDENTIFY_DEVICE& id)
+{
+	CStorageDeviceComm::Inquiry(id);
+	// 获取传输速度
+	std::wstring dev_id;
+	GetDeviceIDFromPhysicalDriveID(dev_id);
+	SlotMaxCurrSpeed speed;
+	GetSlotMaxCurrSpeedFromDeviceID(speed, dev_id);
+
+	id.m_interface = L"NVMe";
+	string_printf(id.m_max_transfer, 32, L"GEN %dx%d", speed.Maximum.SpecVersion, speed.Maximum.LinkWidth);
+	string_printf(id.m_cur_transfer, 32, L"GEN %dx%d", speed.Current.SpecVersion, speed.Current.LinkWidth);
+
+	return true;
 }
 
 #define DRIVE_HEAD_REG	0xA0
@@ -262,9 +294,42 @@ bool CNVMeDevice::GetLogPage(BYTE lid, WORD numld, BYTE * data, size_t data_len)
 	return true;
 }
 
-
-bool CNVMeDevice::GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree * ext_info)
+void CNVMeDevice::GetDeviceIDFromPhysicalDriveID(std::wstring& dev_id)
 {
+//	static const wchar_t * query2findstorage = L"ASSOCIATORS OF {Win32_DiskDrive.DeviceID='\\\\.\\PhysicalDrive%d'} WHERE ResultClass=Win32_PnPEntity";
+	static const wchar_t * query2findstorage = L"ASSOCIATORS OF {Win32_DiskDrive.DeviceID='%s'} WHERE ResultClass=Win32_PnPEntity";
+	static const wchar_t* query2findcontroller = L"ASSOCIATORS OF {Win32_PnPEntity.DeviceID='%s'} WHERE AssocClass=Win32_SCSIControllerDevice";
+	
+	wchar_t qurey[256];
+	BOOL flag = FALSE;
+
+	HRESULT hres;
+	auto_unknown<IWbemLocator> pIWbemLocator;
+	auto_unknown<IWbemServices> wbem_services;
+	hres = CoCreateInstance(CLSID_WbemLocator, NULL, CLSCTX_INPROC_SERVER, IID_IWbemLocator, pIWbemLocator);
+	if (FAILED(hres)) THROW_COM_ERROR(hres, L"failed on creating wbem locator");
+
+	long securityFlag = WBEM_FLAG_CONNECT_USE_MAX_WAIT;
+	hres = pIWbemLocator->ConnectServer(BSTR(L"\\\\.\\root\\cimv2"), NULL, NULL, 0L, securityFlag, NULL, NULL, &wbem_services);
+	if (FAILED(hres) || !wbem_services) THROW_COM_ERROR(hres, L"failed on connecting wmi services");
+
+	hres = CoSetProxyBlanket(wbem_services, RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE,
+			NULL, RPC_C_AUTHN_LEVEL_CALL, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE);
+	if (FAILED(hres))	THROW_COM_ERROR(hres, L"failed on setting proxy blanket");
+	swprintf_s(qurey, query2findstorage, m_dev_id.c_str());
+	std::wstring storage_id;
+	bool br = GetStringValueFromQuery(storage_id, wbem_services, qurey, L"DeviceID");
+	if (!br || storage_id.empty()) THROW_ERROR(ERR_APP, L"failed on getting DeviceID, drive=%s", m_dev_id.c_str());
+	swprintf_s(qurey, query2findcontroller, storage_id.c_str());
+	br = GetStringValueFromQuery(dev_id, wbem_services, qurey, L"DeviceID");
+	if (!br || dev_id.empty()) THROW_ERROR(ERR_APP, L"failed on getting Controller, drive=%s", m_dev_id.c_str());
+}
+
+
+//bool CNVMeDevice::GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree & ext_info)
+STORAGE_HEALTH_STATUS CNVMeDevice::GetHealthInfo(DEVICE_HEALTH_INFO& info, HEALTH_INFO_LIST& ext_info)
+{
+	LOG_STACK_TRACE()
 	memset(&info, 0, sizeof(DEVICE_HEALTH_INFO));
 	size_t buf_len = sizeof(NVME_HEALTH_INFO_LOG);
 	jcvos::auto_array<BYTE> buf(buf_len);
@@ -272,20 +337,30 @@ bool CNVMeDevice::GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree:
 	if (!br)
 	{
 		LOG_ERROR(L"[err] failed on getting smart info");
-		return false;
+		return STATUS_ERROR;
 	}
 	NVME_HEALTH_INFO_LOG *smartInfo = (NVME_HEALTH_INFO_LOG*)buf.get_ptr();
 
 	info.m_power_cycle = *(UINT64*)(smartInfo->PowerCycle);
+	ext_info.push_back(STORAGE_HEALTH_INFO_ITEM(0, POWER_CYCLE, info.m_power_cycle, L""));
 	info.m_power_on_hours = *(UINT64*)(smartInfo->PowerOnHours);
+	ext_info.push_back(STORAGE_HEALTH_INFO_ITEM(0, POWER_ON_HOURS, info.m_power_on_hours, L"hrs"));
 	info.m_unsafe_shutdowns = *(UINT64*)(smartInfo->UnsafeShutdowns);
+	ext_info.push_back(STORAGE_HEALTH_INFO_ITEM(0, UNSAFE_SHUTDOWN, info.m_unsafe_shutdowns, L""));
 	info.m_host_read = *(UINT64*)(smartInfo->DataUnitRead) * 1000 / 2048;
+	ext_info.push_back(STORAGE_HEALTH_INFO_ITEM(0, HOST_READ_MB, info.m_host_read, L"MB"));
 	info.m_host_write = *(UINT64*)(smartInfo->DataUnitWritten) * 1000 / 2048;
+	ext_info.push_back(STORAGE_HEALTH_INFO_ITEM(0, HOST_WRITE_MB, info.m_host_write, L"MB"));
 	info.m_error_count = *(UINT64*)(smartInfo->MediaErrors) + *(UINT64*)(smartInfo->ErrorInfoLogEntryCount);
+	ext_info.push_back(STORAGE_HEALTH_INFO_ITEM(0, ERROR_COUNT, info.m_error_count, L""));
 	info.m_percentage_used = smartInfo->PercentageUsed;
+	ext_info.push_back(STORAGE_HEALTH_INFO_ITEM(0, REMAIN_LIFE, info.m_percentage_used, L"%"));
 
 	info.m_bad_block_num = 100- smartInfo->AvailableSpare;
+	ext_info.push_back(STORAGE_HEALTH_INFO_ITEM(0, RUNTIME_BAD_BLOCK, info.m_bad_block_num, L""));
+
 	info.m_temperature_cur = *(short*)(smartInfo->Temperature) + ABSOLUTE_ZERO;
+	ext_info.push_back(STORAGE_HEALTH_INFO_ITEM(0, CURRENT_TEMPERATURE, info.m_temperature_cur, L"C"));
 	info.m_temperature_max;
 
 	br = GetLogPage(0x09, 0x7F, buf, buf_len);
@@ -293,15 +368,17 @@ bool CNVMeDevice::GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree:
 	{
 		UINT64 *endurance_info = (UINT64*)buf.get_ptr();
 		info.m_media_write = endurance_info[10] * 1024;
+		ext_info.push_back(STORAGE_HEALTH_INFO_ITEM(0, MEDIA_WRITE_MB, info.m_media_write, L"MB"));
 	}
 	else 
 	{
 		// windows property方式（NVMe device）不支持 endurance page
 		LOG_ERROR(L"[err] failed on getting endurance info");
 	}
-	return true;
+	return STATUS_GOOD;
 }
 
+/*
 bool CNVMeDevice::NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length)
 {
 	jcvos::auto_array<BYTE> query_buf(BUFFER_SIZE, 0);
@@ -365,7 +442,7 @@ bool CNVMeDevice::NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BY
 
 	return true;
 }
-
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // -- NVMe passthrough
@@ -511,7 +588,7 @@ bool CNVMePassthroughDevice::NVMETest(jcvos::IBinaryBuffer *& data)
 bool CNVMePassthroughDevice::Inquiry(IDENTIFY_DEVICE & id)
 {
 	jcvos::auto_array<BYTE> data(4096);
-	bool br=ReadIdentifyDevice(1, 0, data, 4096);
+	bool br=ReadIdentifyDevice(1, 0, data, 1024);
 	if (!br)
 	{
 		LOG_ERROR(L"[err] failed on reading Identify");
@@ -528,40 +605,22 @@ bool CNVMePassthroughDevice::Inquiry(IDENTIFY_DEVICE & id)
 	memset(str_buf, 0, STR_BUF_LEN);
 	sprintf_s(str_buf, "%04X-%04X", wbuf[0], wbuf[1]);
 	jcvos::Utf8ToUnicode(id.m_vendor, str_buf);
+	id.m_interface = L"NVMe on USB";
 	return true;
 }
 
-/*
-bool CNVMePassthroughDevice::GetHealthInfo(DEVICE_HEALTH_INFO & info, boost::property_tree::wptree & ext_info)
+bool CNVMePassthroughDevice::OnConnectDevice(void)
 {
-	memset(&info, 0, sizeof(DEVICE_HEALTH_INFO));
-	jcvos::auto_array<BYTE> data_buf(4096);
-	// smart info
-	bool br = GetLogPage(0x02, 0x7F, data_buf, IDENTIFY_BUFFER_SIZE);
+	IDENTIFY_DEVICE id;
+	bool br = Inquiry(id);
 	if (!br)
 	{
-		LOG_ERROR(L"[err] failed on getting smart info");
+		LOG_DEBUG(L"failed on getting identify");
 		return false;
 	}
-
-	WORD * wbuf = (WORD*)((BYTE*)data_buf);
-	UINT64 * llbuf = (UINT64*)((BYTE*)data_buf);
-	info.m_host_read = llbuf[4]*1000 / 2048;
-	info.m_host_write = llbuf[6]*1000 / 2048;
-	info.m_power_cycle = llbuf[14];
-	info.m_power_on_hours = llbuf[16];
-	info.m_unsafe_shutdowns = llbuf[18];
-	info.m_error_count = llbuf[20] + llbuf[22];
-	info.m_temperature_cur = (short)(MAKEWORD(data_buf[1], data_buf[2])) + ABSOLUTE_ZERO;
-	info.m_percentage_used = data_buf[5];
-	info.m_bad_block_num = 100 - data_buf[3];
-
-	br = GetLogPage(0x09, 0x7F, data_buf, IDENTIFY_BUFFER_SIZE);
-	info.m_media_write = llbuf[10] * 1024;
-
+	if (id.m_model_name.empty()) return false;
 	return true;
 }
-*/
 
 bool CNVMePassthroughDevice::ReadIdentifyDevice(BYTE cns, WORD nvmsetid, BYTE * data, size_t data_len)
 {
@@ -604,6 +663,97 @@ bool CNVMePassthroughDevice::GetLogPage(BYTE lid, WORD numld, BYTE * data, size_
 	return true;
 }
 
+WORD CNVMePassthroughDevice::GetFeature(BYTE* buf, size_t buf_len, DWORD & comp, BYTE fid, BYTE sel)
+{
+	NVME_COMMAND nvme_cmd;
+	memset(&nvme_cmd, 0, sizeof(NVME_COMMAND));
+	nvme_cmd.CDW0.OPC = NVME_CMD_GET_FEATURE;
+	nvme_cmd.NSID = 0xFFFFFFFF;
+	nvme_cmd.u.GETFEATURES.CDW10.FID = fid;
+//	.GETLOGPAGE.CDW10.LID = lid;
+	nvme_cmd.u.GETFEATURES.CDW10.SEL = sel;
+//	.CDW10_V13.NUMDL = numld;
+
+//	bool br = NVMeCommand(0x82, NVME_CMD_GET_LOG, &nvme_cmd, buf, buf_len);
+	if (buf == nullptr && buf_len == 0)
+	{
+		buf = new BYTE[512];
+		buf_len = 512;
+	}
+	bool br = NVMeCommandDebug(0x80, NVME_CMD_GET_LOG, &nvme_cmd, buf, buf_len);
+	if (!br)
+	{
+		LOG_ERROR(L"[err] ");
+		return false;
+	}
+	return true;
+
+}
+
+// 0x80: send command
+// 0x82: read data
+
+bool CNVMePassthroughDevice::NVMeCommandDebug(BYTE protocol, BYTE opcode, NVME_COMMAND* cmd, BYTE* buf, size_t length)
+{
+	BYTE sense_buf[24];
+	memset(sense_buf, 0, 24);
+
+	wprintf_s(L"Try for protocols \n");
+
+	for (BYTE ii = 1; ii <= 0x80; ii <<= 1)
+	{
+		BYTE cdb[CDB10GENERIC_LENGTH];
+		memset(cdb, 0, CDB10GENERIC_LENGTH);
+		cdb[0] = 0xA1;	// NVMe pass through
+		cdb[1] = 0x80;	// send command
+		cdb[4] = 2;
+
+		BYTE data_buf[IDENTIFY_BUFFER_SIZE];
+		memset(data_buf, 0, IDENTIFY_BUFFER_SIZE);
+
+		DWORD* cdw = (DWORD*)((BYTE*)data_buf);
+		data_buf[0] = 'N'; data_buf[1] = 'V'; data_buf[2] = 'M'; data_buf[3] = 'E';
+		memcpy_s(data_buf + 8, sizeof(NVME_COMMAND), cmd, sizeof(NVME_COMMAND));
+
+		wprintf_s(L"Send command with protocol 0x80 \n");
+		BYTE status = ScsiCommand(write, data_buf, IDENTIFY_BUFFER_SIZE, cdb, 12, sense_buf, 24, 2000);
+//		if (status != 0) return false;
+		wprintf_s(L"status = %02X, sense = %02X, %02X, %02X, %02X \n", 
+			status, sense_buf[0], sense_buf[1], sense_buf[2], sense_buf[3]);
+
+		if (protocol & 0x02)
+		{
+			wprintf_s(L"read payload by procotol 0x82 \n");
+			cdb[1] = 0x82;
+			status = ScsiCommand(read, buf, length, cdb, 12, sense_buf, 24, 2000);
+//			if (status != 0) return false;
+			wprintf_s(L"status = %02X, sense = %02X, %02X, %02X, %02X \n",
+				status, sense_buf[0], sense_buf[1], sense_buf[2], sense_buf[3]);
+
+		}
+
+		try
+		{
+			wprintf_s(L"read completion by protocol 0x%02X \n", ii);
+			cdb[1] = ii;
+			status = ScsiCommand(read, buf, length, cdb, 12, sense_buf, 24, 2000);
+			//		if (status != 0) return false;
+			wprintf_s(L"status = %02X, sense = %02X, %02X, %02X, %02X \n",
+				status, sense_buf[0], sense_buf[1], sense_buf[2], sense_buf[3]);
+			wprintf_s(L"complete=%08X, %08X, %08X, %08X \n",
+				((DWORD*)buf)[0], ((DWORD*)buf)[1], ((DWORD*)buf)[2], ((DWORD*)buf)[3]);
+		}
+		catch (jcvos::CJCException & err)
+		{
+			wprintf_s(L"detected error in the SCSI call, %s", err.WhatT());
+		}
+
+		Sleep(3000);
+	}
+
+	return true;
+}
+
 bool CNVMePassthroughDevice::NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAND * cmd, BYTE * buf, size_t length)
 {
 	BYTE sense_buf[24];
@@ -623,12 +773,35 @@ bool CNVMePassthroughDevice::NVMeCommand(BYTE protocol, BYTE opcode, NVME_COMMAN
 	memcpy_s(data_buf + 8, sizeof(NVME_COMMAND), cmd, sizeof(NVME_COMMAND));
 
 	BYTE status = ScsiCommand(write, data_buf, IDENTIFY_BUFFER_SIZE, cdb, 12, sense_buf, 24, 5000);
+	if (status != 0) return false;
 
 	if (protocol & 0x02)
 	{
 		cdb[1] = protocol;
 		status = ScsiCommand(read, buf, length, cdb, 12, sense_buf, 24, 50000);
+		if (status != 0) return false;
 	}
 
 	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ==== Factorys ====
+void IStorageDevice::CreateNVMeByIndex(IStorageDevice*& dev, int index)
+{
+	wchar_t path[32];
+	swprintf_s(path, L"\\\\.\\PhysicalDrive%d", index);
+	HANDLE hdev = CreateFile(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+		OPEN_EXISTING, 0, NULL);
+	if (hdev == INVALID_HANDLE_VALUE) THROW_WIN32_ERROR(L"failed on opening device: %s", path);
+	CNVMePassthroughDevice* _dev = jcvos::CDynamicInstance<CNVMePassthroughDevice>::Create();
+	if (!_dev) THROW_ERROR(ERR_APP, L"mem full, failed on creating storage device object");
+	bool br = _dev->Connect(hdev, true, path, DISK_PROPERTY::BUS_NVMe);
+	if (!br)
+	{
+		RELEASE(_dev);
+		THROW_ERROR(ERR_APP, L"[err] failed on connecting device to handle.");
+	}
+	dev = static_cast<IStorageDevice*>(_dev);
+
 }

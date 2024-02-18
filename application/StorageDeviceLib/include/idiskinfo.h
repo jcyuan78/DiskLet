@@ -24,6 +24,23 @@ public:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// -- 错误码定义
+enum DISKINFO_RESULT
+{
+	DR_OK = 0,
+	DR_NOT_SUPPORT = 1, 
+	DR_NO_SOURCE_PARTITION=2,
+	DR_NO_FLEXIBLE_PARTITION=3,
+	DR_DST_INSUFFICIENT = 4,
+	DR_DST_ASSIGN_FAIL = 5,
+	DR_DISK_CREATE_PARTITION = 6,
+	DR_DISK_RESIZE = 7,
+	DR_DISK_VOLUME = 8,
+	DR_WRONG_PARAMETER = 9,
+	DR_MEMORY = 10,
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // -- 
 class VOLUME_PROPERTY
 {
@@ -72,7 +89,7 @@ public:
 public:
 	PartitionStyle	m_style;
 	UINT32			m_index;
-	UINT64			m_size;
+	UINT64			m_size;			// 以字节为单位
 	std::wstring	m_name;
 	GUID			m_guid;
 	BusType			m_bus_type;
@@ -182,3 +199,35 @@ public:
 extern const GUID GPT_TYPE_EFI;
 extern const GUID GPT_TYPE_MSR;
 extern const GUID GPT_TYPE_BASIC;
+
+class PartitionEntry
+{
+public:
+	GUID type;
+	GUID part_id;
+	UINT64 first_lba;
+	UINT64 last_lba;
+	UINT64 attribute;
+	wchar_t name[36];
+};
+
+class GptHeader
+{
+public:
+	char signature[8];
+	DWORD revision;
+	DWORD header_size;
+	DWORD header_crc;
+	DWORD reserved1;
+	UINT64 current_lba;
+	UINT64 backup_lba;
+	UINT64 first_usable;
+	UINT64 last_usable;
+	GUID disk_gid;
+	UINT64 starting_lba;
+	DWORD entry_num;
+	DWORD entry_size;
+	DWORD entry_crc;
+	char reserved2[420];
+};
+
