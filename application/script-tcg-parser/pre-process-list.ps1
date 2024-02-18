@@ -1,4 +1,4 @@
-param($tar)
+#param($tar)
 
 function parse-cmd
 {
@@ -37,10 +37,11 @@ function parse-cmd
     }
 }
 
+<#
 $list_fn = "$tar\list.csv";
 
 import-csv $list_fn | parse-cmd | ?{
 	($_.cmd -eq "Security Send") -or ($_.cmd -eq "Security Receive")
 } | Select-Object time, cmd_id, cmd, CDW10, CDW11, CDW12 | Export-Csv "$tar\security.csv"
-
+#>
 

@@ -146,6 +146,18 @@ import-csv .\test-1.csv | Convert-FileTrace | select-object ts,path_hash,is_dir,
 JumpStart的trace分析
 (1) 分析一台PC的 trace
 	(1) 加载file mapping
+	
+[20230916]
+追加trace分析：
+（1）Viavi trace解析：
+	.\parse-viavi.ps1 -src_fn <> -dst_fn
+	
+（2）给Trace添加文件映射
+	.\mark-file.ps1 -dir <>
+	dir中包含trace文件（trace.csv）和filemap（filemap.csv）。filemap由mytool\ntfs_lba2file\dump-filemapping.ps1获得。
+	输出文件为dir\trace-fs.csv
+	TODO:file mapping的产生更加自动化，包含不同分区，并且要对FAT32分区进行解析。
+		mark trace的时候，增加文件的偏移量。
 
 
 
