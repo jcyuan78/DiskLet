@@ -6,12 +6,12 @@ using namespace System::Runtime::CompilerServices;
 using namespace System::Runtime::InteropServices;
 using namespace System::Security::Permissions;
 
-[assembly:AssemblyTitleAttribute(L"JcCmdLet")];
-[assembly:AssemblyDescriptionAttribute(L"Base library for JC tools")];
+[assembly:AssemblyTitleAttribute(L"Authorizer")];
+[assembly:AssemblyDescriptionAttribute(L"")];
 [assembly:AssemblyConfigurationAttribute(L"")];
-[assembly:AssemblyCompanyAttribute(L"Jingcheng Yuan")];
-[assembly:AssemblyProductAttribute(L"JcCmdLet")];
-[assembly:AssemblyCopyrightAttribute(L"Copyrite(c)  2022")];
+[assembly:AssemblyCompanyAttribute(L"")];
+[assembly:AssemblyProductAttribute(L"Authorizer")];
+[assembly:AssemblyCopyrightAttribute(L"版权所有(c)  2020")];
 [assembly:AssemblyTrademarkAttribute(L"")];
 [assembly:AssemblyCultureAttribute(L"")];
 

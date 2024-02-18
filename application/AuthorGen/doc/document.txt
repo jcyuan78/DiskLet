@@ -1,0 +1,17 @@
+软件/模块名称: sw_name: com.kanenka.renewdisk.v01
+软件/模块UUID: sw_uuid = SHA1(sw_name): 288d554b-a189-5d70-b709-f6d7cf272f59
+软件/模块ID: sw_id = hash(sw_uuid, 32bit): EB0E2A3E
+
+序列号生成算法: 
+	SN = Base32 (AES128((sw_id(32bit) + sn(32bit) + CRC(32bit)+random(32bit)), key_for_sn ))
+
+授权UUID: author_uuid
+授权ID:   author_id = hash(author_uuid)
+
+
+6e 6b 43 12 0a 00 00 00 bb 29 a3 d5 24 db 80 e0  nkC.....?)??$?€?
+d2 f2 a4 7d 4e 76 7c 78 73 3a 0a 1f 95 a4 a2 cf  ???}Nv|xs:..????
+4M3KI-9KQQ3-8HS63-4BIR3-MJFC3-6 
+
+6e 6b 43 12 0a 00 00 00 bb 29 a3 d5 c3 df 91 1d
+ff 9a 50 86 4e f1 9e 47 df 7c c2 20 8f 9e 9c 15

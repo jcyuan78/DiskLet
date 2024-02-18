@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="DEBUG_DYNAMIC|Win32">
@@ -19,48 +19,49 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\protocol-analyzer.h" />
-    <ClInclude Include="include\utility.h" />
-    <ClInclude Include="LibProtocolAnalyzer.h" />
-    <ClInclude Include="source\framework.h" />
-    <ClInclude Include="source\pch.h" />
+    <ClCompile Include="source\AuthorizeService.cpp">
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">4996</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="source\pch.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\LibProtocolAnalyzer.cpp" />
-    <ClCompile Include="source\pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="source\protocol-analyzer.cpp" />
+    <ClInclude Include="source\AuthorizeService.h" />
+    <ClInclude Include="source\pch.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{cb8f3668-12f6-4208-a4e8-95b97ea819d9}</ProjectGuid>
-    <RootNamespace>LibProtocolAnalyzer</RootNamespace>
+    <ProjectGuid>{0f868b2d-1d53-49a8-a951-c2bce012159b}</ProjectGuid>
+    <RootNamespace>AuthorizeService</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <VcpkgConfiguration>Debug</VcpkgConfiguration>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <VcpkgConfiguration>Release</VcpkgConfiguration>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <VcpkgConfiguration>Debug</VcpkgConfiguration>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <VcpkgConfiguration>Release</VcpkgConfiguration>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -76,28 +77,40 @@
     <Import Project="..\..\build\external_libs.props" />
     <Import Project="..\..\jcvos2\support_jcvos.props" />
     <Import Project="..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\..\jcvos2\build_jcvos.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
+    <Import Project="..\LibAuthorizer\support_lib_authorize.props" />
+    <Import Project="..\..\extlib\sqlite\support_sqlite.props" />
+    <Import Project="..\build_app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\build\external_libs.props" />
     <Import Project="..\..\jcvos2\support_jcvos.props" />
     <Import Project="..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\..\jcvos2\build_jcvos.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
+    <Import Project="..\LibAuthorizer\support_lib_authorize.props" />
+    <Import Project="..\..\extlib\sqlite\support_sqlite.props" />
+    <Import Project="..\build_app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\build\external_libs.props" />
     <Import Project="..\..\jcvos2\support_jcvos.props" />
     <Import Project="..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\..\jcvos2\build_jcvos.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
+    <Import Project="..\LibAuthorizer\support_lib_authorize.props" />
+    <Import Project="..\..\extlib\sqlite\support_sqlite.props" />
+    <Import Project="..\build_app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\build\external_libs.props" />
     <Import Project="..\..\jcvos2\support_jcvos.props" />
     <Import Project="..\..\extlib\boost\support_boost.props" />
-    <Import Project="..\..\jcvos2\build_jcvos.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
+    <Import Project="..\LibAuthorizer\support_lib_authorize.props" />
+    <Import Project="..\..\extlib\sqlite\support_sqlite.props" />
+    <Import Project="..\build_app.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">
@@ -116,14 +129,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -133,14 +143,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -150,14 +157,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>C:\Users\Jingcheng\workspace\vcpkg\vcpkg\packages\restbed_x64-windows\include;$(WORKSPACE)\application\LibAuthorGen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -167,14 +172,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>false</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\Jingcheng\workspace\vcpkg\vcpkg\packages\restbed_x64-windows\include;$(WORKSPACE)\application\LibAuthorGen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>
-      </SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>

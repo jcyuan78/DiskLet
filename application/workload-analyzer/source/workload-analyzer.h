@@ -168,6 +168,41 @@ namespace WLA {
 		FILE_INFO* m_cur_file_info;
 	};
 
+	[CmdletAttribute(VerbsCommon::Set, "StaticMapping")]
+	public ref class SetStaticMapping : public System::Management::Automation::Cmdlet
+	{
+	public:
+		SetStaticMapping(void);
+		~SetStaticMapping(void) {};
+
+	public:
+		[Parameter(Position = 0, ValueFromPipeline = true,
+			ValueFromPipelineByPropertyName = true, Mandatory = true,
+			HelpMessage = "input object")]
+		property PSObject^ mapping;
+
+		[Parameter(Position = 1, Mandatory = true,
+			HelpMessage = "disk size, in sector")]
+		property uint64_t secs;
+
+		[Parameter(Position = 2, Mandatory = true,
+			HelpMessage = "offset of the device")]
+		property uint64_t first_lba;
+
+	public:
+		virtual void BeginProcessing()	override;
+		virtual void EndProcessing()	override;
+		virtual void ProcessRecord() override;
+
+	protected:
+		LBA_INFO* m_lba_mapping;
+		// map的大小，以8 sec (4KB）为单位;
+		size_t m_map_size;
+		uint64_t m_first_cluster;
+		FILE_INFO* m_cur_file_info;
+	};
+
+
 	// 不包含 文件的offset，只考虑文件的占用情况
 	[CmdletAttribute(VerbsCommon::Set, "StaticMapping2")]
 	public ref class SetStaticMapping2 : public JcCmdLet::JcCmdletBase

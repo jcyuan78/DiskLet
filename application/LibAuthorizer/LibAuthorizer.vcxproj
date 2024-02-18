@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="DEBUG_DYNAMIC|Win32">
@@ -19,24 +19,28 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\protocol-analyzer.h" />
-    <ClInclude Include="include\utility.h" />
-    <ClInclude Include="LibProtocolAnalyzer.h" />
+    <ClInclude Include="include\authorize.h" />
+    <ClInclude Include="include\comm_structure.h" />
+    <ClInclude Include="include\crypto_feature.h" />
+    <ClInclude Include="lib_authorizer.h" />
     <ClInclude Include="source\framework.h" />
     <ClInclude Include="source\pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\LibProtocolAnalyzer.cpp" />
+    <ClCompile Include="source\authorize.cpp" />
+    <ClCompile Include="source\crypto_feature.cpp" />
     <ClCompile Include="source\pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="source\protocol-analyzer.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{cb8f3668-12f6-4208-a4e8-95b97ea819d9}</ProjectGuid>
-    <RootNamespace>LibProtocolAnalyzer</RootNamespace>
+    <ProjectGuid>{d2019366-0a90-4e30-a4d6-04db94c78582}</ProjectGuid>
+    <RootNamespace>LibAuthorizer</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -76,6 +80,7 @@
     <Import Project="..\..\build\external_libs.props" />
     <Import Project="..\..\jcvos2\support_jcvos.props" />
     <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
     <Import Project="..\..\jcvos2\build_jcvos.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">
@@ -83,6 +88,7 @@
     <Import Project="..\..\build\external_libs.props" />
     <Import Project="..\..\jcvos2\support_jcvos.props" />
     <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
     <Import Project="..\..\jcvos2\build_jcvos.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">
@@ -90,6 +96,7 @@
     <Import Project="..\..\build\external_libs.props" />
     <Import Project="..\..\jcvos2\support_jcvos.props" />
     <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
     <Import Project="..\..\jcvos2\build_jcvos.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">
@@ -97,6 +104,7 @@
     <Import Project="..\..\build\external_libs.props" />
     <Import Project="..\..\jcvos2\support_jcvos.props" />
     <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
     <Import Project="..\..\jcvos2\build_jcvos.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -117,7 +125,7 @@
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -134,7 +142,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -168,7 +176,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
