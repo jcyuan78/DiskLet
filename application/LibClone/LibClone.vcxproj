@@ -1,0 +1,209 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="DEBUG_DYNAMIC|Win32">
+      <Configuration>DEBUG_DYNAMIC</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RELEASE_DYNAMIC|Win32">
+      <Configuration>RELEASE_DYNAMIC</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="DEBUG_DYNAMIC|x64">
+      <Configuration>DEBUG_DYNAMIC</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RELEASE_DYNAMIC|x64">
+      <Configuration>RELEASE_DYNAMIC</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{E32BC23E-B76A-4464-A0E9-1C7E5B1D2826}</ProjectGuid>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <Keyword>ManagedCProj</Keyword>
+    <RootNamespace>LibClone</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CLRSupport>true</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CLRSupport>true</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CLRSupport>true</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CLRSupport>true</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\external_libs.props" />
+    <Import Project="..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
+    <Import Project="..\LibAuthorizer\support_lib_authorize.props" />
+    <Import Project="..\build_app.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\external_libs.props" />
+    <Import Project="..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
+    <Import Project="..\LibAuthorizer\support_lib_authorize.props" />
+    <Import Project="..\build_app.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\external_libs.props" />
+    <Import Project="..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
+    <Import Project="..\LibAuthorizer\support_lib_authorize.props" />
+    <Import Project="..\build_app.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\external_libs.props" />
+    <Import Project="..\..\jcvos2\support_jcvos.props" />
+    <Import Project="..\..\extlib\boost\support_boost.props" />
+    <Import Project="..\..\extlib\cryptopp\support_cryptopp.props" />
+    <Import Project="..\LibAuthorizer\support_lib_authorize.props" />
+    <Import Project="..\build_app.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN64;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
+      <NoEntryPoint>true</NoEntryPoint>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link />
+    <Link>
+      <NoEntryPoint>true</NoEntryPoint>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link />
+    <Link>
+      <NoEntryPoint>true</NoEntryPoint>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>false</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
+      <NoEntryPoint>true</NoEntryPoint>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="include\disk_info.h" />
+    <ClInclude Include="include\jcbuffer.h" />
+    <ClInclude Include="include\storage_device.h" />
+    <ClInclude Include="include\storage_manager.h" />
+    <ClInclude Include="include\utility.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="source\authority.h" />
+    <ClInclude Include="source\pch.h" />
+    <ClInclude Include="source\static_init.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="app.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="app.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Management.Automation">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\WindowsPowerShell\3.0\System.Management.Automation.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\AssemblyInfo.cpp" />
+    <ClCompile Include="source\authority.cpp" />
+    <ClCompile Include="source\disk_info.cpp" />
+    <ClCompile Include="source\jcbuffer.cpp" />
+    <ClCompile Include="source\pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RELEASE_DYNAMIC|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DEBUG_DYNAMIC|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\static_init.cpp" />
+    <ClCompile Include="source\storage_device.cpp" />
+    <ClCompile Include="source\storage_manager.cpp" />
+    <ClCompile Include="source\utility.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
